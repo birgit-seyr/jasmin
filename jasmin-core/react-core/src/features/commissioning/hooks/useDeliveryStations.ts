@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQueries, type UseQueryResult } from "@tanstack/react-query";
 import {
   getCommissioningDeliveryStationsListQueryOptions,
@@ -28,7 +29,10 @@ export const useDeliveryStations = (
     query: { enabled: enabled ?? params.delivery_day != null },
   });
 
-  const deliveryStations: DeliveryStationOption[] = toOptions(data, deliveryStationLabel);
+  const deliveryStations: DeliveryStationOption[] = useMemo(
+    () => toOptions(data, deliveryStationLabel),
+    [data],
+  );
 
   return {
     deliveryStations,

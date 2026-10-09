@@ -64,8 +64,12 @@ export default function DocumentationWaste() {
   );
   const queryClient = useQueryClient();
   const permissions = useMemo(
-    () => gatedByPermission(isStaff && !isPast),
-    [isStaff, isPast],
+    () => ({
+      ...gatedByPermission(isStaff && !isPast),
+      // A new row needs a storage to stamp on it.
+      canAdd: isStaff && !isPast && selectedStorage !== null,
+    }),
+    [isStaff, isPast, selectedStorage],
   );
 
   const { noteColumn } = useNoteColumn();

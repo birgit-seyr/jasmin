@@ -121,6 +121,53 @@ describe("PDFResellerInfo", () => {
     expect(screen.queryByText(/UID/)).toBeNull();
     expect(container.querySelectorAll("[data-pdf='text']")).toHaveLength(3);
   });
+
+  it("prints the reseller's country below the town", () => {
+    const { container } = render(
+      <PDFResellerInfo
+        tenantSettings={tenantSettings}
+        resellerInfo={{
+          reseller_name: "Corner Shop",
+          reseller_address: "Main Street 5",
+          reseller_zip: "80331",
+          reseller_city: "Munich",
+          reseller_country: "Germany",
+          reseller_uid: "DE123456789",
+        }}
+      />,
+    );
+    const lines = Array.from(
+      container.querySelectorAll("[data-pdf='text']"),
+    ).map((line) => line.textContent);
+    expect(lines.slice(1)).toEqual([
+      "Corner Shop",
+      "Main Street 5",
+      "80331 Munich",
+      "Germany",
+      "UID: DE123456789",
+    ]);
+  });
+
+  it.each([null, undefined, ""])(
+    "prints no country line when the country is %j",
+    (reseller_country) => {
+      const { container } = render(
+        <PDFResellerInfo
+          tenantSettings={tenantSettings}
+          resellerInfo={{
+            reseller_name: "Corner Shop",
+            reseller_zip: "8010",
+            reseller_city: "Graz",
+            reseller_country,
+          }}
+        />,
+      );
+      const lines = Array.from(
+        container.querySelectorAll("[data-pdf='text']"),
+      ).map((line) => line.textContent);
+      expect(lines.slice(1)).toEqual(["Corner Shop", "8010 Graz"]);
+    },
+  );
 });
 
 describe("PDFTenantInfo", () => {

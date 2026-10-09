@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useCommissioningResellersList } from "@shared/api/generated/commissioning/commissioning";
 import type { Reseller, CommissioningResellersListParams } from "@shared/api/generated/models";
 import { toOptions, type Option } from "@hooks/internal/toOptions";
@@ -22,7 +23,7 @@ export const useSellers = (params: CommissioningResellersListParams = {}) => {
     ...params,
   });
 
-  const sellers: SellerOption[] = toOptions(data, sellerLabel);
+  const sellers: SellerOption[] = useMemo(() => toOptions(data, sellerLabel), [data]);
 
   return {
     sellers,

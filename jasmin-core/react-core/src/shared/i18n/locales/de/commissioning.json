@@ -804,5 +804,7 @@
   "zugferd_not_available": "ZUGFeRD-XML nicht verfügbar",
   "peak_occupancy": "max. Belegung",
   "capacity_below_peak": "Kapazität kann nicht unter die maximale Belegung ({{peak}}, KW {{week}}) gesetzt werden.",
-  "failed_to_load_invoice": "Rechnungsdaten konnten nicht geladen werden."
+  "failed_to_load_offer": "Angebotsdaten konnten nicht geladen werden.",
+  "failed_to_load_invoice": "Rechnungsdaten konnten nicht geladen werden.",
+  "failed_to_load_delivery_note": "Lieferscheindaten konnten nicht geladen werden."
 }

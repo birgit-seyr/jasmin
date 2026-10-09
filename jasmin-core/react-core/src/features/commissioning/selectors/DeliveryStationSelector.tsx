@@ -38,9 +38,10 @@ const DeliveryStationSelector = ({
 }: DeliveryStationSelectorProps) => {
   const { t } = useTranslation();
 
+  const listEnabled = allStations || delivery_day != null;
   const { deliveryStations, loading } = useDeliveryStations(
     { delivery_day: delivery_day ?? undefined },
-    { enabled: allStations || delivery_day != null },
+    { enabled: listEnabled },
   );
 
   const options = useMemo<SelectorOption<string | null>[]>(() => {
@@ -60,8 +61,11 @@ const DeliveryStationSelector = ({
       options={options}
       loading={loading}
       placeholder={t("placeholder.delivery_station_selector")}
-      style={{ width: "18em", marginLeft: "2em", marginRight: "2em" }}
+      className="bold-select week-selector-select delivery-station-selector"
       preserveSelection={preserveSelection}
+      // A list that was never fetched (no day yet) proves nothing; one that
+      // came back empty clears the pick.
+      emptyValue={listEnabled ? null : undefined}
     />
   );
 };

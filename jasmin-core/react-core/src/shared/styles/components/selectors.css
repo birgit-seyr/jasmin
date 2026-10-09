@@ -69,3 +69,27 @@
 .logging-storage-range-picker .ant-picker-input > input {
   color: var(--color-text-primary);
 }
+/* Widths and spacing of the entity selectors in a page's filter row. */
+.delivery-station-selector {
+  width: 18em;
+  margin-inline: 2em;
+}
+
+.delivery-station-day-selector {
+  width: 18em;
+}
+
+.tour-selector {
+  width: 8em;
+  margin-top: 1em;
+  margin-bottom: 1.5em;
+}
+
+.reseller-selector,
+.share-article-selector {
+  width: 22em;
+}
+
+.reseller-selector--seller {
+  margin-left: 2em;
+}

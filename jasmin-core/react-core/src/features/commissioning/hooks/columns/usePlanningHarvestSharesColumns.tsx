@@ -8,12 +8,17 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
-import { editableOnlyOnCreate } from "@shared/utils";
 import {
-  planningColors,
-  planningRowEmphasis,
-} from "@shared/styles/planningColors";
+  decimalsForUnit,
+  editableOnlyOnCreate,
+  formatAmountForUnit,
+} from "@shared/utils";
+import { planningRowEmphasis } from "@shared/styles/planningColors";
 import { useNumberFormat } from "@hooks/useNumberFormat";
+import {
+  planningRowForecastUnit,
+  planningRowUnit,
+} from "../../utils/planningRow";
 import { useSellerColumn } from "./useSellerColumn";
 
 interface DataHasNotes {
@@ -108,7 +113,7 @@ export function usePlanningHarvestSharesColumns(
 
         render: (value: unknown) =>
           value !== null && value !== undefined ? (
-            <div className="small-title">{format(value as number, 2)}</div>
+            <div className="small-title">{format(value as number, 3)}</div>
           ) : (
             ""
           ),
@@ -130,7 +135,7 @@ export function usePlanningHarvestSharesColumns(
         render: (value: unknown, record: TableRecord) =>
           value !== null && value !== undefined ? (
             <div className="small-title">
-              {formatCurrency(Number(value))}/{getUnitLabel(record.unit as string)}
+              {formatCurrency(Number(value))}/{getUnitLabel(planningRowUnit(record) ?? "")}
             </div>
           ) : (
             ""
@@ -153,7 +158,11 @@ export function usePlanningHarvestSharesColumns(
         render: (_: unknown, record: TableRecord) => (
           <div className="read-only-amounts-planning">
             {record.forecast_available_amount
-              ? format(record.forecast_available_amount as number, 0)
+              ? formatAmountForUnit(
+                  Number(record.forecast_available_amount),
+                  planningRowForecastUnit(record),
+                  format,
+                )
               : record.forecast_unit
                 ? t("commissioning.forecast_enough_available")
                 : ""}
@@ -200,8 +209,16 @@ export function usePlanningHarvestSharesColumns(
         disabled: true,
         readOnly: true,
         hidden: !showDetailedColumns,
-        render: (value: unknown) => (
-          <div className="read-only-amounts-planning">{value as string}</div>
+        render: (value: unknown, record: TableRecord) => (
+          <div className="read-only-amounts-planning">
+            {value == null || value === ""
+              ? ""
+              : formatAmountForUnit(
+                  Number(value),
+                  planningRowUnit(record),
+                  format,
+                )}
+          </div>
         ),
       },
       ...(dataHasNotes.hasStockNote
@@ -241,19 +258,19 @@ export function usePlanningHarvestSharesColumns(
         readOnly: true,
         hidden: !showDetailedColumns,
         render: (_: unknown, record: TableRecord) => {
-          const stillFree = calculateStillFree(record);
+          // Rounded to what the cell shows, so float drift that rounds to
+          // zero neither reads as over-planned nor prints "-0".
+          const decimals = decimalsForUnit(planningRowUnit(record));
+          const stillFree =
+            Math.round(calculateStillFree(record) * 10 ** decimals) /
+              10 ** decimals || 0;
           return (
             <div
-              className="read-only-amounts-planning"
-              style={{
-                color:
-                  stillFree < 0
-                    ? planningColors.overPlanned
-                    : planningColors.ok,
-                fontWeight: stillFree < 0 ? "bold" : "normal",
-              }}
+              className={`read-only-amounts-planning ${
+                stillFree < 0 ? "still-free-over-planned" : "still-free-ok"
+              }`}
             >
-              {format(stillFree, 0)}
+              {format(stillFree, decimals)}
             </div>
           );
         },

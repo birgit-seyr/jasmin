@@ -1,17 +1,19 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
-import { formatAmountForUnit } from "@shared/utils";
+import { amountCellText, formatAmountForUnit } from "@shared/utils";
 import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import type { ShareDeliveryDayOption } from "../useShareDeliveryDays";
 import type { ShareTypeVariationOption } from "../useShareTypeVariations";
 import { computePlannedAmountForDay } from "../usePlanningSummaryData";
+import { planningRowUnit } from "../../utils/planningRow";
 import {
+  dayCellTier,
   dayHarvestedKey,
   dayPlannedAmountKey,
   dayVariationKey,
@@ -71,77 +73,70 @@ export function useDeliveryDayColumns({
 
       const displayValue = formatAmountForUnit(
         numValue,
-        record.unit as string | undefined,
+        planningRowUnit(record),
         format,
       );
 
       return (
         <div
-          style={{
-            backgroundColor: shouldHighlight
-              ? "var(--color-highlight)"
-              : "transparent",
-            padding: "4px",
-            borderRadius: "2px",
-            minHeight: "20px",
-          }}
+          className={
+            shouldHighlight
+              ? "planning-variation-cell planning-variation-cell-highlight"
+              : "planning-variation-cell"
+          }
         >
           {!isEmpty && displayValue}
         </div>
       );
     };
 
+    /** The whole-day amount cell of a (day, variation) pair. */
     const createBasicVariationColumn = (
       deliveryDay: DeliveryDay,
       variation: ShareTypeVariationOption,
-    ): EditableColumnConfig<TableRecord> => ({
-      title: deliveryDay.label,
-      dataIndex: dayVariationKey({
+      title: ReactNode,
+    ): EditableColumnConfig<TableRecord> => {
+      const key = dayVariationKey({
         dayId: deliveryDay.id!,
         variationId: variation.id!,
-      }),
-      key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
-      // Same (day, variation) cell as the day-major layout and the tour/station
-      // leaves — all `positive_decimal2`. This is the "days together" (variation-
-      // major) rendering of it, so it must accept the same precision.
-      inputType: "positive_decimal2",
-      align: "center",
-      width: AMOUNT_COLUMN_WIDTH,
-      render: (value: unknown, record: TableRecord) =>
-        renderVariationCell(value, record, variation.id as string),
-    });
+      });
+      return {
+        title,
+        dataIndex: key,
+        key,
+        inputType: "positive_decimal2",
+        align: "center",
+        width: AMOUNT_COLUMN_WIDTH,
+        render: (value: unknown, record: TableRecord) =>
+          renderVariationCell(value, record, variation.id as string),
+      };
+    };
 
     // Tour/station leaf columns — the per-tour and per-station amount cells
     // for a (day, variation) pair. Shared by BOTH layouts: the variation-major
-    // ("days together") columns and the day-major `createVariationColumnForDay`
-    // build the identical leaves; only the parent header (day label vs. size
-    // label) differs.
+    // ("days together") and the day-major columns build the identical leaves;
+    // only the parent header (day label vs. size label) differs.
     const buildTourLeaves = (
       deliveryDay: DeliveryDay,
       variation: ShareTypeVariationOption,
     ): EditableColumnConfig<TableRecord>[] =>
-      Array.from(
-        { length: deliveryDay.used_tours?.length || 0 },
-        (_, tourIndex) => {
-          const tourNumber =
-            deliveryDay.used_tours?.[tourIndex] || tourIndex + 1;
-          const tourKey = dayVariationKey({
-            dayId: deliveryDay.id!,
-            variationId: variation.id!,
-            tour: tourNumber,
-          });
-          return {
-            title: `T${tourNumber}`,
-            dataIndex: tourKey,
-            key: tourKey,
-            inputType: "positive_decimal2",
-            align: "center",
-            width: AMOUNT_COLUMN_WIDTH,
-            render: (value: unknown, record: TableRecord) =>
-              renderVariationCell(value, record, variation.id as string),
-          };
-        },
-      );
+      (deliveryDay.used_tours ?? []).map((tourNumber) => {
+        const tourKey = dayVariationKey({
+          dayId: deliveryDay.id!,
+          variationId: variation.id!,
+          tour: tourNumber,
+        });
+        return {
+          title: `T${tourNumber}`,
+          dataIndex: tourKey,
+          key: tourKey,
+          inputType: "positive_decimal2",
+          align: "center",
+          width: AMOUNT_COLUMN_WIDTH,
+          render: (value: unknown, record: TableRecord) =>
+            renderVariationCell(value, record, variation.id as string),
+        };
+      });
 
     const buildStationLeaves = (
       deliveryDay: DeliveryDay,
@@ -165,68 +160,26 @@ export function useDeliveryDayColumns({
         };
       }) || [];
 
-    const createTourVariationColumn = (
+    /** The (day, variation) cell split into the day's tours or stations, or
+     *  the whole-day leaf when the day is planned as a whole (`dayCellTier`). */
+    const createVariationColumn = (
       deliveryDay: DeliveryDay,
       variation: ShareTypeVariationOption,
-    ): EditableColumnConfig<TableRecord> => ({
-      title: deliveryDay.label,
-      dataIndex: dayVariationKey({
-        dayId: deliveryDay.id!,
-        variationId: variation.id!,
-      }),
-      key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
-      align: "center",
-      children: buildTourLeaves(deliveryDay, variation),
-    });
-
-    const createStationsVariationColumn = (
-      deliveryDay: DeliveryDay,
-      variation: ShareTypeVariationOption,
-    ): EditableColumnConfig<TableRecord> => ({
-      title: deliveryDay.label,
-      dataIndex: dayVariationKey({
-        dayId: deliveryDay.id!,
-        variationId: variation.id!,
-      }),
-      key: dayVariationKey({ dayId: deliveryDay.id!, variationId: variation.id! }),
-      align: "center",
-      children: buildStationLeaves(deliveryDay, variation),
-    });
-
-    const createVariationColumnForDay = (
-      deliveryDay: DeliveryDay,
-      variation: ShareTypeVariationOption,
+      title: ReactNode,
     ): EditableColumnConfig<TableRecord> => {
-      const dayId = deliveryDay.id!;
-      const variationId = variation.id!;
-      const bareKey = dayVariationKey({ dayId, variationId });
-      const baseColumn = {
-        title: getShareTypeVariationSizeLabelPure(variation.size, t),
-        dataIndex: bareKey,
-        key: bareKey,
-        align: "center" as const,
+      const bareColumn = createBasicVariationColumn(deliveryDay, variation, title);
+      const tier = dayCellTier(deliveryDay, planningMode);
+      if (tier === "bare") return bareColumn;
+      return {
+        title,
+        dataIndex: bareColumn.dataIndex,
+        key: bareColumn.key,
+        align: "center",
+        children:
+          tier === "tour"
+            ? buildTourLeaves(deliveryDay, variation)
+            : buildStationLeaves(deliveryDay, variation),
       };
-
-      if (planningMode === "tours") {
-        return {
-          ...baseColumn,
-          children: buildTourLeaves(deliveryDay, variation),
-        };
-      } else if (planningMode === "stations") {
-        return {
-          ...baseColumn,
-          children: buildStationLeaves(deliveryDay, variation),
-        };
-      } else {
-        return {
-          ...baseColumn,
-          dataIndex: bareKey,
-          inputType: "positive_decimal2",
-          width: AMOUNT_COLUMN_WIDTH,
-          render: (value: unknown, record: TableRecord) =>
-            renderVariationCell(value, record, variation.id as string),
-        };
-      }
     };
 
     const createPlannedAmountColumn = (
@@ -262,7 +215,7 @@ export function useDeliveryDayColumns({
           : Number(value) || 0;
         return (
           <div className="read-only-amounts-planning">
-            {planned ? format(planned, 0) : ""}
+            {amountCellText(planned, planningRowUnit(record), format)}
           </div>
         );
       },
@@ -314,7 +267,7 @@ export function useDeliveryDayColumns({
     const withVariationStart = (
       col: EditableColumnConfig<TableRecord>,
     ): EditableColumnConfig<TableRecord> => {
-      if (col.children) {
+      if (col.children?.length) {
         const children = col.children;
         return {
           ...col,
@@ -338,11 +291,7 @@ export function useDeliveryDayColumns({
           align: "center",
           children: withGroupStart(
             shareDeliveryDays.map((deliveryDay) =>
-              planningMode === "tours"
-                ? createTourVariationColumn(deliveryDay, variation)
-                : planningMode === "stations"
-                  ? createStationsVariationColumn(deliveryDay, variation)
-                  : createBasicVariationColumn(deliveryDay, variation),
+              createVariationColumn(deliveryDay, variation, deliveryDay.label),
             ),
           ),
         }),
@@ -357,7 +306,11 @@ export function useDeliveryDayColumns({
           align: "center",
           children: withGroupStart([
             ...shareTypeVariations.map((variation: ShareTypeVariationOption, varIndex) => {
-              const col = createVariationColumnForDay(deliveryDay, variation);
+              const col = createVariationColumn(
+                deliveryDay,
+                variation,
+                getShareTypeVariationSizeLabelPure(variation.size, t),
+              );
               return varIndex === 0 ? col : withVariationStart(col);
             }),
             createPlannedAmountColumn(deliveryDay),

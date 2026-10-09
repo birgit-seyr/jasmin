@@ -9,6 +9,8 @@
 import { describe, expect, it } from "vitest";
 import {
   dayAmountKey,
+  dayCellKeys,
+  dayCellTier,
   dayHarvestedKey,
   dayPlannedAmountKey,
   dayVariationKey,
@@ -154,5 +156,44 @@ describe("predicates", () => {
   it("dayVariationTier returns null for non-variation keys", () => {
     expect(dayVariationTier(dayVariationKey({ dayId: DAY, variationId: VARIATION, tour: 1 }))).toBe("tour");
     expect(dayVariationTier(dayPlannedAmountKey(DAY))).toBeNull();
+  });
+});
+
+describe("a day's cells per planning mode", () => {
+  const touredDay = {
+    id: DAY,
+    used_tours: [1, 3],
+    delivery_stations: [{ id: "st1" }, { id: "st2" }],
+  };
+  const bare = `day_${DAY}_variation_${VARIATION}`;
+
+  it("plans a toured day per tour, per station or as a whole", () => {
+    expect(dayCellKeys(touredDay, VARIATION, "tours")).toEqual([
+      `${bare}_tour_1`,
+      `${bare}_tour_3`,
+    ]);
+    expect(dayCellKeys(touredDay, VARIATION, "stations")).toEqual([
+      `${bare}_station_st1`,
+      `${bare}_station_st2`,
+    ]);
+    expect(dayCellKeys(touredDay, VARIATION, "basic")).toEqual([bare]);
+  });
+
+  it.each([null, undefined, []])(
+    "plans a day with tours %s as a whole in tour planning",
+    (used_tours) => {
+      const day = { ...touredDay, used_tours };
+
+      expect(dayCellTier(day, "tours")).toBe("bare");
+      expect(dayCellKeys(day, VARIATION, "tours")).toEqual([bare]);
+      expect(dayCellTier(day, "stations")).toBe("station");
+    },
+  );
+
+  it("plans a day without stations as a whole in station planning", () => {
+    const day = { id: DAY, delivery_stations: [] };
+
+    expect(dayCellTier(day, "stations")).toBe("bare");
+    expect(dayCellKeys(day, VARIATION, "stations")).toEqual([bare]);
   });
 });

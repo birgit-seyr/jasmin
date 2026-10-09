@@ -4,34 +4,43 @@ import { Fragment, type ReactNode } from "react";
 
 /**
  * Render Quill-saved HTML inside a react-pdf document while preserving
- * inline formatting (``<strong>`` / ``<b>``, ``<em>`` / ``<i>``,
- * ``<u>``), paragraph breaks (``<p>``) and soft breaks (``<br>``).
+ * its blocks (paragraphs, headings, list items) and inline formatting.
  *
  * Parsing uses a regex tokenizer rather than ``DOMParser`` because the
  * PDF fixture tests run with ``@vitest-environment node`` where
  * ``DOMParser`` doesn't exist. Quill emits a small, well-formed subset
- * of HTML (paragraphs, line breaks, three inline marks, optional links)
- * so a hand-rolled tokenizer is enough and avoids a polyfill.
+ * of HTML, so a hand-rolled tokenizer is enough and avoids a polyfill.
  *
  * Tags handled:
  *   - ``<p>``      → paragraph block
+ *   - ``<h1>``–``<h3>`` → heading block, bold and larger
+ *   - ``<ol>``/``<ul>`` + ``<li>`` → one block per item, prefixed "1." or "•"
  *   - ``<br>``     → soft line break (``"\n"`` inside the current text)
  *   - ``<strong>``/``<b>`` → ``fontWeight: "bold"``
  *   - ``<em>``/``<i>``     → ``fontStyle: "italic"``
- *   - ``<u>``      → ``textDecoration: "underline"``
+ *   - ``<u>``      → underline
+ *   - ``<s>``/``<strike>``/``<del>`` → line-through
  *   - ``<a>``      → underline (we don't generate real PDF links here,
  *     just visually mark them so a copy-out has the address)
  *
+ * Lists come in two shapes. The editor saves Quill's semantic HTML —
+ * ``<ol>`` for numbered and ``<ul>`` for bulleted items, a deeper level
+ * as a list nested inside its parent ``<li>``. Quill's raw editor HTML
+ * instead puts every item in one ``<ol>``, marks the kind on the item
+ * (``<li data-list="bullet">``) and the depth as a ``ql-indent-N`` class.
+ * Both are read here: ``data-list`` overrides the list tag, and the
+ * indent class adds to the nesting depth.
+ *
  * Unknown tags fall through transparently — their children render with
- * the inherited style. Bullet lists / headings / colour aren't handled
- * yet; the reseller-doc UI's RTE has them in its toolbar so they may
- * appear over time. Extend ``applyTagStyle`` below when they do.
+ * the inherited style. Colour isn't handled.
  */
+
+type TextDecoration = "underline" | "line-through" | "underline line-through";
 
 interface InlineStyle {
   fontWeight?: "bold";
   fontStyle?: "italic";
-  textDecoration?: "underline";
+  textDecoration?: TextDecoration;
 }
 
 interface Run {
@@ -39,13 +48,19 @@ interface Run {
   style: InlineStyle;
 }
 
-interface Paragraph {
+type BlockKind =
+  | { type: "paragraph" }
+  | { type: "heading"; level: 1 | 2 | 3 }
+  | { type: "listItem"; marker: string; depth: number };
+
+interface Block {
+  kind: BlockKind;
   runs: Run[];
 }
 
 type Token =
   | { type: "text"; value: string }
-  | { type: "open"; tag: string }
+  | { type: "open"; tag: string; raw: string }
   | { type: "close"; tag: string }
   | { type: "void"; tag: string };
 
@@ -53,16 +68,32 @@ type Token =
 // permits attributes (``<a href="...">``) without trying to parse them.
 const TAG_RE = /<\/?\s*([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?(\/)?\s*>/g;
 const VOID_TAGS = new Set(["br", "hr", "img"]);
+const HEADING_LEVELS: Record<string, 1 | 2 | 3> = { h1: 1, h2: 2, h3: 3 };
+
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+};
+
+// One pass, so a decoded ``&`` never starts another entity: ``&amp;lt;``
+// prints as ``&lt;``.
+const ENTITY_RE = /&(?:#(\d+)|#x([0-9a-fA-F]+)|([a-zA-Z]+));/g;
 
 function decodeEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, " ");
+  return s.replace(ENTITY_RE, (entity, decimal, hex, name) => {
+    if (decimal || hex) {
+      const codePoint = decimal
+        ? Number.parseInt(decimal, 10)
+        : Number.parseInt(hex, 16);
+      if (codePoint === 0xa0) return " ";
+      return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity;
+    }
+    return NAMED_ENTITIES[name.toLowerCase()] ?? entity;
+  });
 }
 
 /**
@@ -109,7 +140,7 @@ function tokenize(html: string): Token[] {
     } else if (raw.startsWith("</")) {
       tokens.push({ type: "close", tag });
     } else {
-      tokens.push({ type: "open", tag });
+      tokens.push({ type: "open", tag, raw });
     }
     cursor = TAG_RE.lastIndex;
   }
@@ -119,79 +150,210 @@ function tokenize(html: string): Token[] {
   return tokens;
 }
 
+function addDecoration(
+  current: TextDecoration | undefined,
+  added: "underline" | "line-through",
+): TextDecoration {
+  if (!current || current === added) return added;
+  return "underline line-through";
+}
+
 function applyTagStyle(tag: string, base: InlineStyle): InlineStyle {
   const next: InlineStyle = { ...base };
   if (tag === "strong" || tag === "b") next.fontWeight = "bold";
   else if (tag === "em" || tag === "i") next.fontStyle = "italic";
-  else if (tag === "u" || tag === "a") next.textDecoration = "underline";
+  else if (tag === "u" || tag === "a") {
+    next.textDecoration = addDecoration(base.textDecoration, "underline");
+  } else if (tag === "s" || tag === "strike" || tag === "del") {
+    next.textDecoration = addDecoration(base.textDecoration, "line-through");
+  }
   return next;
 }
 
-function parseHtml(html: string): Paragraph[] {
-  const tokens = tokenize(html);
-  const paragraphs: Paragraph[] = [];
-  let currentRuns: Run[] = [];
+/** Whether a list item is numbered: its own ``data-list`` wins over the
+ *  list's tag. Checklist items (``checked`` / ``unchecked``) print as
+ *  bullets. */
+function isOrderedItem(raw: string, listIsOrdered: boolean): boolean {
+  const dataList = /\bdata-list\s*=\s*["']?([a-z]+)/i.exec(raw)?.[1];
+  if (!dataList) return listIsOrdered;
+  return dataList.toLowerCase() === "ordered";
+}
+
+function indentOf(raw: string): number {
+  const indent = /\bql-indent-(\d+)\b/.exec(raw)?.[1];
+  return indent ? Number.parseInt(indent, 10) : 0;
+}
+
+class HtmlBlockParser {
+  readonly blocks: Block[] = [];
+  private runs: Run[] = [];
+  private kind: BlockKind = { type: "paragraph" };
   // Stack of inline styles. The bottom entry is the empty baseline; we
-  // push on inline opens and pop on closes. ``<p>`` is a block, not a
-  // style change, so it doesn't push.
-  const styleStack: InlineStyle[] = [{}];
+  // push on inline opens and pop on closes. Block tags don't push.
+  private readonly styleStack: InlineStyle[] = [{}];
+  // One entry per open list: whether its tag numbers its items.
+  private readonly lists: boolean[] = [];
+  // Item counter per nesting depth; deeper counters restart whenever a
+  // shallower item appears.
+  private counters: number[] = [];
 
-  function topStyle(): InlineStyle {
-    return styleStack[styleStack.length - 1];
+  private topStyle(): InlineStyle {
+    return this.styleStack[this.styleStack.length - 1];
   }
 
-  function flushParagraph() {
-    if (currentRuns.length > 0) {
-      paragraphs.push({ runs: currentRuns });
-      currentRuns = [];
+  private flush(nextKind: BlockKind = { type: "paragraph" }) {
+    if (this.runs.length > 0) {
+      this.blocks.push({ kind: this.kind, runs: this.runs });
+      this.runs = [];
+    }
+    this.kind = nextKind;
+  }
+
+  text(value: string) {
+    const decoded = softenLongTokens(decodeEntities(value));
+    if (decoded) this.runs.push({ text: decoded, style: this.topStyle() });
+  }
+
+  void(tag: string) {
+    // Other void tags (``<hr>``, ``<img>``) silently drop.
+    if (tag === "br") this.runs.push({ text: "\n", style: this.topStyle() });
+  }
+
+  open(tag: string, raw: string) {
+    if (tag === "p") return;
+    const headingLevel = HEADING_LEVELS[tag];
+    if (headingLevel) {
+      this.flush({ type: "heading", level: headingLevel });
+    } else if (tag === "ol" || tag === "ul") {
+      this.flush();
+      this.lists.push(tag === "ol");
+      this.counters.length = this.lists.length - 1;
+    } else if (tag === "li") {
+      this.openListItem(raw);
+    } else {
+      this.styleStack.push(applyTagStyle(tag, this.topStyle()));
     }
   }
 
-  for (const tok of tokens) {
-    if (tok.type === "text") {
-      const decoded = softenLongTokens(decodeEntities(tok.value));
-      if (decoded) currentRuns.push({ text: decoded, style: topStyle() });
-      continue;
+  private openListItem(raw: string) {
+    const listIsOrdered = this.lists[this.lists.length - 1] ?? false;
+    const depth = Math.max(this.lists.length - 1, 0) + indentOf(raw);
+    this.counters.length = depth + 1;
+    let marker = "•";
+    if (isOrderedItem(raw, listIsOrdered)) {
+      this.counters[depth] = (this.counters[depth] ?? 0) + 1;
+      marker = `${this.counters[depth]}.`;
     }
-    if (tok.type === "void") {
-      if (tok.tag === "br") {
-        currentRuns.push({ text: "\n", style: topStyle() });
-      }
-      // Other void tags (``<hr>``, ``<img>``) silently drop — see
-      // module docstring about extending tag coverage when needed.
-      continue;
-    }
-    if (tok.type === "open") {
-      if (tok.tag === "p") {
-        // Paragraph block: doesn't change style. Children render at
-        // the current style; ``</p>`` is what commits the runs.
-        continue;
-      }
-      styleStack.push(applyTagStyle(tok.tag, topStyle()));
-      continue;
-    }
-    // tok.type === "close"
-    if (tok.tag === "p") {
-      flushParagraph();
-      continue;
-    }
-    // Pop the matching style frame. We don't validate that the
-    // closing tag matches the open — Quill output is well-formed, so a
-    // mismatched ``</strong>`` against an open ``<em>`` would already
-    // be broken at the source.
-    if (styleStack.length > 1) styleStack.pop();
+    this.flush({ type: "listItem", marker, depth });
   }
 
-  // Trailing inline content not wrapped in a <p> gets emitted as one
-  // more paragraph.
-  flushParagraph();
+  close(tag: string) {
+    if (tag === "p" || tag === "li" || HEADING_LEVELS[tag]) {
+      this.flush();
+    } else if (tag === "ol" || tag === "ul") {
+      this.flush();
+      this.lists.pop();
+      if (this.lists.length === 0) this.counters = [];
+    } else if (this.styleStack.length > 1) {
+      // Pop the matching style frame. We don't validate that the
+      // closing tag matches the open — Quill output is well-formed, so a
+      // mismatched ``</strong>`` against an open ``<em>`` would already
+      // be broken at the source.
+      this.styleStack.pop();
+    }
+  }
 
-  return paragraphs;
+  /** Trailing inline content outside any block becomes one more block. */
+  finish(): Block[] {
+    this.flush();
+    return this.blocks;
+  }
+}
+
+function parseHtml(html: string): Block[] {
+  const parser = new HtmlBlockParser();
+  for (const tok of tokenize(html)) {
+    if (tok.type === "text") parser.text(tok.value);
+    else if (tok.type === "void") parser.void(tok.tag);
+    else if (tok.type === "open") parser.open(tok.tag, tok.raw);
+    else parser.close(tok.tag);
+  }
+  return parser.finish();
 }
 
 function styleIsEmpty(style: InlineStyle): boolean {
   return (
     !style.fontWeight && !style.fontStyle && !style.textDecoration
+  );
+}
+
+const HEADING_STYLES: Record<1 | 2 | 3, Style> = {
+  1: { fontSize: 14, fontWeight: "bold", marginBottom: 3 },
+  2: { fontSize: 12, fontWeight: "bold", marginBottom: 2 },
+  3: { fontSize: 11, fontWeight: "bold", marginBottom: 2 },
+};
+
+const LIST_INDENT_PER_LEVEL = 12;
+
+const blockStyle: Style = {
+  width: "100%",
+  alignSelf: "stretch",
+  flexShrink: 0,
+};
+
+function withStyle(base: Style | undefined, extra: Style): Style | Style[] {
+  return base ? [base, extra] : extra;
+}
+
+function Runs({ runs }: { runs: Run[] }) {
+  return (
+    <>
+      {runs.map((run, runIdx): ReactNode => {
+        if (styleIsEmpty(run.style)) {
+          return <Fragment key={runIdx}>{run.text}</Fragment>;
+        }
+        return (
+          <Text key={runIdx} style={run.style as Style}>
+            {run.text}
+          </Text>
+        );
+      })}
+    </>
+  );
+}
+
+function BlockView({ block, style }: { block: Block; style?: Style }) {
+  const { kind } = block;
+  if (kind.type === "listItem") {
+    // Marker and text sit side by side, so a wrapped item's second line
+    // lines up with its text rather than under the marker.
+    return (
+      <View
+        style={[
+          blockStyle,
+          {
+            flexDirection: "row",
+            paddingLeft: kind.depth * LIST_INDENT_PER_LEVEL,
+          },
+        ]}
+      >
+        <Text style={withStyle(style, { width: 14, flexShrink: 0 })}>
+          {`${kind.marker} `}
+        </Text>
+        <Text style={withStyle(style, { flexGrow: 1, flexShrink: 1 })}>
+          <Runs runs={block.runs} />
+        </Text>
+      </View>
+    );
+  }
+  const textStyle =
+    kind.type === "heading" ? withStyle(style, HEADING_STYLES[kind.level]) : style;
+  return (
+    <View style={blockStyle}>
+      <Text style={textStyle}>
+        <Runs runs={block.runs} />
+      </Text>
+    </View>
   );
 }
 
@@ -204,22 +366,22 @@ export interface PDFRichTextProps {
 
 export default function PDFRichText({ html, style }: PDFRichTextProps) {
   if (!html) return null;
-  const paragraphs = parseHtml(html);
-  if (paragraphs.length === 0) return null;
+  const blocks = parseHtml(html);
+  if (blocks.length === 0) return null;
 
   // Layout shape:
   //
   //   <View outerWrapper>             ← single, definite, stretched
-  //     <View paragraph 1>            ← per-paragraph block
+  //     <View block 1>                ← per-block (paragraph, heading, item)
   //       <Text>…runs…</Text>
   //     </View>
-  //     <View paragraph 2>
+  //     <View block 2>
   //       …
   //     </View>
   //   </View>
   //
   // Why an OUTER wrapper instead of returning a ``Fragment`` of
-  // paragraph Views directly: a Fragment makes its children become
+  // block Views directly: a Fragment makes its children become
   // direct siblings of the caller's container. When ``PDFRichText`` is
   // used inside ``PDFEntryLines``' ``<View styles.entrySection>`` and
   // emits *multiple* Views (e.g. the two-paragraph
@@ -228,40 +390,12 @@ export default function PDFRichText({ html, style }: PDFRichTextProps) {
   // instead of stretching them — visually the text wraps inside a
   // narrow left "column". Anchoring the whole rich-text output in one
   // explicitly stretched outer View prevents that collapse: the
-  // engine measures ONE box, stretches it, and the per-paragraph
+  // engine measures ONE box, stretches it, and the per-block
   // children inside inherit the full available width.
   return (
-    <View
-      style={{
-        width: "100%",
-        alignSelf: "stretch",
-        flexShrink: 0,
-      }}
-    >
-      {paragraphs.map((paragraph, paragraphIdx) => (
-        <View
-          key={paragraphIdx}
-          style={{
-            width: "100%",
-            alignSelf: "stretch",
-            flexShrink: 0,
-          }}
-        >
-          <Text style={style}>
-            {paragraph.runs.map((run, runIdx): ReactNode => {
-              if (styleIsEmpty(run.style)) {
-                return (
-                  <Fragment key={runIdx}>{run.text}</Fragment>
-                );
-              }
-              return (
-                <Text key={runIdx} style={run.style as Style}>
-                  {run.text}
-                </Text>
-              );
-            })}
-          </Text>
-        </View>
+    <View style={blockStyle}>
+      {blocks.map((block, blockIdx) => (
+        <BlockView key={blockIdx} block={block} style={style} />
       ))}
     </View>
   );

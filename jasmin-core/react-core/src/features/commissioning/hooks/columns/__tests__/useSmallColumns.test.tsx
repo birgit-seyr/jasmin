@@ -158,7 +158,7 @@ describe("useSellerColumn", () => {
     expect(screen.getByText("commissioning.supplier")).toBeInTheDocument();
   });
 
-  it.skip("hands back the same column on every render while the sellers stay the same", () => {
+  it("hands back the same column on every render while the sellers stay the same", () => {
     const { result, rerender } = renderHook(() => useSellerColumn());
     const first = result.current;
 

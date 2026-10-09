@@ -203,6 +203,13 @@ describe("DeliveryStationSelector options", () => {
     expect(stationSelect()).toHaveAccessibleName(PLACEHOLDER);
   });
 
+  it("takes its width and spacing from the stylesheet", () => {
+    renderPage({ day: "day-tue" });
+
+    expect(selectRoot()).toHaveClass("bold-select", "week-selector-select", "delivery-station-selector");
+    expect(selectRoot()).not.toHaveAttribute("style");
+  });
+
   it("shows the placeholder when the stations fail to load", async () => {
     api.stations.mockRejectedValue(Object.assign(new Error("Network Error"), { isAxiosError: true }));
     renderPage({ day: "day-tue", preserveSelection: true });
@@ -263,7 +270,7 @@ describe("DeliveryStationSelector picks", () => {
     await waitFor(() => expect(picked).toBe(HOF.id));
   });
 
-  it.skip("lets a kept station go when the next day serves none", async () => {
+  it("lets a kept station go when the next day serves none", async () => {
     const page = renderPage({ day: "day-tue", preserveSelection: true, initialStation: MARKT.id });
     await waitFor(() => expect(shownStation()).toBe("Markt"));
 

@@ -104,7 +104,7 @@ function usePackingScope({
   dayNumber: number | null;
   dayRecord: ShareDeliveryDayOption | undefined;
 }) {
-  const [selectedTour, setSelectedTour] = useState<number | "all">("all");
+  const [selectedTour, setSelectedTour] = useState<number | "all" | null>("all");
   const { daysOk, toursOk } = useShareContentGranularity({
     year,
     delivery_week: week ?? undefined,
@@ -117,10 +117,10 @@ function usePackingScope({
 
   // The tour picker offers only the day's tours, so the list asks for one of
   // them from the start: the first until another is picked, and the first
-  // again when the picked one isn't among the day's.
+  // again when the picked one isn't among the day's or none is picked.
   const effectiveTour = useMemo<number | undefined>(() => {
     if (!tourSelectorActive) return undefined;
-    return selectedTour !== "all" && selectedTour <= numberOfTours
+    return typeof selectedTour === "number" && selectedTour <= numberOfTours
       ? selectedTour
       : 1;
   }, [tourSelectorActive, selectedTour, numberOfTours]);

@@ -6,8 +6,9 @@ import BaseEntitySelector, { type SelectorOption } from "@shared/selectors/BaseE
 
 interface StorageSelectorProps {
   selectedStorage: string | null;
-  setSelectedStorage: (value: string) => void;
-  onStorageChange?: ((value: string) => void) | null;
+  /** Gets `null` once the list loads empty, so no stale storage stays picked. */
+  setSelectedStorage: (value: string | null) => void;
+  onStorageChange?: ((value: string | null) => void) | null;
   include_null_option?: boolean;
   preserveSelection?: boolean;
 }
@@ -23,8 +24,8 @@ const StorageSelector = ({
   const { storages, loading } = useStorages();
   const isMobile = useIsMobile();
 
-  const options = useMemo<SelectorOption<string>[]>(() => {
-    const opts: SelectorOption<string>[] = [];
+  const options = useMemo<SelectorOption<string | null>[]>(() => {
+    const opts: SelectorOption<string | null>[] = [];
     if (include_null_option) opts.push({ value: "none", label: "-" });
     storages.forEach((storage) =>
       opts.push({
@@ -36,7 +37,7 @@ const StorageSelector = ({
   }, [storages, include_null_option]);
 
   return (
-    <BaseEntitySelector<string>
+    <BaseEntitySelector<string | null>
       value={selectedStorage}
       onValueChange={setSelectedStorage}
       onChange={onStorageChange}
@@ -50,6 +51,7 @@ const StorageSelector = ({
       }
       autoSelectFirst
       preserveSelection={preserveSelection}
+      emptyValue={null}
     />
   );
 };

@@ -142,27 +142,36 @@ describe("useDeliveryDayColumns tours and stations", () => {
     expect(column.children?.[0].width).toBe("8em");
   });
 
-  it("gives a day without tours or stations no leaf for them", () => {
+  it("plans a day without tours or stations as a whole day", () => {
     for (const planningMode of ["tours", "stations"]) {
       const [fri] = build({
         planningMode,
         shareDeliveryDays: [friday],
         shareTypeVariations: [small],
       });
-      expect(fri.children?.[0].children).toEqual([]);
+      const [smallColumn] = fri.children ?? [];
+      expect(smallColumn.children).toBeUndefined();
+      expect(smallColumn.dataIndex).toBe("day_day-fri_variation_var-s");
+      expect(smallColumn.title).toBe("commissioning.S");
+      expect(smallColumn.inputType).toBe("positive_decimal2");
     }
   });
 
-  it.skip("builds a tour-planning week holding a day whose stations carry no tour number", () => {
-    const columns = build({ planningMode: "tours" });
+  it("builds a tour-planning week holding a day whose stations carry no tour number", () => {
+    for (const used_tours of [null, []]) {
+      const columns = build({
+        planningMode: "tours",
+        shareDeliveryDays: [tuesday, { ...friday, used_tours } as typeof friday],
+      });
 
-    const fri = findColumn(columns, "day_day-fri");
-    expect(
-      (fri.children ?? []).slice(0, 2).map((column) => column.children),
-    ).toEqual([[], []]);
-    expect(
-      findColumn(columns, "day_day-tue_variation_var-l").children,
-    ).toHaveLength(2);
+      const [smallColumn, largeColumn] = findColumn(columns, "day_day-fri").children ?? [];
+      expect(smallColumn.children).toBeUndefined();
+      expect(largeColumn.children).toBeUndefined();
+      expect(largeColumn.className).toBe("column-variation-start");
+      expect(
+        findColumn(columns, "day_day-tue_variation_var-l").children,
+      ).toHaveLength(2);
+    }
   });
 
   it("starts the first tour of a further variation a new variation", () => {
@@ -218,7 +227,10 @@ describe("useDeliveryDayColumns days together", () => {
     expect(tue.title).toBe("Di");
     expect((tue.children ?? []).map((c) => c.title)).toEqual(["T1", "T3"]);
     expect(tue.children?.[0].className).toBe("column-group-start");
-    expect(first.children?.[1].children).toEqual([]);
+    // Friday runs no tour, so it is planned as a whole day.
+    expect(first.children?.[1].children).toBeUndefined();
+    expect(first.children?.[1].title).toBe("Fr");
+    expect(first.children?.[1].dataIndex).toBe("day_day-fri_variation_var-s");
   });
 
   it("splits each day into its stations", () => {
@@ -291,7 +303,7 @@ describe("useDeliveryDayColumns amount cells", () => {
     const cell = renderCell(column, 0, carrotRow).firstElementChild as HTMLElement;
 
     expect(cell.textContent).toBe("");
-    expect(cell.style.backgroundColor).toBe("var(--color-highlight)");
+    expect(cell).toHaveClass("planning-variation-cell-highlight");
   });
 
   it("does not highlight a filled cell of a forecast variation", () => {
@@ -303,7 +315,8 @@ describe("useDeliveryDayColumns amount cells", () => {
     const cell = renderCell(column, 0.75, carrotRow).firstElementChild as HTMLElement;
 
     expect(cell.textContent).toBe("0,75");
-    expect(cell.style.backgroundColor).toBe("transparent");
+    expect(cell).toHaveClass("planning-variation-cell");
+    expect(cell).not.toHaveClass("planning-variation-cell-highlight");
   });
 
   it("does not highlight a variation the forecast leaves out", () => {
@@ -337,7 +350,7 @@ describe("useDeliveryDayColumns amount cells", () => {
     );
 
     const cell = renderCell(column, null, carrotRow).firstElementChild as HTMLElement;
-    expect(cell.style.backgroundColor).toBe("var(--color-highlight)");
+    expect(cell).toHaveClass("planning-variation-cell-highlight");
   });
 });
 
@@ -367,7 +380,7 @@ describe("useDeliveryDayColumns day totals", () => {
     const column = planned({ shareTypeVariationAmountsSummary: subscriberCounts });
 
     // 13 × 0.50 + 2 × 0.75
-    expect(cellText(column, 12, carrotRow)).toBe("8");
+    expect(cellText(column, 12, carrotRow)).toBe("8,00");
   });
 
   it("totals the day per tour in tour planning", () => {
@@ -377,7 +390,7 @@ describe("useDeliveryDayColumns day totals", () => {
     });
 
     // 10 × 0.5 + 4 × 0.25
-    expect(cellText(column, 12, carrotRow)).toBe("6");
+    expect(cellText(column, 12, carrotRow)).toBe("6,00");
   });
 
   it("totals the day per station in station planning", () => {
@@ -387,7 +400,7 @@ describe("useDeliveryDayColumns day totals", () => {
     });
 
     // 8 × 0.5 + 5 × 0
-    expect(cellText(column, 12, carrotRow)).toBe("4");
+    expect(cellText(column, 12, carrotRow)).toBe("4,00");
   });
 
   it("leaves the total blank when nothing is planned", () => {
@@ -399,18 +412,43 @@ describe("useDeliveryDayColumns day totals", () => {
   it("shows the saved total without subscriber counts", () => {
     const column = planned();
 
-    expect(cellText(column, 1200, carrotRow)).toBe("1.200");
+    expect(cellText(column, 1200, carrotRow)).toBe("1.200,00");
     expect(cellText(column, null, carrotRow)).toBe("");
     expect(cellText(column, "n/a", carrotRow)).toBe("");
   });
 
-  it.skip("shows a kilo total at the unit's precision", () => {
+  it("shows a kilo total at the unit's precision", () => {
     const column = planned({ shareTypeVariationAmountsSummary: subscriberCounts });
 
     // 13 × 0.5 kg = 6.5 kg
     expect(
       cellText(column, 0, { key: "r", unit: "KG", [cellKey("var-s")]: 0.5 }),
     ).toBe("6,50");
+  });
+
+  it("shows a piece total at one decimal", () => {
+    const column = planned({ shareTypeVariationAmountsSummary: subscriberCounts });
+
+    // 13 × 2 pieces
+    expect(
+      cellText(column, 0, { key: "r", unit: "PCS", [cellKey("var-s")]: 2 }),
+    ).toBe("26,0");
+  });
+
+  it("totals a whole-day planned day in tour planning", () => {
+    const column = findColumn(
+      build({
+        planningMode: "tours",
+        shareDeliveryDays: [friday],
+        shareTypeVariationAmountsSummary: { "day_day-fri_variation_var-s": "6" },
+      }),
+      "day_day-fri_planned_amount",
+    );
+
+    // 6 × 0.5 kg
+    expect(
+      cellText(column, 0, { key: "r", unit: "KG", "day_day-fri_variation_var-s": 0.5 }),
+    ).toBe("3,00");
   });
 
   it("shows the harvested amount as the row carries it", () => {

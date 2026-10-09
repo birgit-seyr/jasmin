@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useCommissioningShareTypeVariationsList } from "@shared/api/generated/commissioning/commissioning";
 import type { ShareTypeVariation, CommissioningShareTypeVariationsListParams } from "@shared/api/generated/models";
 import { toOptions, type Option } from "@hooks/internal/toOptions";
@@ -10,7 +11,10 @@ export const useShareTypeVariations = (params: CommissioningShareTypeVariationsL
     { query: { enabled: params !== null } },
   );
 
-  const shareTypeVariations: ShareTypeVariationOption[] = toOptions(data, (stv) => stv.size!);
+  const shareTypeVariations: ShareTypeVariationOption[] = useMemo(
+    () => toOptions(data, (stv) => stv.size!),
+    [data],
+  );
 
   return {
     shareTypeVariations,

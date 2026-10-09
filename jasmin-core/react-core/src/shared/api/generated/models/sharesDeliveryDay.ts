@@ -23,7 +23,8 @@ create / update path (no list parent, or a bulk-batch failure) falls
 through to the per-instance check — identical result. */
   readonly can_be_deleted?: boolean;
   readonly delivery_stations?: readonly _DeliveryStationEntry[];
-  readonly used_tours?: readonly number[];
+  /** @nullable */
+  readonly used_tours?: readonly number[] | null;
   valid_from: string;
   /** @nullable */
   valid_until?: string | null;

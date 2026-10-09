@@ -56,8 +56,9 @@ const DeliveryStationDaySelector = ({
       options={options}
       loading={loading}
       placeholder={t("placeholder.delivery_station_day_selector")}
-      style={{ width: "18em" }}
+      className="bold-select week-selector-select delivery-station-day-selector"
       preserveSelection={preserveSelection}
+      emptyValue={null}
     />
   );
 };

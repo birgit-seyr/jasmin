@@ -144,7 +144,7 @@ describe("usePackingBaseColumns columns", () => {
     expect(column(baseColumns, "unit").hidden).toBeUndefined();
   });
 
-  it.skip("hands back the same columns on every render while the articles stay the same", () => {
+  it("hands back the same columns on every render while the articles stay the same", () => {
     const { result, rerender } = renderHook(() => usePackingBaseColumns());
     const first = result.current.baseColumns;
 

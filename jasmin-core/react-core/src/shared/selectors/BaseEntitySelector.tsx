@@ -44,6 +44,13 @@ export interface BaseEntitySelectorProps<V> {
   autoSelectFirst?: boolean;
   /** Keep the current selection if it still exists in options. */
   preserveSelection?: boolean;
+  /**
+   * With `preserveSelection`: the value the pick becomes once the list has
+   * loaded empty, so no pick from an earlier list stays shown. Left unset, an
+   * empty list keeps the pick — the only choice for a value type without an
+   * empty value.
+   */
+  emptyValue?: V;
 }
 
 const matchesOptionLabel = (
@@ -75,10 +82,17 @@ export default function BaseEntitySelector<V extends string | number | null>({
   optionFilterProp,
   autoSelectFirst = false,
   preserveSelection = false,
+  emptyValue,
 }: BaseEntitySelectorProps<V>) {
   // Auto-select / preserve-selection logic
   useEffect(() => {
-    if (loading || !options.length) return;
+    if (loading) return;
+    if (!options.length) {
+      if (preserveSelection && emptyValue !== undefined && value !== emptyValue) {
+        onValueChange(emptyValue);
+      }
+      return;
+    }
     if (!autoSelectFirst && !preserveSelection) return;
 
     const currentExists = options.some((o) => o.value === value);
@@ -94,6 +108,7 @@ export default function BaseEntitySelector<V extends string | number | null>({
     onValueChange,
     autoSelectFirst,
     preserveSelection,
+    emptyValue,
   ]);
 
   const handleChange = useCallback(

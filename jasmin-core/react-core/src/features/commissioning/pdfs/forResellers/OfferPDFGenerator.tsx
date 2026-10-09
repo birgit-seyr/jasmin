@@ -62,10 +62,11 @@ export default function OfferPDFGenerator({
   );
 
   const error = useMemo(() => {
-    if (queryError) return queryError.message || "Failed to load offer data";
-    if (offers && offers.length === 0) return "No offers found";
+    if (queryError)
+      return queryError.message || t("commissioning.failed_to_load_offer");
+    if (offers && offers.length === 0) return t("commissioning.no_offers_for_week");
     return null;
-  }, [queryError, offers]);
+  }, [queryError, offers, t]);
 
   const pdfData = useMemo(() => {
     if (!offers || offers.length === 0) return null;

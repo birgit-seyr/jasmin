@@ -11,11 +11,8 @@ import {
 import type { ShareArticleOption } from "./useShareArticles";
 import type { ShareTypeVariationOption } from "./useShareTypeVariations";
 import type { DeliveryDay } from "./columns/useDeliveryDayColumns";
-import {
-  dayVariationKey,
-  parseDayVariationKey,
-  planningModeTier,
-} from "./columns/columnKeys";
+import { kgPerRowUnit } from "../utils/planningRow";
+import { dayCellKeys } from "./columns/columnKeys";
 
 interface UsePlanningSummaryDataParams {
   shareDeliveryDays: DeliveryDay[];
@@ -52,33 +49,7 @@ export function computePlannedAmountForDay(
 ): number {
   let total = 0;
   for (const variation of shareTypeVariations) {
-    if (planningMode === "tours") {
-      deliveryDay.used_tours?.forEach((tourNumber: number) => {
-        const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          tour: tourNumber,
-        });
-        const count = Number(shareTypeVariationAmountsSummary[key]) || 0;
-        const perShare = Number(record[key]) || 0;
-        total += count * perShare;
-      });
-    } else if (planningMode === "stations") {
-      deliveryDay.delivery_stations?.forEach((station) => {
-        const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          station: station.id,
-        });
-        const count = Number(shareTypeVariationAmountsSummary[key]) || 0;
-        const perShare = Number(record[key]) || 0;
-        total += count * perShare;
-      });
-    } else {
-      const key = dayVariationKey({
-        dayId: deliveryDay.id!,
-        variationId: variation.id!,
-      });
+    for (const key of dayCellKeys(deliveryDay, variation.id!, planningMode)) {
       const count = Number(shareTypeVariationAmountsSummary[key]) || 0;
       const perShare = Number(record[key]) || 0;
       total += count * perShare;
@@ -98,111 +69,55 @@ export function usePlanningSummaryData({
   currencySymbol,
   historicalAverages,
 }: UsePlanningSummaryDataParams) {
+  // The (day, variation) cells the active planning mode edits, in column
+  // order, each with its variation — the cells every summary row fills.
+  const activeCells = useMemo(
+    () =>
+      shareDeliveryDays.flatMap((deliveryDay) =>
+        shareTypeVariations.flatMap((variation: ShareTypeVariationOption) =>
+          dayCellKeys(deliveryDay, variation.id!, planningMode).map((key) => ({
+            key,
+            variation,
+          })),
+        ),
+      ),
+    [shareDeliveryDays, shareTypeVariations, planningMode],
+  );
+
+  const summaryColumns = useMemo(
+    () => activeCells.map(({ key }) => key),
+    [activeCells],
+  );
+
   const shareTypeVariationAmountsSummary = useMemo(() => {
     if (!shareTypeVariationAmounts) {
       return {};
     }
 
     const summary: Record<string, string> = {};
-
-    shareDeliveryDays.forEach((deliveryDay) => {
-      shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
-        if (planningMode === "basic") {
-          const key = dayVariationKey({
-            dayId: deliveryDay.id!,
-            variationId: variation.id!,
-          });
-          summary[key] = String(
-            Math.round((shareTypeVariationAmounts[key] as number) || 0),
-          );
-        } else if (planningMode === "tours") {
-          deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          tour: tourNumber,
-        });
-            summary[key] = String(
-              Math.round((shareTypeVariationAmounts[key] as number) || 0),
-            );
-          });
-        } else if (planningMode === "stations") {
-          deliveryDay.delivery_stations?.forEach((station) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          station: station.id,
-        });
-            summary[key] = String(
-              Math.round((shareTypeVariationAmounts[key] as number) || 0),
-            );
-          });
-        }
-      });
+    summaryColumns.forEach((key) => {
+      summary[key] = String(
+        Math.round((shareTypeVariationAmounts[key] as number) || 0),
+      );
     });
-
     return summary;
-  }, [
-    shareTypeVariationAmounts,
-    shareDeliveryDays,
-    shareTypeVariations,
-    planningMode,
-  ]);
+  }, [shareTypeVariationAmounts, summaryColumns]);
 
   const calculateDayVariationSums = useCallback(
     (tableData: TableRecord[]) => {
       const sums: Record<string, number> = {};
-      const dayVariationKeys = new Set<string>();
-      const activeTier = planningModeTier(planningMode);
 
-      tableData.forEach((item) => {
-        Object.keys(item).forEach((key) => {
-          // Only unprefixed cells for the ACTIVE mode's tier. Parsing (instead
-          // of substring scans) keeps the `prefix === ""` guard explicit:
-          // planning rows also carry `backup_day_…_variation_…` fields (they
-          // seed the BackupModal) which must NOT count toward these totals.
-          const parsed = parseDayVariationKey(key);
-          if (parsed?.prefix === "" && parsed.tier === activeTier) {
-            dayVariationKeys.add(key);
-          }
-        });
-      });
-
-      dayVariationKeys.forEach((dayVariationKey) => {
+      // Only the active mode's own cells that some row carries: a row also
+      // carries the other tiers and the `backup_…` cells that seed the
+      // BackupModal.
+      summaryColumns.forEach((dayVariationKey) => {
+        if (!tableData.some((item) => dayVariationKey in item)) return;
         let sum = 0;
 
         tableData.forEach((item) => {
           const amount = parseFloat(String(item[dayVariationKey])) || 0;
           if (amount === 0) return;
-
-          if (item.unit === "KG") {
-            sum += amount;
-          } else {
-            const rowOverride = parseFloat(String(item.kg_per_piece)) || 0;
-            let conversionFactor = rowOverride;
-
-            if (!conversionFactor) {
-              if (item.unit === "PCS") {
-                if (item.size === "S")
-                  conversionFactor = item.kg_per_piece_S as number;
-                else if (item.size === "M")
-                  conversionFactor = item.kg_per_piece_M as number;
-                else if (item.size === "L")
-                  conversionFactor = item.kg_per_piece_L as number;
-              } else if (item.unit === "BUNCH") {
-                if (item.size === "S")
-                  conversionFactor = item.kg_per_bunch_S as number;
-                else if (item.size === "M")
-                  conversionFactor = item.kg_per_bunch_M as number;
-                else if (item.size === "L")
-                  conversionFactor = item.kg_per_bunch_L as number;
-              }
-            }
-
-            if (conversionFactor) {
-              sum += amount * conversionFactor;
-            }
-          }
+          sum += amount * kgPerRowUnit(item);
         });
 
         sums[dayVariationKey] = sum;
@@ -210,14 +125,12 @@ export function usePlanningSummaryData({
 
       return sums;
     },
-    [planningMode],
+    [summaryColumns],
   );
 
   const calculateDayVariationCounts = useCallback(
     (tableData: TableRecord[]) => {
       const totals: Record<string, number> = {};
-      const dayVariationKeys = new Set<string>();
-      const activeTier = planningModeTier(planningMode);
 
       const priceMap = new Map(
         vegetables_and_fruits?.map((article: ShareArticleOption) => [
@@ -226,20 +139,11 @@ export function usePlanningSummaryData({
         ]) || [],
       );
 
-      tableData.forEach((item) => {
-        Object.keys(item).forEach((key) => {
-          // Only unprefixed cells for the ACTIVE mode's tier. Parsing (instead
-          // of substring scans) keeps the `prefix === ""` guard explicit:
-          // planning rows also carry `backup_day_…_variation_…` fields (they
-          // seed the BackupModal) which must NOT count toward these totals.
-          const parsed = parseDayVariationKey(key);
-          if (parsed?.prefix === "" && parsed.tier === activeTier) {
-            dayVariationKeys.add(key);
-          }
-        });
-      });
-
-      dayVariationKeys.forEach((dayVariationKey) => {
+      // Only the active mode's own cells that some row carries: a row also
+      // carries the other tiers and the `backup_…` cells that seed the
+      // BackupModal.
+      summaryColumns.forEach((dayVariationKey) => {
+        if (!tableData.some((item) => dayVariationKey in item)) return;
         let total = 0;
 
         tableData.forEach((item) => {
@@ -288,7 +192,7 @@ export function usePlanningSummaryData({
 
       return totals;
     },
-    [planningMode, vegetables_and_fruits],
+    [summaryColumns, vegetables_and_fruits],
   );
 
   const dayVariationSums = useMemo(() => {
@@ -301,117 +205,26 @@ export function usePlanningSummaryData({
 
   const averageWeightSubData = useMemo(() => {
     const subData: Record<string, number> = {};
-    shareDeliveryDays.forEach((deliveryDay) => {
-      shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
-        const avgWeight = parseFloat(
-          String((variation as unknown as Record<string, unknown>).average_weight ?? ""),
-        );
-        if (!avgWeight) return;
-        if (planningMode === "basic") {
-          const key = dayVariationKey({
-            dayId: deliveryDay.id!,
-            variationId: variation.id!,
-          });
-          subData[key] = avgWeight;
-        } else if (planningMode === "tours") {
-          deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          tour: tourNumber,
-        });
-            subData[key] = avgWeight;
-          });
-        } else if (planningMode === "stations") {
-          deliveryDay.delivery_stations?.forEach((station) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          station: station.id,
-        });
-            subData[key] = avgWeight;
-          });
-        }
-      });
+    activeCells.forEach(({ key, variation }) => {
+      const avgWeight = parseFloat(
+        String((variation as unknown as Record<string, unknown>).average_weight ?? ""),
+      );
+      if (avgWeight) subData[key] = avgWeight;
     });
     return subData;
-  }, [shareDeliveryDays, shareTypeVariations, planningMode]);
+  }, [activeCells]);
 
   const priceSumArticlesSubData = useMemo(() => {
     const subData: Record<string, number> = {};
-    shareDeliveryDays.forEach((deliveryDay) => {
-      shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
-        const priceSumArticles = parseFloat(
-          String((variation as unknown as Record<string, unknown>).active_price_sum_articles ?? ""),
-        );
-        if (!priceSumArticles) return;
-        if (planningMode === "basic") {
-          const key = dayVariationKey({
-            dayId: deliveryDay.id!,
-            variationId: variation.id!,
-          });
-          subData[key] = priceSumArticles;
-        } else if (planningMode === "tours") {
-          deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          tour: tourNumber,
-        });
-            subData[key] = priceSumArticles;
-          });
-        } else if (planningMode === "stations") {
-          deliveryDay.delivery_stations?.forEach((station) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          station: station.id,
-        });
-            subData[key] = priceSumArticles;
-          });
-        }
-      });
+    activeCells.forEach(({ key, variation }) => {
+      const priceSumArticles = parseFloat(
+        String((variation as unknown as Record<string, unknown>).active_price_sum_articles ?? ""),
+      );
+      if (priceSumArticles) subData[key] = priceSumArticles;
     });
     return subData;
-  }, [shareDeliveryDays, shareTypeVariations, planningMode]);
+  }, [activeCells]);
 
-  const summaryColumns = useMemo(() => {
-    const dayVariationKeys: string[] = [];
-
-    shareDeliveryDays.forEach((deliveryDay) => {
-      shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
-        if (planningMode === "basic") {
-          const key = dayVariationKey({
-            dayId: deliveryDay.id!,
-            variationId: variation.id!,
-          });
-          if (!key.includes("_tour_") && !key.includes("_station_")) {
-            dayVariationKeys.push(key);
-          }
-        } else if (planningMode === "tours") {
-          deliveryDay.used_tours?.forEach((tourNumber: number) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          tour: tourNumber,
-        });
-            dayVariationKeys.push(key);
-          });
-        } else if (planningMode === "stations") {
-          deliveryDay.delivery_stations?.forEach((station) => {
-            const key = dayVariationKey({
-          dayId: deliveryDay.id!,
-          variationId: variation.id!,
-          station: station.id,
-        });
-            dayVariationKeys.push(key);
-          });
-        }
-      });
-    });
-
-    return dayVariationKeys;
-  }, [shareDeliveryDays, shareTypeVariations, planningMode]);
 
   // Ready-to-render summary rows — assembled here (not in the page) so the two
   // amount rows, the price row and the historical row share one definition and

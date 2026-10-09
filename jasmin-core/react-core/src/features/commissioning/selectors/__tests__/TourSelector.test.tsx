@@ -12,7 +12,10 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SharesDeliveryDay } from "@shared/api/generated/models";
+import type {
+  CommissioningSharesDeliveryDaysListParams,
+  SharesDeliveryDay,
+} from "@shared/api/generated/models";
 import { flushMicrotasks } from "@/test/profileRenders";
 
 // A `t` that shows the tour number, so the tours tell apart.
@@ -75,6 +78,7 @@ const ALL_TOURS = "commissioning.all_tours";
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 let picked: number | "all" | null = null;
+let pageRenders = 0;
 const onTourChange = vi.fn();
 
 type PageProps = {
@@ -84,12 +88,13 @@ type PageProps = {
   preserveSelection?: boolean;
   year?: number | null;
   week?: number | null;
-  filters?: Record<string, unknown>;
+  filters?: CommissioningSharesDeliveryDaysListParams;
 };
 
 function Page({ day = null, initialTour = null, includeAll, preserveSelection, year, week, filters }: PageProps) {
   const [tour, setTour] = useState<number | "all" | null>(initialTour);
   picked = tour;
+  pageRenders += 1;
   return (
     <TourSelector
       selectedTour={tour}
@@ -115,7 +120,10 @@ function renderPage(props: PageProps) {
     </QueryClientProvider>
   );
   const view = render(tree(props));
-  return { showDay: (day: string | null | undefined) => view.rerender(tree({ ...props, day })) };
+  return {
+    showDay: (day: string | null | undefined) => view.rerender(tree({ ...props, day })),
+    rerenderWith: (next: Partial<PageProps>) => view.rerender(tree({ ...props, ...next })),
+  };
 }
 
 const tourSelect = () => screen.getByRole("combobox");
@@ -144,6 +152,7 @@ const settle = () => act(() => flushMicrotasks());
 
 beforeEach(() => {
   picked = null;
+  pageRenders = 0;
   onTourChange.mockReset();
   api.deliveryDays
     .mockReset()
@@ -211,11 +220,18 @@ describe("TourSelector options", () => {
     expect(picked).toBeNull();
   });
 
-  it.skip("names the select for screen readers", async () => {
+  it("names the select for screen readers", async () => {
     renderPage({ day: TUESDAY_THREE_TOURS.id });
     await waitFor(() => expect(picked).toBe(1));
 
     expect(tourSelect()).toHaveAccessibleName();
+  });
+
+  it("takes its width and spacing from the stylesheet", () => {
+    renderPage({ day: TUESDAY_THREE_TOURS.id });
+
+    expect(selectRoot()).toHaveClass("bold-select", "week-selector-select", "tour-selector");
+    expect(selectRoot()).not.toHaveAttribute("style");
   });
 });
 
@@ -239,6 +255,33 @@ describe("TourSelector fetch scope", () => {
 
     await waitFor(() => expect(api.deliveryDays).toHaveBeenCalledWith({ get_delivery_stations: true }));
     expect(api.deliveryDays).not.toHaveBeenCalledWith({ active_at_date: "2026-10-10" });
+  });
+
+  it("asks once and renders no more while the page re-renders with the same filters", async () => {
+    const filters = { need_info_on_tours: true };
+    const page = renderPage({ day: TUESDAY_THREE_TOURS.id, filters });
+    await waitFor(() => expect(picked).toBe(1));
+    await settle();
+    const rendersSettled = pageRenders;
+
+    page.rerenderWith({ filters });
+    page.rerenderWith({ filters });
+    await settle();
+
+    expect(api.deliveryDays).toHaveBeenCalledTimes(1);
+    // The two re-renders the page asked for, and none the selector caused.
+    expect(pageRenders).toBe(rendersSettled + 2);
+    expect(picked).toBe(1);
+  });
+
+  it("asks again when the filters change", async () => {
+    const page = renderPage({ day: TUESDAY_THREE_TOURS.id, filters: { need_info_on_tours: true } });
+    await waitFor(() => expect(api.deliveryDays).toHaveBeenCalledTimes(1));
+
+    page.rerenderWith({ filters: { future: true } });
+
+    await waitFor(() => expect(api.deliveryDays).toHaveBeenLastCalledWith({ future: true }));
+    expect(api.deliveryDays).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -286,6 +329,31 @@ describe("TourSelector keeping the pick", () => {
     await settle();
 
     expect(picked).toBe(3);
+  });
+
+  it("drops a kept tour when the next day isn't in the list", async () => {
+    const page = renderPage({ day: TUESDAY_THREE_TOURS.id });
+    await waitFor(() => expect(picked).toBe(1));
+    await chooseTour(`${TOUR} 3`);
+
+    page.showDay("day-gone");
+
+    await waitFor(() => expect(picked).toBeNull());
+    expect(tourSelect()).toBeDisabled();
+    expect(onTourChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the tour while no day is chosen and checks it once one is", async () => {
+    const page = renderPage({ day: TUESDAY_THREE_TOURS.id });
+    await waitFor(() => expect(picked).toBe(1));
+    await chooseTour(`${TOUR} 3`);
+
+    page.showDay(null);
+    await settle();
+    expect(picked).toBe(3);
+
+    page.showDay(FRIDAY_TWO_TOURS.id);
+    await waitFor(() => expect(picked).toBe(1));
   });
 
   it("without preserving, keeps an existing pick even when the day doesn't run it", async () => {

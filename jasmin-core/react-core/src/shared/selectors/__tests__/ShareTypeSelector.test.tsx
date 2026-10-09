@@ -74,3 +74,51 @@ describe("ShareTypeSelector — preserveSelection default", () => {
     );
   });
 });
+
+describe("ShareTypeSelector — an emptied list", () => {
+  it("drops the pick once the list loads empty", async () => {
+    mockUseShareTypes.mockReturnValue({ shareTypes: [], loading: false });
+    const setSelectedShareType = vi.fn();
+
+    render(
+      <ShareTypeSelector
+        selectedShareType="honey"
+        setSelectedShareType={setSelectedShareType}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(setSelectedShareType).toHaveBeenCalledWith(null),
+    );
+  });
+
+  it("keeps the pick while the list is still loading", async () => {
+    mockUseShareTypes.mockReturnValue({ shareTypes: [], loading: true });
+    const setSelectedShareType = vi.fn();
+
+    render(
+      <ShareTypeSelector
+        selectedShareType="honey"
+        setSelectedShareType={setSelectedShareType}
+      />,
+    );
+
+    await Promise.resolve();
+    expect(setSelectedShareType).not.toHaveBeenCalled();
+  });
+
+  it("leaves an empty pick alone on an empty list", async () => {
+    mockUseShareTypes.mockReturnValue({ shareTypes: [], loading: false });
+    const setSelectedShareType = vi.fn();
+
+    render(
+      <ShareTypeSelector
+        selectedShareType={null}
+        setSelectedShareType={setSelectedShareType}
+      />,
+    );
+
+    await Promise.resolve();
+    expect(setSelectedShareType).not.toHaveBeenCalled();
+  });
+});

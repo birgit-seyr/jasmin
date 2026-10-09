@@ -13,6 +13,7 @@ from apps.commissioning.services.share_content_service import ShareContentServic
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     DeliveryStationFactory,
+    ForecastFactory,
     ShareArticleFactory,
     ShareContentFactory,
     ShareFactory,
@@ -679,6 +680,46 @@ class TestGetShareContentAsFrontendData:
         svc = ShareContentService()
         result = svc.get_share_content_as_frontend_data([])
         assert result == []
+
+    @patch(
+        "apps.commissioning.services.share_content_frontend.StockService.get_theoretical_current_stock",
+        return_value={},
+    )
+    def test_each_unit_row_carries_only_its_own_forecast(self, _mock_stock, tenant):
+        # A forecast belongs to exactly one (article, unit, size): with a KG
+        # and a PCS forecast for the same article, the KG row shows the KG
+        # amount and the PCS row the PCS amount, never the other's.
+        variation = ShareTypeVariationFactory()
+        delivery_day = SharesDeliveryDayFactory(day_number=2)
+        station_day = DeliveryStationDayFactory(delivery_day=delivery_day)
+        share = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=delivery_day,
+            share_type_variation=variation,
+        )
+        article = ShareArticleFactory()
+        ForecastFactory(share_article=article, unit="KG", size="M", amount=40)
+        ForecastFactory(share_article=article, unit="PCS", size="M", amount=120)
+        contents = [
+            ShareContentFactory(
+                share=share,
+                share_article=article,
+                delivery_station=station_day.delivery_station,
+                amount=Decimal("1"),
+                unit=unit,
+                size="M",
+            )
+            for unit in ("KG", "PCS")
+        ]
+
+        result = ShareContentService().get_share_content_as_frontend_data(contents)
+
+        by_unit = {row["unit"]: row for row in result}
+        assert by_unit["KG"]["forecast_unit"] == "KG"
+        assert by_unit["KG"]["forecast_available_amount"] == Decimal("40")
+        assert by_unit["PCS"]["forecast_unit"] == "PCS"
+        assert by_unit["PCS"]["forecast_available_amount"] == Decimal("120")
 
 
 # ---------------------------------------------------------------------------

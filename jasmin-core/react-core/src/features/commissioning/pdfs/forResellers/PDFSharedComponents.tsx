@@ -79,7 +79,9 @@ export function PDFResellerInfo({
       <Text style={styles.label}>
         {resellerInfo.reseller_zip} {resellerInfo.reseller_city}
       </Text>
-     
+      {resellerInfo.reseller_country && (
+        <Text style={styles.label}>{resellerInfo.reseller_country}</Text>
+      )}
       {resellerInfo.reseller_uid && (
         <Text style={styles.label}>UID: {resellerInfo.reseller_uid}</Text>
       )}

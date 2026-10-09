@@ -96,9 +96,13 @@ const build = (overrides: Partial<Args> = {}): Column[] =>
 const column = (id: string, overrides: Partial<Args> = {}) =>
   findColumn(build(overrides), id);
 
+/** A cell's outermost element. */
+const cellElement = (col: Column, value: unknown, record: TableRecord) =>
+  renderCell(col, value, record).firstElementChild as HTMLElement;
+
 /** The inline style of a cell's outermost element. */
 const cellStyle = (col: Column, value: unknown, record: TableRecord) =>
-  (renderCell(col, value, record).firstElementChild as HTMLElement).style;
+  cellElement(col, value, record).style;
 
 beforeEach(() => {
   tenantState.settings = {};
@@ -288,12 +292,12 @@ describe("usePlanningHarvestSharesColumns cells", () => {
   it("shows the weight per piece in the farm's format, blank without one", () => {
     const col = column("kg_per_piece");
 
-    expect(cellText(col, "1.5", plainRow)).toBe("1,50");
+    expect(cellText(col, "1.5", plainRow)).toBe("1,500");
     expect(cellText(col, null, forecastRow)).toBe("");
     expect(cellText(col, undefined, forecastRow)).toBe("");
   });
 
-  it.skip("shows the weight per piece at the three decimals it is entered in", () => {
+  it("shows the weight per piece at the three decimals it is entered in", () => {
     expect(cellText(column("kg_per_piece"), "0.125", plainRow)).toBe("0,125");
   });
 
@@ -305,13 +309,23 @@ describe("usePlanningHarvestSharesColumns cells", () => {
     expect(cellText(col, null, plainRow)).toBe("");
   });
 
-  it("shows the forecast amount as a whole number in the farm's format", () => {
+  it("shows the forecast amount in the farm's format", () => {
     const col = column("forecast_available_amount");
 
-    expect(cellText(col, undefined, forecastRow)).toBe("40");
+    expect(cellText(col, undefined, forecastRow)).toBe("40,00");
     expect(
       cellText(col, undefined, { ...forecastRow, forecast_available_amount: "1200.00" }),
-    ).toBe("1.200");
+    ).toBe("1.200,00");
+  });
+
+  it("shows the forecast at the precision of the forecast's unit", () => {
+    expect(
+      cellText(column("forecast_available_amount"), undefined, {
+        ...forecastRow,
+        forecast_available_amount: "25",
+        forecast_unit: "PCS",
+      }),
+    ).toBe("25,0");
   });
 
   it("says enough is available for a forecast without an amount", () => {
@@ -326,7 +340,7 @@ describe("usePlanningHarvestSharesColumns cells", () => {
     expect(cellText(column("forecast_available_amount"), undefined, plainRow)).toBe("");
   });
 
-  it.skip("shows a kilo forecast at the unit's precision", () => {
+  it("shows a kilo forecast at the unit's precision", () => {
     expect(
       cellText(column("forecast_available_amount"), undefined, {
         ...forecastRow,
@@ -343,11 +357,14 @@ describe("usePlanningHarvestSharesColumns cells", () => {
     expect(cellText(column("forecast_note", { dataHasNotes: notes }), null, plainRow)).toBe("");
   });
 
-  it("shows a whole stock amount as it comes", () => {
-    expect(cellText(column("current_stock_begin_of_week"), 30, stockRow)).toBe("30");
+  it("shows a piece stock amount at one decimal, blank without one", () => {
+    const col = column("current_stock_begin_of_week");
+
+    expect(cellText(col, 30, stockRow)).toBe("30,0");
+    expect(cellText(col, null, stockRow)).toBe("");
   });
 
-  it.skip("shows a kilo stock amount in the farm's format", () => {
+  it("shows a kilo stock amount in the farm's format", () => {
     expect(
       cellText(column("current_stock_begin_of_week"), 12.5, forecastRow),
     ).toBe("12,50");
@@ -357,28 +374,34 @@ describe("usePlanningHarvestSharesColumns cells", () => {
     const calculateStillFree = vi.fn(() => 1200);
     const col = column("still_free", { calculateStillFree });
 
-    const style = cellStyle(col, undefined, forecastRow);
+    const cell = cellElement(col, undefined, forecastRow);
 
-    expect(cellText(col, undefined, forecastRow)).toBe("1.200");
+    expect(cellText(col, undefined, forecastRow)).toBe("1.200,00");
     expect(calculateStillFree).toHaveBeenCalledWith(forecastRow);
-    expect(style.color).toBe("green");
-    expect(style.fontWeight).toBe("normal");
+    expect(cell).toHaveClass("still-free-ok");
+    expect(cell).not.toHaveClass("still-free-over-planned");
   });
 
   it("shows an over-planned row red and bold", () => {
     const col = column("still_free", { calculateStillFree: () => -5 });
 
-    const style = cellStyle(col, undefined, forecastRow);
+    const cell = cellElement(col, undefined, forecastRow);
 
-    expect(cellText(col, undefined, forecastRow)).toBe("-5");
-    expect(style.color).toBe("red");
-    expect(style.fontWeight).toBe("bold");
+    expect(cellText(col, undefined, forecastRow)).toBe("-5,00");
+    expect(cell).toHaveClass("still-free-over-planned");
   });
 
-  it.skip("shows a kilo still-free amount at the unit's precision", () => {
+  it("shows a kilo still-free amount at the unit's precision", () => {
     const col = column("still_free", { calculateStillFree: () => -0.4 });
 
     expect(cellText(col, undefined, forecastRow)).toBe("-0,40");
+  });
+
+  it("shows float drift that rounds to nothing as an unplanned zero", () => {
+    const col = column("still_free", { calculateStillFree: () => -1e-9 });
+
+    expect(cellText(col, undefined, forecastRow)).toBe("0,00");
+    expect(cellElement(col, undefined, forecastRow)).toHaveClass("still-free-ok");
   });
 });
 

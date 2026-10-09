@@ -20,6 +20,20 @@ class _DeliveryStationEntrySerializer(serializers.Serializer):
     stop_order = serializers.IntegerField(allow_null=True)
 
 
+class _UsedToursField(serializers.ListField):
+    """The distinct tour numbers of a delivery day's station days.
+
+    Only present with ``need_info_on_tours``, which annotates the queryset;
+    without the annotation the key is left out of the row. With it, a day
+    without station days carries null.
+    """
+
+    def get_attribute(self, instance):
+        if not hasattr(instance, "used_tours"):
+            raise serializers.SkipField()
+        return super().get_attribute(instance)
+
+
 class SharesDeliveryDayListSerializer(serializers.ListSerializer):
     """Bulk-precomputes ``can_be_deleted`` for the delivery-day list.
 
@@ -68,8 +82,11 @@ class SharesDeliveryDayListSerializer(serializers.ListSerializer):
 class SharesDeliveryDaySerializer(serializers.ModelSerializer):
     can_be_deleted = serializers.SerializerMethodField()
     delivery_stations = serializers.SerializerMethodField()
-    used_tours = serializers.ListField(
-        child=serializers.IntegerField(), read_only=True, required=False
+    used_tours = _UsedToursField(
+        child=serializers.IntegerField(),
+        read_only=True,
+        required=False,
+        allow_null=True,
     )
 
     @extend_schema_field(_DeliveryStationEntrySerializer(many=True))

@@ -225,6 +225,31 @@ describe("StorageSelector picks", () => {
     await waitFor(() => expect(picked).toBe(COLD_ROOM.id));
   });
 
+  it("drops the picked storage once every storage is gone", async () => {
+    const page = renderPage();
+    await waitFor(() => expect(picked).toBe(COLD_ROOM.id));
+    await chooseStorage("Keller");
+
+    api.storages.mockResolvedValue([]);
+    await page.reload();
+
+    await waitFor(() => expect(picked).toBeNull());
+    expect(placeholderShown()).toBe(PLACEHOLDER);
+    // Dropping the pick is the selector's own doing, not a user's choice.
+    expect(onStorageChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("without preserving, keeps the picked storage when every storage is gone", async () => {
+    const page = renderPage({ initialStorage: CELLAR.id, preserveSelection: false });
+    await waitFor(() => expect(shownStorage()).toBe("Keller"));
+
+    api.storages.mockResolvedValue([]);
+    await page.reload();
+    await settle();
+
+    expect(picked).toBe(CELLAR.id);
+  });
+
   it("picks nothing while no storage exists or the list fails to load", async () => {
     api.storages.mockResolvedValue([]);
     const empty = renderPage();

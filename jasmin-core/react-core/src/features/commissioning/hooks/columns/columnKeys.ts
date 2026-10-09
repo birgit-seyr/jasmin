@@ -160,3 +160,51 @@ export function planningModeTier(planningMode: string): ColumnKeyTier {
 export function dayVariationTier(key: string): ColumnKeyTier | null {
   return parseDayVariationKey(key)?.tier ?? null;
 }
+
+/** The parts of a delivery day that decide which tier its cells live in. */
+export interface PlanningDayTiers {
+  id?: string | number;
+  used_tours?: readonly number[] | null;
+  delivery_stations?: readonly { id: string | number }[] | null;
+}
+
+/**
+ * The tier a delivery day's cells are planned in under `planningMode`. Every
+ * station day carries a tour number, so the backend sends `used_tours: null`
+ * only for a day without active station days; such a day has no tour or
+ * station to plan per, so it is planned as a whole day in either mode, which
+ * the backend fans out to every station of the day.
+ */
+export function dayCellTier(
+  deliveryDay: PlanningDayTiers,
+  planningMode: string,
+): ColumnKeyTier {
+  const tier = planningModeTier(planningMode);
+  if (tier === "tour" && !deliveryDay.used_tours?.length) return "bare";
+  if (tier === "station" && !deliveryDay.delivery_stations?.length) return "bare";
+  return tier;
+}
+
+/**
+ * The editable cell keys of one (day, variation) under `planningMode`: one per
+ * tour, one per station, or the single whole-day key (see {@link dayCellTier}).
+ */
+export function dayCellKeys(
+  deliveryDay: PlanningDayTiers,
+  variationId: string | number,
+  planningMode: string,
+): string[] {
+  const dayId = deliveryDay.id!;
+  switch (dayCellTier(deliveryDay, planningMode)) {
+    case "tour":
+      return (deliveryDay.used_tours ?? []).map((tour) =>
+        dayVariationKey({ dayId, variationId, tour }),
+      );
+    case "station":
+      return (deliveryDay.delivery_stations ?? []).map((station) =>
+        dayVariationKey({ dayId, variationId, station: station.id }),
+      );
+    default:
+      return [dayVariationKey({ dayId, variationId })];
+  }
+}

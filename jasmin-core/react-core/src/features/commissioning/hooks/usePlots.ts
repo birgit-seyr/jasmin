@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import { useCommissioningPlotsList } from "@shared/api/generated/commissioning/commissioning";
 import type { Plot } from "@shared/api/generated/models";
-import { toOptions, toOptionsWithNull, type NullableOption } from "@hooks/internal/toOptions";
+import { toOptionsWithNull, type NullableOption } from "@hooks/internal/toOptions";
 
 export type PlotOption = NullableOption<Plot>;
 
@@ -9,12 +10,12 @@ export const usePlots = () => {
     is_active: true,
   });
 
-  const options = toOptions(data, (p) => p.name);
-  const plots: PlotOption[] = toOptionsWithNull(data, (p) => p.name);
+  const plots: PlotOption[] = useMemo(() => toOptionsWithNull(data, (p) => p.name), [data]);
 
   return {
     plots,
-    countPlots: options.length,
+    // Every plot but the leading "no plot" entry.
+    countPlots: plots.length - 1,
     loading: isLoading,
     error,
     refetch,

@@ -8,5 +8,6 @@
   "seller_selector": "Select supplier",
   "member_selector": "Select member",
   "share_article_selector": "Select vegetable/fruit",
-  "shares_delivery_day_selector": "Select delivery day"
+  "shares_delivery_day_selector": "Select delivery day",
+  "tour_selector": "Select tour"
 }

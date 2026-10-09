@@ -37952,6 +37952,7 @@ components:
           items:
             type: integer
           readOnly: true
+          nullable: true
         valid_from:
           type: string
           format: date

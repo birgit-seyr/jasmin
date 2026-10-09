@@ -1,15 +1,9 @@
 /**
  * Semantic colour ladder for the planning grid and any sibling table
- * (offers etc.) that wants the same visual hint about each row.
- *
- * Two independent ladders live here:
- *
- * - "Why is this row interesting?" — forecast / stock-only / nothing.
- *   Applied to the share-article name cell and to the unit / size /
- *   amount cells in ``usePlanningHarvestSharesColumns``.
- *
- * - "Is this row over-planned?" — over-planned / ok. Applied to the
- *   ``still_free`` cell.
+ * (offers etc.) that wants the same visual hint about each row:
+ * "Why is this row interesting?" — forecast / stock-only / nothing.
+ * Applied to the share-article name cell and to the unit / size /
+ * amount cells in ``usePlanningHarvestSharesColumns``.
  *
  * Keep the literal colour values in this one module so that:
  *   1. Sibling hooks (offers, orders) can reuse the same ladder by
@@ -22,10 +16,6 @@ export const planningColors = {
   forecast: "green",
   /** Row has leftover stock at week-start but no forecast and no plan. */
   stockOnly: "green",
-  /** ``still_free`` went negative — over-planned. */
-  overPlanned: "red",
-  /** ``still_free`` is non-negative. */
-  ok: "green",
   /** Default: nothing special — fall back to the surrounding text colour. */
   neutral: "inherit",
 } as const;

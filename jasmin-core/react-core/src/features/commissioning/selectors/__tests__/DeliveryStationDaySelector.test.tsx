@@ -214,6 +214,13 @@ describe("DeliveryStationDaySelector options", () => {
     expect(picked).toBeNull();
   });
 
+  it("takes its width from the stylesheet", () => {
+    renderPage({});
+
+    expect(selectRoot()).toHaveClass("bold-select", "week-selector-select", "delivery-station-day-selector");
+    expect(selectRoot()).not.toHaveAttribute("style");
+  });
+
   it("keeps no pick when the station days fail to load", async () => {
     api.stationDays.mockRejectedValue(Object.assign(new Error("Network Error"), { isAxiosError: true }));
     renderPage({ preserveSelection: true });

@@ -245,6 +245,16 @@ class TestSharesDeliveryDayViewSet:
         row = next(d for d in resp.data if d["id"] == day.id)
         assert row["used_tours"] == [2]
 
+    def test_day_without_station_days_has_null_used_tours(self, api_client, tenant):
+        day = SharesDeliveryDayFactory(day_number=4)
+
+        resp = api_client.get(
+            self.URL, {"need_info_on_tours": "true", "active_at_date": "2026-06-01"}
+        )
+
+        row = next(d for d in resp.data if d["id"] == day.id)
+        assert row["used_tours"] is None
+
 
 # ---------------------------------------------------------------------------
 # SharesDeliveryDayViewSet — moving valid_from

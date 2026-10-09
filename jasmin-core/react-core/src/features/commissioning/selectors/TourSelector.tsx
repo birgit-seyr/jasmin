@@ -2,18 +2,26 @@ import { activeAtDateForWeek } from "@shared/utils";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useShareDeliveryDays } from '@features/commissioning/hooks';
+import type { CommissioningSharesDeliveryDaysListParams } from "@shared/api/generated/models";
 import BaseEntitySelector, { type SelectorOption } from "@shared/selectors/BaseEntitySelector";
 
+type TourValue = number | "all";
+
 interface TourSelectorProps {
-  selectedTour: number | "all" | null;
-  setSelectedTour: (value: number | "all") => void;
-  onTourChange?: ((value: number | "all") => void) | null;
+  selectedTour: TourValue | null;
+  /** Gets `null` when the chosen day lists no tours, so no stale tour stays picked. */
+  setSelectedTour: (value: TourValue | null) => void;
+  onTourChange?: ((value: TourValue | null) => void) | null;
   include_null_option?: boolean;
   preserveSelection?: boolean;
   delivery_day?: string | null;
   selectedYear?: number | null;
   selectedWeek?: number | null;
-  filters?: Record<string, unknown>;
+  /**
+   * Filters for the delivery-day fetch, replacing the week's `active_at_date`.
+   * Pass a memoised object: a new one each render recomputes the fetch scope.
+   */
+  filters?: CommissioningSharesDeliveryDaysListParams;
 }
 
 const TourSelector = ({
@@ -25,7 +33,7 @@ const TourSelector = ({
   delivery_day = null,
   selectedYear = null,
   selectedWeek = null,
-  filters = {},
+  filters,
 }: TourSelectorProps) => {
   const { t } = useTranslation();
 
@@ -34,16 +42,13 @@ const TourSelector = ({
     return activeAtDateForWeek(selectedYear, selectedWeek);
   }, [selectedYear, selectedWeek]);
 
-  const tourFilters = useMemo(() => {
-    if (Object.keys(filters).length > 0) return filters;
+  const tourFilters = useMemo<CommissioningSharesDeliveryDaysListParams>(() => {
+    if (filters && Object.keys(filters).length > 0) return filters;
     if (activeAtDate) return { active_at_date: activeAtDate };
     return {};
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(filters), activeAtDate]);
+  }, [filters, activeAtDate]);
 
-  const { shareDeliveryDays, loading } = useShareDeliveryDays(
-    tourFilters as Parameters<typeof useShareDeliveryDays>[0],
-  );
+  const { shareDeliveryDays, loading } = useShareDeliveryDays(tourFilters);
 
   const numberOfTours = useMemo(() => {
     if (delivery_day === null) {
@@ -53,12 +58,12 @@ const TourSelector = ({
     return record ? record.number_of_tours || 1 : 0;
   }, [shareDeliveryDays, delivery_day]);
 
-  const options = useMemo<SelectorOption<number | "all">[]>(() => {
+  const options = useMemo<SelectorOption<TourValue | null>[]>(() => {
     if (numberOfTours === 0) return [];
-    const tours: SelectorOption<number | "all">[] = Array.from(
+    const tours: SelectorOption<TourValue | null>[] = Array.from(
       { length: numberOfTours },
       (_, i) => ({
-        value: (i + 1) as number,
+        value: i + 1,
         label: t("commissioning.tour_number", { number: i + 1 }),
       }),
     );
@@ -69,15 +74,19 @@ const TourSelector = ({
   }, [numberOfTours, include_null_option, t]);
 
   return (
-    <BaseEntitySelector<number | "all">
+    <BaseEntitySelector<TourValue | null>
       value={selectedTour}
       onValueChange={setSelectedTour}
       onChange={onTourChange}
       options={options}
       loading={loading}
+      placeholder={t("placeholder.tour_selector")}
       disabled={numberOfTours === 0}
-      style={{ width: "8em", marginTop: "1em", marginBottom: "1.5em" }}
+      className="bold-select week-selector-select tour-selector"
       preserveSelection={preserveSelection}
+      // Without a day there is nothing to check the pick against; a day
+      // listing no tours drops it.
+      emptyValue={delivery_day === null ? undefined : null}
       autoSelectFirst
     />
   );

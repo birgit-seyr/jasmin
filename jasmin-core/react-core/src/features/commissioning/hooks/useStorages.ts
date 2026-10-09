@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useCommissioningStoragesList } from "@shared/api/generated/commissioning/commissioning";
 import type { Storage } from "@shared/api/generated/models";
 import { toOptions, type Option } from "@hooks/internal/toOptions";
@@ -9,7 +10,7 @@ export const useStorages = () => {
     is_active: true,
   });
 
-  const storages: StorageOption[] = toOptions(data, (s) => s.name);
+  const storages: StorageOption[] = useMemo(() => toOptions(data, (s) => s.name), [data]);
 
   return {
     storages,

@@ -122,8 +122,8 @@ export function ListPDFHeader({
 }: {
   children: ReactNode;
   /**
-   * Optional branded strip — when provided, the tenant logo + name +
-   * contact render on the RIGHT side of the header, with the title
+   * Optional branded strip — when it carries a logo, name, email or
+   * phone, those render on the RIGHT side of the header, with the title
    * content (``children``) taking the remaining width on the left.
    * Omit on internal-only PDFs where the brand isn't useful (e.g.
    * harvest worksheets). ``styles.header`` keeps its existing
@@ -138,7 +138,10 @@ export function ListPDFHeader({
    */
   pill?: string;
 }) {
-  const hasTenant = !!(tenant && (tenant.logoUrl || tenant.name));
+  const hasTenant = !!(
+    tenant &&
+    (tenant.logoUrl || tenant.name || tenant.email || tenant.phone)
+  );
   const titleBlock = (
     <>
       {pill && (

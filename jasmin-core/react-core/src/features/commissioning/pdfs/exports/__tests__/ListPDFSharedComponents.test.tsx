@@ -122,13 +122,36 @@ describe("ListPDFHeader", () => {
     expect(container.textContent).toBe("KW 12");
   });
 
-  it("keeps the plain layout for a tenant with neither logo nor name", () => {
+  it.each([
+    [{ email: "office@farm.test" }, "KW 12office@farm.test"],
+    [{ phone: "+43 1 234" }, "KW 12+43 1 234"],
+    [
+      { email: "office@farm.test", phone: "+43 1 234" },
+      "KW 12office@farm.test+43 1 234",
+    ],
+  ])(
+    "prints the contact of a tenant with neither logo nor name (%j)",
+    (tenant, printed) => {
+      const { container } = render(
+        <ListPDFHeader tenant={tenant}>
+          <span>KW 12</span>
+        </ListPDFHeader>,
+      );
+      expect(container.querySelector("img")).toBeNull();
+      expect(container.textContent).toBe(printed);
+    },
+  );
+
+  it("keeps the plain layout for a tenant with nothing to show", () => {
     const { container } = render(
-      <ListPDFHeader tenant={{ email: "office@farm.test" }}>
+      <ListPDFHeader tenant={{ name: "", logoUrl: null, email: "", phone: "" }}>
         <span>KW 12</span>
       </ListPDFHeader>,
     );
     expect(container.textContent).toBe("KW 12");
+    expect(
+      container.querySelectorAll("[data-pdf='view'] [data-pdf='view']"),
+    ).toHaveLength(0);
   });
 });
 

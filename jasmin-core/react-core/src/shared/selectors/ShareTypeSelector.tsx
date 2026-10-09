@@ -7,8 +7,9 @@ import BaseEntitySelector, { type SelectorOption } from "./BaseEntitySelector";
 
 interface ShareTypeSelectorProps {
   selectedShareType: string | null;
-  setSelectedShareType: (value: string) => void;
-  onShareTypeChange?: ((value: string) => void) | null;
+  /** Gets `null` once the list loads empty, so no stale share type stays picked. */
+  setSelectedShareType: (value: string | null) => void;
+  onShareTypeChange?: ((value: string | null) => void) | null;
   include_null_option?: boolean;
   autoSelectFirst?: boolean;
   /**
@@ -51,8 +52,8 @@ const ShareTypeSelector = ({
     activeAtDate ? { active_at_date: activeAtDate } : {},
   );
 
-  const options = useMemo<SelectorOption<string>[]>(() => {
-    const opts: SelectorOption<string>[] = [];
+  const options = useMemo<SelectorOption<string | null>[]>(() => {
+    const opts: SelectorOption<string | null>[] = [];
     if (include_null_option) opts.push({ value: "none", label: "-" });
     shareTypes
       .filter((st) => !allowedShareTypeIds || allowedShareTypeIds.has(st.value))
@@ -61,7 +62,7 @@ const ShareTypeSelector = ({
   }, [shareTypes, include_null_option, allowedShareTypeIds]);
 
   return (
-    <BaseEntitySelector<string>
+    <BaseEntitySelector<string | null>
       value={selectedShareType}
       onValueChange={setSelectedShareType}
       onChange={onShareTypeChange}
@@ -71,6 +72,7 @@ const ShareTypeSelector = ({
       style={style}
       autoSelectFirst={autoSelectFirst}
       preserveSelection={preserveSelection}
+      emptyValue={null}
     />
   );
 };

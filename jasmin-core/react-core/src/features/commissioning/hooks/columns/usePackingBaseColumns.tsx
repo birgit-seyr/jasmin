@@ -30,6 +30,17 @@ export function withBackupSubline(
   );
 }
 
+const HARVEST_ARTICLE_FILTERS = {
+  is_harvest_share_article: true,
+  is_active: true,
+};
+
+// Article, unit and size are fixed once a row is saved.
+const CREATE_ONLY_UNIT_AND_SIZE = {
+  unit: { disabled: editableOnlyOnCreate },
+  size: { disabled: editableOnlyOnCreate },
+};
+
 interface UsePackingBaseColumnsOptions {
   /** Which share articles the article-column selector may pick from. */
   shareArticleFilters?: Record<string, unknown>;
@@ -47,18 +58,12 @@ export function usePackingBaseColumns(
   const { noteColumn } = useNoteColumn();
 
   const { shareArticleColumn } = useShareArticleColumn({
-    filters: options.shareArticleFilters ?? {
-      is_harvest_share_article: true,
-      is_active: true,
-    },
+    filters: options.shareArticleFilters ?? HARVEST_ARTICLE_FILTERS,
     showFruitsAndVegs: true,
   });
 
   const { amountUnitSizeColumns } = useAmountUnitSizeColumns({
-    overrides: {
-      unit: { disabled: editableOnlyOnCreate },
-      size: { disabled: editableOnlyOnCreate },
-    },
+    overrides: CREATE_ONLY_UNIT_AND_SIZE,
     showAmount: false,
   });
 

@@ -162,7 +162,7 @@ describe("useBoxCombinationColumns layout", () => {
     expect(columnsFor([])).toEqual([]);
   });
 
-  it.skip("keeps the backend's size order for sizes that share a sort order", () => {
+  it("keeps the backend's size order for sizes that share a sort order", () => {
     // Variations default to sort order 0; the backend then orders by size.
     const groups = columnsFor([
       combination("combo_zz-small|", VEG, "S", 0),

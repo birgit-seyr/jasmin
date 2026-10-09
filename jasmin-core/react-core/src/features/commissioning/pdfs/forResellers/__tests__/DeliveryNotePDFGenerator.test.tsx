@@ -145,7 +145,7 @@ describe("DeliveryNotePDFGenerator", () => {
 
   // The generic text is user-facing copy, so it comes from the locale files
   // (the mock's ``t`` echoes keys), never as hardcoded English.
-  it.skip("shows a translated generic error when the failure carries no message", () => {
+  it("shows a translated generic error when the failure carries no message", () => {
     query.result = { data: undefined, isLoading: false, error: {} };
     render(<DeliveryNotePDFGenerator deliveryNoteId="dn-1" />);
     expect(

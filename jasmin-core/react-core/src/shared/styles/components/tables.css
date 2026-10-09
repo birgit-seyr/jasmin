@@ -334,6 +334,27 @@
   font-size: 0.85em !important;
 }
 
+/* A harvest share planning amount cell. Highlighted while it is empty but a
+   forecast assigns its variation. */
+.planning-variation-cell {
+  padding: 4px;
+  border-radius: 2px;
+  min-height: 20px;
+}
+
+.planning-variation-cell-highlight {
+  background-color: var(--color-highlight);
+}
+
+.still-free-ok {
+  color: var(--color-success-text);
+}
+
+.still-free-over-planned {
+  color: var(--color-error-text);
+  font-weight: bold;
+}
+
 .joker-taken-row,
 .joker-taken-row td {
   color: var(--color-text-tertiary) !important;

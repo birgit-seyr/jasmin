@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useCommissioningShareArticlesList } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningShareArticlesListParams,
@@ -26,9 +27,9 @@ export const useShareArticles = (params: UseShareArticlesParams = {}) => {
     params as CommissioningShareArticlesListParams,
   );
 
-  const shareArticles: ShareArticleOption[] = toOptions(
-    source.data,
-    (sa) => sa.name,
+  const shareArticles: ShareArticleOption[] = useMemo(
+    () => toOptions(source.data, (sa) => sa.name),
+    [source.data],
   );
 
   return {

@@ -264,12 +264,13 @@ export default function DocumentationHarvest() {
     ],
   );
 
-  // Staff can add + edit while the week isn't past; delete is additionally
-  // hidden on mobile, and a row can only be deleted while it carries no
-  // recorded (or additional) theoretical harvest amount.
+  // Staff can add + edit while the week isn't past; adding also needs a
+  // storage to stamp on the row. Delete is additionally hidden on mobile, and
+  // a row can only be deleted while it carries no recorded (or additional)
+  // theoretical harvest amount.
   const permissions = useMemo(
     () => ({
-      canAdd: isStaff && !isPast,
+      canAdd: isStaff && !isPast && selectedStorage !== null,
       canEdit: isStaff && !isPast,
       canDelete: isStaff && !isPast && !isMobile,
       canDeleteRecord: (record: TableRecord) => {
@@ -291,7 +292,7 @@ export default function DocumentationHarvest() {
         return true;
       },
     }),
-    [isStaff, isPast, isMobile],
+    [isStaff, isPast, isMobile, selectedStorage],
   );
 
   return (

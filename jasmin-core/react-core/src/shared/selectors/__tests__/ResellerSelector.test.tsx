@@ -7,11 +7,13 @@
  * antd Select is stubbed: what's under test is the params object handed to
  * the generated list hook, not the rendered widget.
  */
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("antd", () => ({
-  Select: () => null,
+  Select: ({ className, style }: { className?: string; style?: object }) => (
+    <div data-testid="select" className={className} style={style} />
+  ),
 }));
 
 const listHookMock = vi.fn();
@@ -76,5 +78,20 @@ describe("ResellerSelector — has_orders_without_invoice", () => {
       is_active_seller: true,
     });
     expect(lastParams()).not.toHaveProperty("has_orders_without_invoice");
+  });
+});
+
+describe("ResellerSelector — look", () => {
+  it("takes a reseller select's width from the stylesheet", () => {
+    renderSelector();
+    const select = screen.getByTestId("select");
+    expect(select).toHaveClass("bold-select", "week-selector-select", "reseller-selector");
+    expect(select).not.toHaveClass("reseller-selector--seller");
+    expect(select).not.toHaveAttribute("style");
+  });
+
+  it("indents a seller select through the stylesheet", () => {
+    renderSelector({ userType: "seller" });
+    expect(screen.getByTestId("select")).toHaveClass("reseller-selector", "reseller-selector--seller");
   });
 });

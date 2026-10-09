@@ -10,13 +10,17 @@ import { useNumberFormat } from "@hooks/useNumberFormat";
 import { useVegetableSizeOptions } from "@hooks/useVegetableSizeOptions";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 
+// Stable default, so a caller that passes no overrides keeps the column memo
+// intact across renders.
+const NO_OVERRIDES: Record<string, Record<string, unknown>> = {};
+
 interface AmountUnitSizeConfig {
   overrides?: Record<string, Record<string, unknown>>;
   showAmount?: boolean;
 }
 
 export const useAmountUnitSizeColumns = (config: AmountUnitSizeConfig = {}) => {
-  const { overrides = {}, showAmount = true } = config;
+  const { overrides = NO_OVERRIDES, showAmount = true } = config;
 
   const { getSetting } = useTenant();
   const showSizeColumn = getSetting("show_size_column");

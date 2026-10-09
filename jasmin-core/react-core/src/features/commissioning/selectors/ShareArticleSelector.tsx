@@ -8,6 +8,11 @@ interface ShareArticleSelectorProps {
   setSelectedShareArticle: (value: string | null) => void;
   onShareArticleChange?: ((value: string | null) => void) | null;
   include_null_option?: boolean;
+  /**
+   * Keep the pick while the list still holds it, fall back to the first
+   * option when it doesn't (picking it on mount too), and drop it once the
+   * list loads empty.
+   */
   preserveSelection?: boolean;
   additionalFilters?: Record<string, unknown>;
 }
@@ -17,6 +22,7 @@ const ShareArticleSelector = ({
   setSelectedShareArticle,
   onShareArticleChange = null,
   include_null_option = false,
+  preserveSelection = false,
   additionalFilters = {},
 }: ShareArticleSelectorProps) => {
   const { t } = useTranslation();
@@ -45,8 +51,10 @@ const ShareArticleSelector = ({
       options={options}
       loading={loading}
       placeholder={t("placeholder.share_article_selector")}
-      style={{ width: "22em" }}
+      className="bold-select week-selector-select share-article-selector"
       showSearch
+      preserveSelection={preserveSelection}
+      emptyValue={null}
     />
   );
 };

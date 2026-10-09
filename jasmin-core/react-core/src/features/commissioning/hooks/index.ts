@@ -62,6 +62,8 @@ export {
   isDayVariationKey,
   dayVariationTier,
   planningModeTier,
+  dayCellTier,
+  dayCellKeys,
 } from './columns/columnKeys';
 export type {
   ColumnKeyTier,

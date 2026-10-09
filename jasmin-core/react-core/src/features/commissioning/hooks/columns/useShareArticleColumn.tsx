@@ -14,6 +14,11 @@ import {
   type ArticleAutofillContext,
 } from "./articleDefaults";
 
+// Stable defaults, so a caller that passes no overrides keeps the column memo
+// below intact across renders.
+const NO_FILTERS: Record<string, unknown> = {};
+const NO_OVERRIDES: Record<string, unknown> = {};
+
 interface FormInstance {
   setFieldsValue: (values: Record<string, unknown>) => void;
   getFieldValue: (field: string) => unknown;
@@ -72,8 +77,8 @@ interface ShareArticleColumnConfig {
 
 export const useShareArticleColumn = (config: ShareArticleColumnConfig = {}) => {
   const {
-    filters = {},
-    overrides = {},
+    filters = NO_FILTERS,
+    overrides = NO_OVERRIDES,
     onFieldChange = null,
     showFruitsOnly = false,
     showVegsOnly = false,

@@ -95,12 +95,13 @@ const ResellerSelector = ({
           ? t("placeholder.reseller_selector")
           : t("placeholder.seller_selector")
       }
-      style={
+      className={
         userType === "reseller"
-          ? { width: "22em" }
-          : { width: "22em", marginLeft: "2em" }
+          ? "bold-select week-selector-select reseller-selector"
+          : "bold-select week-selector-select reseller-selector reseller-selector--seller"
       }
       preserveSelection={preserveSelection}
+      emptyValue={null}
     />
   );
 };

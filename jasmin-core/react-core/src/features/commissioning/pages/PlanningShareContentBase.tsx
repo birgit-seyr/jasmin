@@ -4,6 +4,8 @@ import {
 } from "@features/commissioning/components";
 import {
   computePlannedAmountForDay,
+  dayCellKeys,
+  dayCellTier,
   dayHarvestedKey,
   dayPlannedAmountKey,
   dayVariationKey,
@@ -51,6 +53,7 @@ import type {
   HarvestSharePlanningCreateRequest,
 } from "@shared/api/generated/models";
 import { ShareTypeEnum } from "@shared/api/generated/models";
+import { forecastAmountInRowUnit } from "@features/commissioning/utils/planningRow";
 import { useRoles } from "@shared/auth";
 import { PlanningModeSelector, WeekSelector } from "@shared/selectors";
 import {
@@ -287,20 +290,8 @@ export default function PlanningShareContentBase({
   // The editable day×variation cell keys for one (day, variation) in the
   // currently-active tier — mirrors ``customEdit``'s tier fan-out exactly.
   const activeTierCellKeys = useCallback(
-    (deliveryDay: DeliveryDay, variationId: string): string[] => {
-      const dayId = deliveryDay.id!;
-      if (planningMode === "tours" && deliveryDay.used_tours) {
-        return deliveryDay.used_tours.map((tour: number) =>
-          dayVariationKey({ dayId, variationId, tour }),
-        );
-      }
-      if (planningMode === "stations" && deliveryDay.delivery_stations) {
-        return deliveryDay.delivery_stations.map((station) =>
-          dayVariationKey({ dayId, variationId, station: station.id }),
-        );
-      }
-      return [dayVariationKey({ dayId, variationId })];
-    },
+    (deliveryDay: DeliveryDay, variationId: string): string[] =>
+      dayCellKeys(deliveryDay, variationId, planningMode),
     [planningMode],
   );
 
@@ -553,33 +544,13 @@ export default function PlanningShareContentBase({
         const dayId = deliveryDay.id!;
         shareTypeVariations.forEach((variation: ShareTypeVariationOption) => {
           const variationId = variation.id!;
-          // Basic variation field
-          const basicKey = dayVariationKey({ dayId, variationId });
-          processedRecord[basicKey] = processedRecord[basicKey] || 0;
-
-          // Tour fields (if in tours mode)
-          if (planningMode === "tours" && deliveryDay.used_tours) {
-            deliveryDay.used_tours.forEach((tourNumber: number) => {
-              const tourKey = dayVariationKey({
-                dayId,
-                variationId,
-                tour: tourNumber,
-              });
-              processedRecord[tourKey] = processedRecord[tourKey] || 0;
-            });
-          }
-
-          // Station fields (if in stations mode)
-          if (planningMode === "stations" && deliveryDay.delivery_stations) {
-            deliveryDay.delivery_stations.forEach((station) => {
-              const stationKey = dayVariationKey({
-                dayId,
-                variationId,
-                station: station.id,
-              });
-              processedRecord[stationKey] = processedRecord[stationKey] || 0;
-            });
-          }
+          // The basic field and the active mode's tour or station fields.
+          [
+            dayVariationKey({ dayId, variationId }),
+            ...dayCellKeys(deliveryDay, variationId, planningMode),
+          ].forEach((key) => {
+            processedRecord[key] = processedRecord[key] || 0;
+          });
         });
 
         // Planned amount and harvested fields
@@ -649,7 +620,14 @@ export default function PlanningShareContentBase({
       // strings on the surviving tier become 0 (the wire signal for
       // "user cleared this cell"; backend treats "all zero on the
       // surviving tier" as "no human plan").
-      const activeTier = planningModeTier(planningMode);
+      // A day planned as a whole keeps its bare cells (see ``dayCellTier``).
+      const tierByDay = new Map(
+        shareDeliveryDays.map((deliveryDay) => [
+          String(deliveryDay.id),
+          dayCellTier(deliveryDay, planningMode),
+        ]),
+      );
+      const modeTier = planningModeTier(planningMode);
       Object.keys(processedData).forEach((key) => {
         // Only our own (unprefixed) day×variation cells are subject to the
         // tier drop — a `backup_…` field on the record must pass through
@@ -659,7 +637,7 @@ export default function PlanningShareContentBase({
           return;
         }
 
-        if (parsed.tier !== activeTier) {
+        if (parsed.tier !== (tierByDay.get(parsed.dayId) ?? modeTier)) {
           delete processedData[key];
           return;
         }
@@ -677,7 +655,14 @@ export default function PlanningShareContentBase({
         delivery_week: selectedWeek,
       };
     },
-    [planningMode, selectedYear, selectedWeek, t, vegetables_and_fruits],
+    [
+      planningMode,
+      shareDeliveryDays,
+      selectedYear,
+      selectedWeek,
+      t,
+      vegetables_and_fruits,
+    ],
   );
 
   const listParams = useMemo<CommissioningHarvestSharePlanningListParams>(
@@ -832,20 +817,17 @@ export default function PlanningShareContentBase({
         | undefined,
     });
 
-  // Live still-free indicator: forecast + current stock − Σ (planned per day).
-  // Per-day planned is derived from the same variation-cell values the user
-  // is editing right now (see `computePlannedAmountForDay`), not from the
-  // saved `day_X_planned_amount` snapshot — otherwise the indicator would
-  // lag a save behind. EditableCell hands `record === liveRecord` to this
-  // render while the row is in edit mode, so the result updates per keystroke.
+  // Live still-free indicator: forecast + current stock − Σ (planned per day),
+  // all in the row's own unit. Per-day planned is derived from the variation
+  // cells the user is editing right now (`computePlannedAmountForDay`), not
+  // the saved `day_X_planned_amount` snapshot, which lags a save behind.
+  // EditableCell hands `record === liveRecord` to this render while the row
+  // is in edit mode, so the result updates per keystroke.
   const calculateStillFree = useCallback(
     (record: TableRecord) => {
-      const forecastAmount =
-        parseFloat(String(record.forecast_available_amount)) || 0;
+      const forecastAmount = forecastAmountInRowUnit(record);
       const currentStock =
-        parseFloat(
-          String(record.available_amount_current_stock_at_time_of_planning),
-        ) || 0;
+        parseFloat(String(record.current_stock_begin_of_week)) || 0;
 
       const totalPlanned = shareDeliveryDays.reduce(
         (sum, deliveryDay) =>

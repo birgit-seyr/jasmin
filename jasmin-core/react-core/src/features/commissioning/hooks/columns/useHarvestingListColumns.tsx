@@ -191,14 +191,14 @@ export function useHarvestingListColumns({
   // Combined "amount + amount/PU" cell (used by both gardener flat and
   // office grouped layouts via the column factories below).
   const renderCombinedCell = useCallback(
-    (color: string, suffix: "" | "_share_content" | "_order_content") =>
+    (className: string, suffix: "" | "_share_content" | "_order_content") =>
       (_: unknown, record: TableRecord) => {
         const totalText = record[
           `computed_total_amount_text${suffix}`
         ] as string;
         const puText = record[`computed_amount_pu_text${suffix}`] as string;
         return (
-          <div style={{ color }}>
+          <div className={className}>
             {totalText}
             {puText && <br />}
             {puText}

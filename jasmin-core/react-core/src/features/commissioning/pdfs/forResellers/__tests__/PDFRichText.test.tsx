@@ -103,12 +103,115 @@ describe("PDFRichText — blocks", () => {
 
   // The editor's toolbar offers lists and headings; their items have to stay
   // apart rather than run together into one line.
-  it.skip("prints list items and headings as separate lines", () => {
+  it("prints list items and headings as separate lines", () => {
     expect(
       paragraphs(
         "<h2>Opening hours</h2><ol><li>Monday</li><li>Thursday</li></ol>",
       ),
-    ).toEqual(["Opening hours", "Monday", "Thursday"]);
+    ).toEqual(["Opening hours", "1. Monday", "2. Thursday"]);
+  });
+});
+
+describe("PDFRichText — headings", () => {
+  it.each([
+    ["h1", 14],
+    ["h2", 12],
+    ["h3", 11],
+  ])("prints <%s> bold at %ipt on a line of its own", (tag, fontSize) => {
+    const { container } = render(
+      <PDFRichText html={`<p>before</p><${tag}>Title</${tag}>after`} />,
+    );
+    const blocks = Array.from(container.firstElementChild!.children);
+    expect(blocks.map((block) => block.textContent)).toEqual([
+      "before",
+      "Title",
+      "after",
+    ]);
+    expect(styleOf(blocks[1].firstElementChild!)).toMatchObject({
+      fontSize,
+      fontWeight: "bold",
+    });
+    expect(styleOf(blocks[2].firstElementChild!)).toEqual({});
+  });
+
+  it("lays the heading style over the baseline style", () => {
+    const { container } = render(
+      <PDFRichText html="<h1>Title</h1>" style={{ color: "#333" }} />,
+    );
+    const text = container.querySelector("[data-pdf='text']")!;
+    expect(styleOf(text)).toMatchObject({ color: "#333", fontSize: 14 });
+  });
+
+  it("keeps inline marks inside a heading", () => {
+    expect(styledRuns("<h2>Big <em>news</em></h2>")).toEqual([
+      { text: "news", style: { fontStyle: "italic" } },
+    ]);
+  });
+});
+
+describe("PDFRichText — lists", () => {
+  /** Each list item's marker and text, with its indent. */
+  function listItems(html: string) {
+    const { container } = render(<PDFRichText html={html} />);
+    return Array.from(container.firstElementChild!.children).map((item) => {
+      const [marker, body] = Array.from(item.children);
+      return {
+        marker: marker.textContent,
+        text: body.textContent,
+        indent: styleOf(item).paddingLeft,
+      };
+    });
+  }
+
+  it("bullets the items of an unordered list", () => {
+    expect(listItems("<ul><li>Carrots</li><li>Leeks</li></ul>")).toEqual([
+      { marker: "• ", text: "Carrots", indent: 0 },
+      { marker: "• ", text: "Leeks", indent: 0 },
+    ]);
+  });
+
+  it("numbers each list from one", () => {
+    expect(
+      paragraphs("<ol><li>a</li><li>b</li></ol><p>x</p><ol><li>c</li></ol>"),
+    ).toEqual(["1. a", "2. b", "x", "1. c"]);
+  });
+
+  it("indents and renumbers a list nested in an item", () => {
+    expect(
+      listItems(
+        "<ol><li>Order<ol><li>by Monday</li><li>by noon</li></ol></li><li>Collect</li></ol>",
+      ),
+    ).toEqual([
+      { marker: "1. ", text: "Order", indent: 0 },
+      { marker: "1. ", text: "by Monday", indent: 12 },
+      { marker: "2. ", text: "by noon", indent: 12 },
+      { marker: "2. ", text: "Collect", indent: 0 },
+    ]);
+  });
+
+  it("reads Quill's raw item kinds and indent classes", () => {
+    expect(
+      listItems(
+        '<ol><li data-list="ordered"><span class="ql-ui" contenteditable="false"></span>One</li>' +
+          '<li data-list="bullet" class="ql-indent-1">Sub</li>' +
+          '<li data-list="ordered">Two</li><li data-list="checked">Done</li></ol>',
+      ),
+    ).toEqual([
+      { marker: "1. ", text: "One", indent: 0 },
+      { marker: "• ", text: "Sub", indent: 12 },
+      { marker: "2. ", text: "Two", indent: 0 },
+      { marker: "• ", text: "Done", indent: 0 },
+    ]);
+  });
+
+  it("keeps inline marks inside an item", () => {
+    expect(styledRuns("<ul><li><strong>Fresh</strong> eggs</li></ul>")).toEqual([
+      { text: "Fresh", style: { fontWeight: "bold" } },
+    ]);
+  });
+
+  it("drops an empty item", () => {
+    expect(paragraphs("<ul><li></li><li>a</li></ul>")).toEqual(["• a"]);
   });
 });
 
@@ -130,9 +233,22 @@ describe("PDFRichText — inline marks", () => {
 
   // The editor offers strikethrough; struck-out text must not print as if it
   // were still valid.
-  it.skip("strikes through <s>", () => {
+  it("strikes through <s>", () => {
     expect(styledRuns("<p>was <s>12 €</s> now 10 €</p>")).toEqual([
       { text: "12 €", style: { textDecoration: "line-through" } },
+    ]);
+  });
+
+  it.each(["strike", "del"])("strikes through <%s>", (tag) => {
+    expect(styledRuns(`<p><${tag}>gone</${tag}></p>`)).toEqual([
+      { text: "gone", style: { textDecoration: "line-through" } },
+    ]);
+  });
+
+  it("both underlines and strikes through nested marks", () => {
+    expect(styledRuns("<p><u>a<s>b</s></u></p>")).toEqual([
+      { text: "a", style: { textDecoration: "underline" } },
+      { text: "b", style: { textDecoration: "underline line-through" } },
     ]);
   });
 
@@ -187,9 +303,15 @@ describe("PDFRichText — text content", () => {
 
   // An escaped ampersand must decode once: typing "&lt;" in the editor saves
   // "&amp;lt;", which has to print as "&lt;", not as "<".
-  it.skip("decodes an escaped entity only once", () => {
+  it("decodes an escaped entity only once", () => {
     expect(paragraphs("<p>Write &amp;lt;b&amp;gt; or &amp;nbsp;</p>")).toEqual([
       "Write &lt;b&gt; or &nbsp;",
+    ]);
+  });
+
+  it("decodes numeric entities and leaves unknown ones as written", () => {
+    expect(paragraphs("<p>&#8364; &#x20AC; &#160;x &bogus; &#xFFFFFFF;</p>")).toEqual([
+      "€ €  x &bogus; &#xFFFFFFF;",
     ]);
   });
 

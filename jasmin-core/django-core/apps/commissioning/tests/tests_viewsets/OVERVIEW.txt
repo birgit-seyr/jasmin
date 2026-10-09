@@ -40,11 +40,13 @@ test_basics_viewsets.py (63 tests)
                                                in-use article → 409 + row kept; unused → 204;
                                                future price of in-use article → 204
 
-test_choices_viewsets.py (28 tests)
+test_choices_viewsets.py (29 tests)
 ───────────────────────────────────
-  TestSharesDeliveryDayViewSet            15   list, retrieve, tour count raise/reduce rules,
+  TestSharesDeliveryDayViewSet            16   list, retrieve, tour count raise/reduce rules,
                                                get_delivery_stations flag (false omits the prefetch;
-                                               without active_at_date → 400), active_at_date wins
+                                               without active_at_date → 400), used_tours (false
+                                               omits it; a day without station days → null),
+                                               active_at_date wins
                                                over active_at_date_or_future, future needs
                                                active_at_date (→ 400) and returns the not-yet-active
                                                days

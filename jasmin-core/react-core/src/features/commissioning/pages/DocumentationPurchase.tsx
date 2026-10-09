@@ -103,6 +103,8 @@ export default function DocumentationPurchase() {
   const permissions = useMemo(
     () => ({
       ...gatedByPermission(isStaff && !isPast),
+      // A new row needs a storage to stamp on it.
+      canAdd: isStaff && !isPast && selectedStorage !== null,
       canDeleteRecord: (record: TableRecord) => {
         if (record.key === -1 || !record.id) return true;
         const r = record as Record<string, unknown>;
@@ -119,7 +121,7 @@ export default function DocumentationPurchase() {
         return true;
       },
     }),
-    [isStaff, isPast],
+    [isStaff, isPast, selectedStorage],
   );
 
   const { noteColumn } = useNoteColumn();

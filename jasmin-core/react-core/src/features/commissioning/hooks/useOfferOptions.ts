@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useCommissioningOffersList } from "@shared/api/generated/commissioning/commissioning";
 import type { Offer, CommissioningOffersListParams } from "@shared/api/generated/models";
 import { useNumberFormat } from "@hooks/useNumberFormat";
@@ -17,10 +18,14 @@ export const useOfferOptions = (params: CommissioningOffersListParams) => {
     query: { enabled: !!params.reseller || !!params.offer_group },
   });
 
-  const offers: OfferOption[] = toOptions(
-    data,
-    (o) =>
-      `${o.share_article_name} [${getUnitLabel(o.unit)}] - (${format(Number(o.amount_per_pu), 0)} ${getUnitLabel(o.unit)}/VPE)`,
+  const offers: OfferOption[] = useMemo(
+    () =>
+      toOptions(
+        data,
+        (o) =>
+          `${o.share_article_name} [${getUnitLabel(o.unit)}] - (${format(Number(o.amount_per_pu), 0)} ${getUnitLabel(o.unit)}/VPE)`,
+      ),
+    [data, format, getUnitLabel],
   );
 
   return {

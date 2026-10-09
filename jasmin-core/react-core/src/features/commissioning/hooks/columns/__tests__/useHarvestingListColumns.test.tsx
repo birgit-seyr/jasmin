@@ -324,7 +324,7 @@ describe("useHarvestingListColumns amount cells", () => {
     expect(cellText(share, undefined, radishRow)).toBe("");
   });
 
-  it.skip("colours the harvesting-list amounts by share and order content", () => {
+  it("colours the harvesting-list amounts by share and order content", () => {
     const [share, order] = groupChildren("amount_harvesting_list");
 
     const shareCell = renderCell(share, undefined, carrotRow).firstElementChild;
