@@ -457,7 +457,7 @@ services:
     # pin below. A floating major can silently pull a release with breaking
     # migrations against the SHARED prod postgres (glitchtip DB on the same
     # instance). Bump deliberately via the docker Dependabot entry.
-    image: glitchtip/glitchtip:v4.1.0
+    image: glitchtip/glitchtip:6.2.6
     restart: unless-stopped
     logging: *default-logging
     # Non-critical observability — capped (incl. CPU) so an event spike can
@@ -486,7 +486,7 @@ services:
     # pin below. A floating major can silently pull a release with breaking
     # migrations against the SHARED prod postgres (glitchtip DB on the same
     # instance). Bump deliberately via the docker Dependabot entry.
-    image: glitchtip/glitchtip:v4.1.0
+    image: glitchtip/glitchtip:6.2.6
     restart: unless-stopped
     logging: *default-logging
     # Non-critical observability — capped (incl. CPU); CELERY_WORKER_AUTOSCALE
