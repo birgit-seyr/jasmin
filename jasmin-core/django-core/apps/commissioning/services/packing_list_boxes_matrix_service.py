@@ -292,9 +292,7 @@ class PackingListBoxesMatrixService:
             list
         )
         day_number_by_id: dict[str, int] = {}
-        station_meta: dict[
-            tuple[str, str], tuple[int | None, str | None, int | None]
-        ] = {}
+        station_meta: dict[tuple[str, str], tuple[int, str | None, int | None]] = {}
         for delivery in deliveries:
             station_day = delivery.delivery_station_day
             day = delivery.share.delivery_day
@@ -351,7 +349,7 @@ class PackingListBoxesMatrixService:
             elif mode == "tours":
                 tour_counters: defaultdict[int, Counter] = defaultdict(Counter)
                 for key in day_station_keys:
-                    tour_number = station_meta[key][0] or 1
+                    tour_number = station_meta[key][0]
                     tour_counters[tour_number].update(scope_counts[key])
                 for tour_number in sorted(tour_counters):
                     rows.append(

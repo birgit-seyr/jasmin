@@ -111,17 +111,16 @@ export default function DocumentationOverview() {
           include_null_option={true}
         />
       )}
-      <div style={{ marginTop: "1em", marginBottom: "1em" }}>
+      <div className="mt-1em mb-1em">
         <ShareArticleSelector
           selectedShareArticle={selectedShareArticle}
           setSelectedShareArticle={setSelectedShareArticle}
           preserveSelection={true}
         />
       </div>
-      <div style={{ marginTop: "1em", marginBottom: "1em" }}>
+      <div className="mt-1em mb-1em">
         <Select
           value={selectedSource}
-          style={{ width: "12em" }}
           size="small"
           onChange={(val) =>
             setSelectedSource(
@@ -129,7 +128,7 @@ export default function DocumentationOverview() {
             )
           }
           options={sourceOptions}
-          className="bold-select"
+          className="bold-select documentation-source-select"
         />
       </div>
       <EditableTable

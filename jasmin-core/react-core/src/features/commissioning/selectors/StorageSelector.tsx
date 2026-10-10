@@ -44,11 +44,9 @@ const StorageSelector = ({
       options={options}
       loading={loading}
       placeholder={t("placeholder.storage_selector")}
-      style={
-        isMobile
-          ? { width: "100%" }
-          : { width: "15em", marginLeft: "2em", marginRight: "2em" }
-      }
+      className={`bold-select week-selector-select ${
+        isMobile ? "w-full" : "storage-selector"
+      }`}
       autoSelectFirst
       preserveSelection={preserveSelection}
       emptyValue={null}

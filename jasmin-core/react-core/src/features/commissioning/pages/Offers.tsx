@@ -64,13 +64,16 @@ export default function Offers() {
     () => isWeekInPast(selectedYear, selectedWeek),
     [selectedYear, selectedWeek],
   );
+  // A new offer is stamped with the picked offer group, so adding waits for
+  // one to be picked.
   const permissions = useMemo(
     () => ({
       ...gatedByPermission(isOffice && !isPast),
+      canAdd: isOffice && !isPast && selectedOfferGroup !== null,
       canDeleteRecord: (record: TableRecord) =>
         !((record.amount_ordered as number) > 0),
     }),
-    [isOffice, isPast],
+    [isOffice, isPast, selectedOfferGroup],
   );
   const [isSendOffersModalOpen, setIsSendOffersModalOpen] = useState(false);
   // ID of the active Huey-backed offer-send job; ``null`` when no
@@ -281,9 +284,8 @@ export default function Offers() {
         selectedOfferGroup={selectedOfferGroup}
         setSelectedOfferGroup={setSelectedOfferGroup}
         onOfferGroupChange={setSelectedOfferGroup}
-        include_null_option={true}
       />
-      <div style={{ marginTop: "1em" }}>
+      <div className="mt-1em">
         <strong>{t("commissioning.reseller_in_this_offer_group")}</strong>{" "}
         <br />
         {currentOfferGroup?.reseller_names}
@@ -359,12 +361,7 @@ export default function Offers() {
         onSuccess={() => refetchShareArticles()}
       />
 
-      <div
-        className="flex-col gap-8"
-        style={{
-          margin: "16px 0",
-        }}
-      >
+      <div className="flex-col gap-8 mt-16 mb-16">
         <Flex align="center" gap="8px" component="label">
           <Checkbox
             checked={pricesPerPU}
@@ -381,7 +378,7 @@ export default function Offers() {
           <ToolTipIcon title={t("tooltip.use_personalized_offers")} />
         </Flex>
       </div>
-      <div style={{ marginBottom: 16, marginTop: 16 }}>
+      <div className="mt-16 mb-16">
         {selectedOfferGroup && data.length > 0 && allFinalized && (
           <>
             <Suspense
@@ -402,7 +399,7 @@ export default function Offers() {
           </>
         )}
       </div>
-      <div style={{ marginBottom: 16, marginTop: 16 }}>
+      <div className="mt-16 mb-16">
         <Button
           icon={<SendOutlined />}
           onClick={handleSendOffers}

@@ -14,7 +14,6 @@ interface ShareArticleSelectorProps {
    * list loads empty.
    */
   preserveSelection?: boolean;
-  additionalFilters?: Record<string, unknown>;
 }
 
 const ShareArticleSelector = ({
@@ -23,14 +22,10 @@ const ShareArticleSelector = ({
   onShareArticleChange = null,
   include_null_option = false,
   preserveSelection = false,
-  additionalFilters = {},
 }: ShareArticleSelectorProps) => {
   const { t } = useTranslation();
 
-  const params = useMemo(() => ({ ...additionalFilters }), [additionalFilters]);
-  const { shareArticles, loading } = useShareArticles(
-    params as Parameters<typeof useShareArticles>[0],
-  );
+  const { shareArticles, loading } = useShareArticles();
 
   const options = useMemo<SelectorOption<string | null>[]>(() => {
     const opts: SelectorOption<string | null>[] = [];

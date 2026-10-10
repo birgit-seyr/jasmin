@@ -13,6 +13,7 @@ from ..errors import (
     DeliveryExceptionPeriodLocked,
     DeliveryStationMoreThanOneFee,
     PictureInvalid,
+    TourNumberBelowOne,
 )
 from ..models import DeliveryExceptionPeriod, DeliveryStation, DeliveryStationDay
 from ..utils.capacity_window import build_capacity_by_week, parse_capacity_window
@@ -30,6 +31,15 @@ from .serializers_mixin import (
 # ========================================
 # DELIVERY STATION SERIALIZERS
 # ========================================
+
+
+def refuse_tour_number_below_one(value: int) -> None:
+    """Field validator for every ``tour_number`` input. Listed in
+    ``validators`` so it runs before the field's own ``min_value=1`` check,
+    which stays for the schema's ``minimum`` but would answer with DRF's
+    uncoded message."""
+    if value < 1:
+        raise TourNumberBelowOne()
 
 
 class CapacityWeekEntrySerializer(serializers.Serializer):
@@ -290,6 +300,9 @@ class DeliveryStationDaySerializer(
     # The delivery tours list only the station days that hold a stop; saving
     # the tours clears the stop of every station day left off them.
     tour_assignment_missing = serializers.SerializerMethodField()
+    tour_number = serializers.IntegerField(
+        required=False, min_value=1, validators=[refuse_tour_number_below_one]
+    )
 
     class Meta:
         model = DeliveryStationDay
@@ -297,6 +310,19 @@ class DeliveryStationDaySerializer(
 
     def get_tour_assignment_missing(self, obj) -> bool:
         return obj.stop_order is None
+
+    def validate(self, attrs):
+        # A row stored with tour 0 fails the table's CHECK on any UPDATE, so an
+        # edit that leaves tour_number out is refused with the coded error
+        # rather than a database error.
+        attrs = super().validate(attrs)
+        if (
+            self.instance is not None
+            and "tour_number" not in attrs
+            and self.instance.tour_number < 1
+        ):
+            raise TourNumberBelowOne()
+        return attrs
 
     def validate_capacity(self, value):
         """Floor a capacity edit at the busiest upcoming week's occupancy.
@@ -459,7 +485,9 @@ class DeliveryTourResponseSerializer(serializers.Serializer):
 class DeliveryTourUpdateSerializer(serializers.Serializer):
     """Serializer for updating a single tour (POST/PUT)."""
 
-    tour_number = serializers.IntegerField(min_value=1)
+    tour_number = serializers.IntegerField(
+        min_value=1, validators=[refuse_tour_number_below_one]
+    )
     positions = DeliveryTourPositionSerializer(many=True)
 
     def validate_positions(self, positions):

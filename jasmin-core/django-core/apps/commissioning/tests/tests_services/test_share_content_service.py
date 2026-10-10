@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
+import time_machine
 
 from apps.commissioning.models import ShareContent
 from apps.commissioning.services.planning_slots import PlanningSlot
@@ -20,6 +22,7 @@ from apps.commissioning.tests.factories import (
     SharesDeliveryDayFactory,
     ShareTypeVariationFactory,
 )
+from apps.commissioning.tests.factories.days import store_legacy_tour_number_zero
 from core.errors import JasminError
 
 
@@ -639,6 +642,12 @@ class TestUpdateBackupFields:
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestGetShareContentAsFrontendData:
+    @pytest.fixture(autouse=True)
+    def _freeze(self):
+        # The shares sit in 2026-W15; Monday of W10 keeps that week ahead.
+        with time_machine.travel(datetime(2026, 3, 2, 12, 0), tick=False):
+            yield
+
     @patch(
         "apps.commissioning.services.share_content_frontend.StockService.get_theoretical_current_stock",
         return_value={},
@@ -720,6 +729,46 @@ class TestGetShareContentAsFrontendData:
         assert by_unit["KG"]["forecast_available_amount"] == Decimal("40")
         assert by_unit["PCS"]["forecast_unit"] == "PCS"
         assert by_unit["PCS"]["forecast_available_amount"] == Decimal("120")
+
+    @pytest.mark.parametrize("tour_number", [0, 1, 2])
+    @patch(
+        "apps.commissioning.services.share_content_frontend.StockService.get_theoretical_current_stock",
+        return_value={},
+    )
+    def test_carries_the_tour_cell_of_the_station_tour(
+        self, _mock_stock, tenant, tour_number
+    ):
+        # Tours start at 1, but rows written before that rule may still hold a
+        # tour 0; the save path writes their ``_tour_0`` cell, so reading must
+        # carry it back.
+        variation = ShareTypeVariationFactory()
+        delivery_day = SharesDeliveryDayFactory(day_number=2)
+        station_day = DeliveryStationDayFactory(
+            delivery_day=delivery_day, tour_number=max(tour_number, 1)
+        )
+        if tour_number == 0:
+            store_legacy_tour_number_zero(station_day)
+        share = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=delivery_day,
+            share_type_variation=variation,
+        )
+        content = ShareContentFactory(
+            share=share,
+            share_article=ShareArticleFactory(),
+            delivery_station=station_day.delivery_station,
+            amount=Decimal("5"),
+            unit="KG",
+            size="M",
+        )
+
+        [row] = ShareContentService().get_share_content_as_frontend_data([content])
+
+        base_key = f"day_{delivery_day.pk}_variation_{variation.pk}"
+        tour_keys = [key for key in row if key.startswith(f"{base_key}_tour_")]
+        assert tour_keys == [f"{base_key}_tour_{tour_number}"]
+        assert row[f"{base_key}_tour_{tour_number}"] == "5"
 
 
 # ---------------------------------------------------------------------------

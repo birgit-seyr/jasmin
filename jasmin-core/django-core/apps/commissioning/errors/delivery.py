@@ -55,6 +55,22 @@ class SharedStationIdentityLocked(ForbiddenError):
     code = "my_data.shared_station_identity_locked"
 
 
+class TourNumberBelowOne(BadRequestError):
+    """A station-day's ``tour_number`` is below 1. Tours are numbered from 1;
+    the tours page shows tour N in column N, so a 0 has no column and its
+    station drops out of the planning. Rows written before the rule may still
+    hold a 0, so an edit of such a row is refused too until it names a tour.
+    ``field="tour_number"``."""
+
+    code = "delivery_station_day.tour_number_below_one"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Tour numbers start at 1. Assign the station day to a tour.",
+            field="tour_number",
+        )
+
+
 class DeliveryDayValidFromInPast(BadRequestError):
     """A delivery day or station-day was CREATED with a ``valid_from`` date
     before today.

@@ -30,6 +30,8 @@
   --color-plot-header-text: #3a5a1c;
   /* The single money series of a statistics chart (purchase spending). */
   --color-chart-money: #3f8600;
+  /* A harvest share planning row scaffolded from a forecast or backed by stock. */
+  --color-planning-row-highlight: #008000;
 
   /* Surface & text colors for components */
   --color-bg-base: #ffffff;
@@ -192,6 +194,7 @@
   --color-plot-header-bg: #162312;
   --color-plot-header-text: #66bb6a;
   --color-chart-money: #73d13d;
+  --color-planning-row-highlight: #73d13d;
 
   /* Role tags (dark): AntD's dark palette for each hue — its first step for the
      background, the third for the border and the eighth for the text. */

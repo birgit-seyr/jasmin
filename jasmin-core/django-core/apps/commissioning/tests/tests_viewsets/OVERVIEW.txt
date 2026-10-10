@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-1256 tests | 236 test classes | 43 files
+1264 tests | 239 test classes | 44 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -226,6 +226,14 @@ test_delivery_station_photo_link.py (3 tests)
 test_delivery_station_query_count.py (1 test)
 ─────────────────────────────────────────────
   (module-level)                           1   delivery-station list is scale-invariant
+
+test_delivery_station_day_tour_number.py (8 tests)
+──────────────────────────────────────────────────
+  TestStationDayCreate                     4   a tour of 0 or -1 → 400 delivery_station_day.tour_number_
+                                               below_one and no row; tour 1 and a left-out tour save as 1
+  TestStationDayUpdate                     3   setting tour 0 is refused; a stored tour-0 row is refused
+                                               until the edit names a tour, then saves
+  TestUpdateTours                          1   update_tours with tour 0 → the same code, no row
 
 test_delivery_viewsets.py (52 tests)
 ────────────────────────────────────

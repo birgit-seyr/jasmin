@@ -11,5 +11,7 @@
     "warehouse": "Equipment & Supplies",
     "economics": "Economics",
     "exports": "Exports",
-    "imports": "Imports"
+    "imports": "Imports",
+    "navigation": "Navigation",
+    "open_menu": "Open navigation"
   }

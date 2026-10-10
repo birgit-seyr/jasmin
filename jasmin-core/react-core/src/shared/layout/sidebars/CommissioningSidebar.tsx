@@ -10,6 +10,7 @@ import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
+import { usePackingListVisibility } from "./usePackingListVisibility";
 
 import AllInclusiveIcon from "@mui/icons-material/AllInclusive";
 import BubbleChartIcon from "@mui/icons-material/BubbleChart";
@@ -114,14 +115,8 @@ export default function CommissioningSidebar({
 
   const has_markets = getSetting("has_markets", true);
   const sells_to_resellers = getSetting("sells_to_resellers", true);
-  const packing_mode = getSetting("packing_mode", "BOXES") as
-    | "BOXES"
-    | "BULK"
-    | "MIXED";
-  const show_bulk_packing_list =
-    packing_mode === "BULK" || packing_mode === "MIXED";
-  const show_boxes_packing_list =
-    packing_mode === "BOXES" || packing_mode === "MIXED";
+  const { packingMode, showBulkPackingList, showBoxesPackingList } =
+    usePackingListVisibility();
   const weekly_upload = getSetting("uploads_weekly_share_amount", false);
 
   // The station-fee billing is only relevant for solawis that actually charge
@@ -436,7 +431,7 @@ export default function CommissioningSidebar({
             </Link>
           ),
         },
-        ...(show_bulk_packing_list
+        ...(showBulkPackingList
           ? [
               {
                 key: "commissioning-packing-list-bulk",
@@ -444,7 +439,7 @@ export default function CommissioningSidebar({
                 requireRole: "isStaff",
                 label: (
                   <Link to="/commissioning/packing-list-bulk">
-                    {packing_mode === "MIXED"
+                    {packingMode === "MIXED"
                       ? t("commissioning.packing_list_bulk")
                       : t("commissioning.packing_list")}
                   </Link>
@@ -452,7 +447,7 @@ export default function CommissioningSidebar({
               },
             ]
           : []),
-        ...(show_boxes_packing_list
+        ...(showBoxesPackingList
           ? [
               {
                 key: "commissioning-packing-list-boxes",
@@ -460,7 +455,7 @@ export default function CommissioningSidebar({
                 requireRole: "isStaff",
                 label: (
                   <Link to="/commissioning/packing-list-boxes">
-                    {packing_mode === "MIXED"
+                    {packingMode === "MIXED"
                       ? t("commissioning.packing_list_boxes")
                       : t("commissioning.packing_list")}
                   </Link>

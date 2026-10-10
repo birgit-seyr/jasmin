@@ -357,7 +357,8 @@
     "starts_before_delivery_day": "Der Stationstag kann nicht vor seinem Liefertag beginnen. Verschiebe zuerst den Beginn des Liefertags oder wähle ein Startdatum ab dessen Beginn.",
     "in_use": "Dieser Abholtag kann nicht gelöscht werden, weil noch Lieferungen darauf verweisen. Bitte zuerst die Lieferungen verschieben oder beenden.",
     "unknown": "Am {{date}} wird keine Verteilstation „{{delivery_station}}“ am Liefertag {{delivery_day}} beliefert.",
-    "ambiguous": "Am {{date}} werden {{matches}} Verteilstationen namens „{{delivery_station}}“ am Liefertag {{delivery_day}} beliefert — bitte eindeutige Kurznamen vergeben."
+    "ambiguous": "Am {{date}} werden {{matches}} Verteilstationen namens „{{delivery_station}}“ am Liefertag {{delivery_day}} beliefert — bitte eindeutige Kurznamen vergeben.",
+    "tour_number_below_one": "Touren beginnen bei 1. Bitte den Stationstag in der Tourenplanung einer Tour zuordnen."
   },
   "inventory_entry": {
     "not_found": "Inventureintrag nicht gefunden."

@@ -166,7 +166,9 @@ EMAIL_ADMIN=${ADMIN_EMAIL}
 # gateway, and the frontend build must all agree — keep the two below equal.
 SUPER_ADMIN_SUBDOMAIN=${SUPER_ADMIN_SUBDOMAIN}
 VITE_SUPER_ADMIN_SUBDOMAIN=${SUPER_ADMIN_SUBDOMAIN}
-# The entrypoint auto-creates this SuperAdmin on first boot. SAVE THE PASSWORD.
+# The entrypoint creates this SuperAdmin on first boot, only while none exists;
+# later edits here change nothing. SAVE THE PASSWORD, and rotate it in the
+# admin UI after the first login — then this line may be deleted.
 DJANGO_SUPERUSER_EMAIL=${ADMIN_EMAIL}
 DJANGO_SUPERUSER_PASSWORD=${SUPERUSER_PASSWORD}
 

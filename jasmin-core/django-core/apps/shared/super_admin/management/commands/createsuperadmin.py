@@ -16,8 +16,15 @@ Usage::
         --password='supersecret' \\
         --first-name=Bia --last-name=Seyr
 
-    # Idempotent re-runs: pass --update-if-exists to refresh password / names
-    # on an existing account instead of erroring.
+    # Explicit reset: pass --update-if-exists to refresh password / names
+    # on an existing account (and re-activate it) instead of erroring.
+    poetry run python manage.py createsuperadmin \\
+        --email=admin@example.com --update-if-exists
+
+    # Container boot (docker_entrypoint.sh): create the first SuperAdmin only
+    # while none exists; never touches an existing account.
+    poetry run python manage.py createsuperadmin --bootstrap \\
+        --email=admin@example.com --password='supersecret'
 """
 
 from __future__ import annotations
@@ -41,7 +48,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser: Any) -> None:
         parser.add_argument(
-            "--email", required=True, help="SuperAdmin email (USERNAME_FIELD)."
+            "--email", default="", help="SuperAdmin email (USERNAME_FIELD)."
         )
         parser.add_argument(
             "--password",
@@ -63,9 +70,31 @@ class Command(BaseCommand):
                 "Useful after a dev-DB reset."
             ),
         )
+        parser.add_argument(
+            "--bootstrap",
+            action="store_true",
+            help=(
+                "Create the SuperAdmin only while no SuperAdmin exists at all, "
+                "and leave every existing account untouched — so a password "
+                "rotated in the UI or an account deactivated during an incident "
+                "survives the next container start. Missing --email/--password "
+                "with no SuperAdmin yet prints a hint instead of failing."
+            ),
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
+        if options["bootstrap"]:
+            if options["update_if_exists"]:
+                raise CommandError(
+                    "--bootstrap never updates an existing SuperAdmin; "
+                    "drop --update-if-exists."
+                )
+            if self._bootstrap_is_done(options):
+                return
+
         email = options["email"].strip().lower()
+        if not email:
+            raise CommandError("--email is required.")
         first_name = options["first_name"]
         last_name = options["last_name"]
         update_if_exists = options["update_if_exists"]
@@ -105,6 +134,29 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"Updated existing SuperAdmin {existing.email}")
         )
+
+    def _bootstrap_is_done(self, options: dict[str, Any]) -> bool:
+        """True when the boot-time bootstrap has nothing to create.
+
+        The check is "any SuperAdmin at all", not "this email": an operator who
+        retired the bootstrap account in favour of another must not see it come
+        back on the next start.
+        """
+        if SuperAdmin.objects.exists():
+            self.stdout.write(
+                "A SuperAdmin already exists; leaving every account untouched."
+            )
+            return True
+        if not options["email"].strip() or not options["password"]:
+            self.stderr.write(
+                "No SuperAdmin exists yet and DJANGO_SUPERUSER_EMAIL / "
+                "DJANGO_SUPERUSER_PASSWORD are not both set, so none was "
+                "created. Set both in .env and restart the backend, or run "
+                "'docker compose exec backend python manage.py createsuperadmin "
+                "--email <email>' (it asks for the password)."
+            )
+            return True
+        return False
 
     @staticmethod
     def _prompt_password() -> str:

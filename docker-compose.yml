@@ -32,10 +32,11 @@ x-backend-env: &backend-env
   DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
   FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY is required}
-  # First-boot SuperAdmin bootstrap — docker_entrypoint.sh runs the idempotent
-  # ``createsuperadmin --update-if-exists`` when BOTH are non-empty. Without
-  # this passthrough the vars exist only in .env and the entrypoint silently
-  # skips creation (no super_admin row, admin login impossible).
+  # First-boot SuperAdmin bootstrap — docker_entrypoint.sh runs
+  # ``createsuperadmin --bootstrap``, which creates the account from these only
+  # while no SuperAdmin exists and never touches an existing one (so a rotated
+  # password or a deactivation survives restarts). Optional once the first
+  # SuperAdmin exists; without this passthrough a fresh install gets none.
   DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-}
   DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-}
   EMAIL_HOST: ${EMAIL_HOST:-}

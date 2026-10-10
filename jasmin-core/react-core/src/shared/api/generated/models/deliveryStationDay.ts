@@ -31,6 +31,8 @@ export interface DeliveryStationDay {
   /** @nullable */
   readonly capacity_by_week?: DeliveryStationDayCapacityByWeek;
   readonly tour_assignment_missing?: boolean;
+  /** @minimum 1 */
+  tour_number?: number;
   valid_from: string;
   /** @nullable */
   valid_until?: string | null;
@@ -58,11 +60,6 @@ export interface DeliveryStationDay {
   additional_pickup_time_end_2?: string | null;
   /** @nullable */
   special_instructions?: string | null;
-  /**
-   * @minimum 0
-   * @maximum 2147483647
-   */
-  tour_number?: number;
   /**
    * @minimum 0
    * @maximum 2147483647

@@ -357,7 +357,8 @@
     "starts_before_delivery_day": "A station-day cannot start before its delivery day. Move the delivery day's start first, or pick a start on or after it.",
     "in_use": "This pickup day cannot be deleted while deliveries still reference it. Move or end those deliveries first.",
     "unknown": "No delivery station \"{{delivery_station}}\" is served on delivery day {{delivery_day}} on {{date}}.",
-    "ambiguous": "{{matches}} delivery stations named \"{{delivery_station}}\" are served on delivery day {{delivery_day}} on {{date}} — give them distinct short names."
+    "ambiguous": "{{matches}} delivery stations named \"{{delivery_station}}\" are served on delivery day {{delivery_day}} on {{date}} — give them distinct short names.",
+    "tour_number_below_one": "Tours start at 1. Assign the station day to a tour in the tour planning."
   },
   "inventory_entry": {
     "not_found": "Inventory entry not found."

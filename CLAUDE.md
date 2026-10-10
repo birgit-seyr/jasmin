@@ -1165,7 +1165,7 @@ their schemas themselves. In production, run them in the backend container
 
 | Command | Where | What it does, and when to run it |
 | ------- | ----- | -------------------------------- |
-| `createsuperadmin` | both | Creates a platform super-admin login in the public schema, asking for the password; `--update-if-exists` resets an existing one. `make dev-superuser EMAIL=…` in dev. |
+| `createsuperadmin` | both | Creates a platform super-admin login in the public schema, asking for the password; `--update-if-exists` resets an existing one's password and re-activates it — the only way to do that from the shell. `make dev-superuser EMAIL=…` in dev. Every backend/huey start runs `--bootstrap` from `DJANGO_SUPERUSER_*`, which creates one only while none exists and never touches an existing account. |
 | `check_invoice_hashes` | prod | Checks one tenant's finalized invoices against their sealed hashes; exits 1 on drift and logs `invoice.hash_drift` to the security log. Huey's `nightly_invoice_hash_check` checks every tenant at 03:00 and emails the operator, so run this for an on-demand check. |
 | `reconcile_current_stock` | prod | Compares one tenant's stock balances and snapshots with the movement ledger; `--fix` rebuilds the rows that drifted. Run when stock figures look wrong. |
 | `normalize_ibans` | prod, once after its deploy | Rewrites every billing profile's IBAN into the canonical form the SEPA export needs (no spaces, upper-case), in all active tenants or in `--tenant <schema>`; preview with `--dry-run`. Idempotent. An IBAN that is invalid even then is left unchanged and listed by member number for the office to correct. Run it once after the deploy that brought it; afterwards only when stored IBANs look wrong. |

@@ -30129,6 +30129,9 @@ components:
         tour_assignment_missing:
           type: boolean
           readOnly: true
+        tour_number:
+          type: integer
+          minimum: 1
         valid_from:
           type: string
           format: date
@@ -30176,10 +30179,6 @@ components:
         special_instructions:
           type: string
           nullable: true
-        tour_number:
-          type: integer
-          maximum: 2147483647
-          minimum: 0
         stop_order:
           type: integer
           maximum: 2147483647

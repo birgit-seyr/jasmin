@@ -326,7 +326,7 @@
 }
 
 .changed-day {
-  color: #a8071a;
+  color: var(--color-error-text);
   font-weight: bold;
 }
 
@@ -344,6 +344,18 @@
 
 .planning-variation-cell-highlight {
   background-color: var(--color-highlight);
+}
+
+/* A harvest share planning row scaffolded from a forecast (bold) or backed by
+   leftover stock (normal weight); see planningRowEmphasis.ts. */
+.planning-row-forecast {
+  color: var(--color-planning-row-highlight);
+  font-weight: bold;
+}
+
+.planning-row-stock {
+  color: var(--color-planning-row-highlight);
+  font-weight: normal;
 }
 
 .still-free-ok {

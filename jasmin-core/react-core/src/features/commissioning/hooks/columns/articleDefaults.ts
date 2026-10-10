@@ -21,7 +21,7 @@
  * enumerates both spellings so the inconsistency stays in one place.
  */
 
-import type { ShareArticle } from "@shared/api/generated/models";
+import type { ShareArticle, UnitEnum } from "@shared/api/generated/models";
 
 export type ArticleAutofillContext =
   | "harvest"
@@ -34,8 +34,11 @@ export type ArticleAutofillContext =
   // as a share_type_variation id.
   | "longtermplanning";
 
-/** Unit values stored on rows. We normalise to uppercase for lookups. */
-type UnitKey = "KG" | "PCS" | "PIECES" | "BUNCH";
+/**
+ * The row units a ShareArticle carries per-unit defaults for (``L`` / ``G``
+ * have none). Form values are normalised to uppercase for the lookup.
+ */
+type UnitKey = Extract<UnitEnum, "KG" | "PCS" | "BUNCH">;
 
 interface CrateBinding {
   /** ShareArticle field carrying the crate FK id. */
@@ -88,28 +91,24 @@ interface ArticleAutofillBindings {
 const PER_PU_HARVEST: Record<UnitKey, string> = {
   KG: "default_kg_per_pu_harvest",
   PCS: "default_pieces_per_pu_harvest",
-  PIECES: "default_pieces_per_pu_harvest",
   BUNCH: "default_bunches_per_pu_harvest",
 };
 
 const PER_PU_PURCHASE: Record<UnitKey, string> = {
   KG: "default_kg_per_pu_purchase",
   PCS: "default_pieces_per_pu_purchase",
-  PIECES: "default_pieces_per_pu_purchase",
   BUNCH: "default_bunches_per_pu_purchase",
 };
 
 const PER_PU_RESELLER: Record<UnitKey, string> = {
   KG: "default_kg_per_pu_reseller",
   PCS: "default_pieces_per_pu_reseller",
-  PIECES: "default_pieces_per_pu_reseller",
   BUNCH: "default_bunches_per_pu_reseller",
 };
 
 const RESELLER_ORDER_PRICE_SUFFIX: Record<UnitKey, string> = {
   KG: "kg",
   PCS: "pieces",
-  PIECES: "pieces",
   BUNCH: "bunch",
 };
 
@@ -159,12 +158,14 @@ const CONTEXTS: Record<
 const readField = (article: ShareArticle, field: string): unknown =>
   (article as unknown as Record<string, unknown>)[field];
 
+const isUnitKey = (unit: string): unit is UnitKey =>
+  Object.hasOwn(PER_PU_HARVEST, unit);
+
 /** Normalise whatever unit value the form carries to one of our keys. */
 const normaliseUnit = (raw: unknown): UnitKey | null => {
   if (typeof raw !== "string" || !raw) return null;
   const up = raw.toUpperCase();
-  if (up in PER_PU_HARVEST) return up as UnitKey;
-  return null;
+  return isUnitKey(up) ? up : null;
 };
 
 function buildAmountPatch(

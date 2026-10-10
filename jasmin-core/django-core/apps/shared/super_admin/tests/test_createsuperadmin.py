@@ -1,6 +1,7 @@
 """``createsuperadmin``: creates — or, with ``--update-if-exists``, resets — a
 platform super-admin login in the public schema. Django's ``createsuperuser``
-can't: it targets the tenant user model.
+can't: it targets the tenant user model. ``--bootstrap`` is the container-boot
+mode: it creates the first login only while none exists.
 """
 
 from __future__ import annotations
@@ -95,3 +96,88 @@ class TestCreateSuperAdmin:
 
         with schema_context("public"):
             assert not SuperAdmin.objects.filter(email=EMAIL).exists()
+
+
+def _run_capturing_stderr(**options) -> tuple[str, str]:
+    out, err = StringIO(), StringIO()
+    with schema_context("public"):
+        call_command("createsuperadmin", stdout=out, stderr=err, **options)
+    return out.getvalue(), err.getvalue()
+
+
+@pytest.mark.django_db
+class TestBootstrap:
+    """The boot path never undoes a rotation or a deactivation."""
+
+    @pytest.fixture(autouse=True)
+    def _no_super_admins(self, _tenant_schema):
+        with schema_context("public"):
+            SuperAdmin.objects.all().delete()
+
+    def test_creates_the_first_login(self):
+        output = _run(email=EMAIL, password=PASSWORD, bootstrap=True)
+
+        admin = _admin()
+        assert admin.is_active
+        assert admin.check_password(PASSWORD)
+        assert f"Created SuperAdmin {EMAIL}" in output
+
+    def test_an_existing_login_keeps_its_password_and_deactivation(self):
+        _run(email=EMAIL, password=PASSWORD, first_name="Ops")
+        with schema_context("public"):
+            SuperAdmin.objects.filter(email=EMAIL).update(is_active=False)
+
+        output = _run(
+            email=EMAIL, password=NEW_PASSWORD, first_name="Other", bootstrap=True
+        )
+
+        admin = _admin()
+        assert not admin.is_active
+        assert admin.check_password(PASSWORD)
+        assert admin.first_name == "Ops"
+        assert "leaving every account untouched" in output
+
+    def test_another_super_admin_stops_the_bootstrap_email_coming_back(self):
+        _run(email="someone.else@example.com", password=PASSWORD)
+
+        _run(email=EMAIL, password=PASSWORD, bootstrap=True)
+
+        with schema_context("public"):
+            assert not SuperAdmin.objects.filter(email=EMAIL).exists()
+
+    @pytest.mark.parametrize(
+        "options",
+        [{}, {"email": EMAIL}, {"password": PASSWORD}],
+        ids=["nothing-set", "no-password", "no-email"],
+    )
+    def test_missing_settings_print_a_hint_without_failing(self, options):
+        _out, err = _run_capturing_stderr(bootstrap=True, **options)
+
+        assert "No SuperAdmin exists yet" in err
+        with schema_context("public"):
+            assert not SuperAdmin.objects.exists()
+
+    def test_missing_settings_are_fine_once_a_super_admin_exists(self):
+        _run(email=EMAIL, password=PASSWORD)
+
+        _out, err = _run_capturing_stderr(bootstrap=True)
+
+        assert err == ""
+        assert _admin().check_password(PASSWORD)
+
+    def test_refuses_update_if_exists(self):
+        with pytest.raises(CommandError, match="never updates"):
+            _run(email=EMAIL, password=PASSWORD, bootstrap=True, update_if_exists=True)
+
+    def test_a_policy_violating_password_creates_nothing(self):
+        with pytest.raises(CommandError, match="at least 10 characters"):
+            _run(email=EMAIL, password="too-short", bootstrap=True)
+
+        with schema_context("public"):
+            assert not SuperAdmin.objects.exists()
+
+
+@pytest.mark.django_db
+def test_email_is_required_outside_bootstrap(_tenant_schema):
+    with pytest.raises(CommandError, match="--email is required"):
+        _run(password=PASSWORD)

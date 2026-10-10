@@ -108,46 +108,9 @@ if not DEBUG:
 # paste a real DSN from the GlitchTip UI.
 _SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
 if _SENTRY_DSN:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.huey import HueyIntegration
-    from sentry_sdk.integrations.logging import LoggingIntegration
+    from core.sentry_setup import init_sentry
 
-    # send_default_pii=False stops Sentry AUTO-attaching user.email / IP, but
-    # NOT PII the app put into a log message. INFO/WARNING lines become
-    # breadcrumbs on the next ERROR event, beyond the GDPR erasure pipeline —
-    # these hooks scrub email/IP substrings (see core/sentry_scrub.py).
-    from core.sentry_scrub import (
-        before_breadcrumb as _sentry_before_breadcrumb,
-    )
-    from core.sentry_scrub import (
-        before_send as _sentry_before_send,
-    )
-
-    sentry_sdk.init(
-        dsn=_SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(),
-            # INFO and WARNING log lines become Sentry breadcrumbs; ERROR
-            # and above become Sentry events. Keeps the noise floor
-            # honest without flooding the project.
-            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
-            # Surface Huey periodic-task crashes as Sentry events with
-            # task name + args + traceback (the LoggingIntegration alone
-            # would catch the bare exception line but lose the context).
-            HueyIntegration(),
-        ],
-        # 5% perf sampling — cheap baseline; raise once you have a
-        # specific endpoint you want to drill into.
-        traces_sample_rate=0.05,
-        # GDPR: never auto-attach user.email / IP. If you ever decide
-        # to attach them deliberately, do it per-event with
-        # ``sentry_sdk.set_user(...)`` after consent gating.
-        send_default_pii=False,
-        before_breadcrumb=_sentry_before_breadcrumb,
-        before_send=_sentry_before_send,
-        environment="production" if not DEBUG else "development",
-    )
+    init_sentry(_SENTRY_DSN, debug=DEBUG)
 
 # TRANSLATION for pdfs:
 USE_I18N = True

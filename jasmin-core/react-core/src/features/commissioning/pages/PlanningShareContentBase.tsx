@@ -26,12 +26,12 @@ import {
 import type { DeliveryDay } from "@features/commissioning/hooks/columns/useDeliveryDayColumns";
 import type { ShareArticleOption } from "@features/commissioning/hooks/useShareArticles";
 import type { ShareTypeVariationOption } from "@features/commissioning/hooks/useShareTypeVariations";
+import { usePlanningTenantSettings } from "@features/commissioning/hooks/usePlanningTenantSettings";
 import { BackupModal } from "@features/commissioning/modals";
 import {
   useCurrency,
   useNoteColumn,
   useTableRowSelection,
-  useTenant,
   useUnitOptions,
   useYearWeekState,
 } from "@hooks/index";
@@ -53,7 +53,11 @@ import type {
   HarvestSharePlanningCreateRequest,
 } from "@shared/api/generated/models";
 import { ShareTypeEnum } from "@shared/api/generated/models";
-import { forecastAmountInRowUnit } from "@features/commissioning/utils/planningRow";
+import {
+  articlePriceField,
+  articleWeightField,
+  forecastAmountInRowUnit,
+} from "@features/commissioning/utils/planningRow";
 import { useRoles } from "@shared/auth";
 import { PlanningModeSelector, WeekSelector } from "@shared/selectors";
 import {
@@ -78,28 +82,6 @@ import { Button, Space } from "antd";
 import type { Key } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-// The article's net box price field for each unit — the source of a planning
-// row's ``price_per_unit`` default (mirrors the backend's per-unit fallback in
-// ShareContentService).
-const PRICE_PER_UNIT_ARTICLE_FIELD: Record<string, string> = {
-  KG: "net_price_for_boxes_kg",
-  PCS: "net_price_for_boxes_pieces",
-  PIECES: "net_price_for_boxes_pieces",
-  BUNCH: "net_price_for_boxes_bunch",
-};
-
-// The article's per-item weight base for each unit — the source of a planning
-// row's ``kg_per_piece``. PCS uses the per-piece weight, BUNCH the per-bunch
-// weight (a distinct field); KG carries no per-item weight (the amount is
-// already in kg). Combined with the row's size, e.g. ``kg_per_piece_M`` /
-// ``kg_per_bunch_M``.
-const KG_WEIGHT_ARTICLE_BASE: Record<string, string | null> = {
-  KG: null,
-  PCS: "kg_per_piece",
-  PIECES: "kg_per_piece",
-  BUNCH: "kg_per_bunch",
-};
 
 /**
  * A planning-list row as the cache holds it: the generated
@@ -146,17 +128,19 @@ export default function PlanningShareContentBase({
     useState<TableRecord | null>(null);
 
   const { t } = useTranslation();
-  const { getSetting } = useTenant();
+  const {
+    defaultPlanningGranularity,
+    numberPackingStations: number_packing_stations,
+    showSummaryOnTop: showSummaryInHarvestSharePlanningOnTop,
+  } = usePlanningTenantSettings();
 
   // Seed ``planningMode`` from ``TenantSettings.default_planning_granularity``.
-  // Lazy initializer runs once on mount so subsequent tenant-settings
+  // The initial state is taken once on mount so subsequent tenant-settings
   // refetches don't clobber the user's manual selection via the
   // <PlanningModeSelector> dropdown (the auto-seeding ``useEffect`` below
   // also intentionally leaves the value alone in certain branches).
   const [planningMode, setPlanningMode] = useState<string>(
-    () =>
-      (getSetting("default_planning_granularity", "basic") as string) ||
-      "basic",
+    defaultPlanningGranularity,
   );
   const [showForecastClassification, setShowForecastClassification] =
     useState(true);
@@ -172,7 +156,7 @@ export default function PlanningShareContentBase({
       // creations — they were scaffolded by the system from
       // upstream data (a Forecast row → green + bold; leftover
       // stock from last week → green + normal weight, see
-      // ``styles/planningColors.planningRowColor``). Deleting one
+      // ``styles/planningRowEmphasis.planningRowStatus``). Deleting one
       // here would only nuke the planner's per-(day, variation,
       // tour, station) ShareContent line, but the underlying
       // forecast / stock would re-scaffold the row on the next
@@ -192,15 +176,6 @@ export default function PlanningShareContentBase({
     }),
     [isPast, isOffice],
   );
-
-  const number_packing_stations = getSetting(
-    "number_packing_stations",
-    1,
-  ) as number;
-  const showSummaryInHarvestSharePlanningOnTop = getSetting(
-    "show_summary_in_harvest_share_planning_on_top",
-    true,
-  ) as boolean;
 
   // Single source of truth for the (day × variation) axes. The base grid
   // AND the BackupModal consume this same hook, so their day/variation
@@ -384,27 +359,23 @@ export default function PlanningShareContentBase({
       },
       articleChanged: boolean,
     ) => {
-      const article = pricingArticlesById.get(String(articleId)) as
-        | Record<string, unknown>
-        | undefined;
+      const article = pricingArticlesById.get(String(articleId));
       if (!article) return;
 
       const patch: Record<string, unknown> = {};
       const unitKey = String(unit).toUpperCase();
-      const size = String(form.getFieldValue("size") ?? "");
 
       // kg/item weight is fully derived from (article, unit, size), so always
       // reflect the current state: the per-PIECE weight for PCS, the per-BUNCH
       // weight for BUNCH, and none for KG. Clearing when this unit/size has no
       // source weight (KG, or a bunch article lacking a per-bunch weight) stops
       // a stale piece-weight from lingering after a unit switch.
-      const weightBase = KG_WEIGHT_ARTICLE_BASE[unitKey];
-      const kgWeight =
-        weightBase && size ? article[`${weightBase}_${size}`] : undefined;
+      const weightField = articleWeightField(unitKey, form.getFieldValue("size"));
+      const kgWeight = weightField ? article[weightField] : undefined;
       patch.kg_per_piece =
         kgWeight != null && kgWeight !== "" ? kgWeight : null;
 
-      const priceField = PRICE_PER_UNIT_ARTICLE_FIELD[unitKey];
+      const priceField = articlePriceField(unitKey);
       const price = priceField ? article[priceField] : undefined;
       if (price != null && price !== "") {
         patch.price_per_unit = price;
@@ -498,10 +469,12 @@ export default function PlanningShareContentBase({
           // On an unsaved row the article id lives under ``share_article_name``
           // (the foreignKey display field) until it is persisted — mirror
           // handleUnitChange's fallback so a size change actually re-derives.
-          const articleId = (form.getFieldValue("share_article") ??
-            form.getFieldValue("share_article_name")) as string | undefined;
-          const unit = form.getFieldValue("unit") as string | undefined;
-          if (articleId) applyRowDefaults(articleId, unit ?? "", form);
+          const articleId =
+            form.getFieldValue("share_article") ??
+            form.getFieldValue("share_article_name");
+          const unit = form.getFieldValue("unit");
+          if (typeof articleId === "string" && articleId)
+            applyRowDefaults(articleId, typeof unit === "string" ? unit : "", form);
         },
         disabled: (record: TableRecord) => {
           if (record.key != -1) return true;

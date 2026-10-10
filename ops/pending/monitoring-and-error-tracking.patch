@@ -1,0 +1,509 @@
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 67acaa6..889ed89 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -478,7 +478,9 @@ outside Huey on purpose:
+ - certificate renewal, in certbot's renewal loop, with the gateway's 12-hourly
+   nginx reload that picks the renewed certificate up;
+ - the worker's own liveness, through the `huey` container's heartbeat
+-  healthcheck (`docker-compose.yml`), since a dead Huey can't report itself.
++  healthcheck (`docker-compose.yml`) and the Uptime Kuma push monitor the same
++  heartbeat feeds (`KUMA_PUSH_HUEY_URL`), since a dead Huey can't report
++  itself. Docker only marks the container unhealthy; Kuma raises the alert.
+ 
+ ## Frontend rules
+ 
+diff --git a/backups/backup.sh b/backups/backup.sh
+index eb2875e..540ca49 100644
+--- a/backups/backup.sh
++++ b/backups/backup.sh
+@@ -39,6 +39,13 @@ BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be se
+ # RCLONE_CONFIG=/backups/rclone.conf set in .env, every freshly written,
+ # already-encrypted artifact is copied off-host. Unset -> local-only backups.
+ RCLONE_REMOTE="${RCLONE_REMOTE:-}"
++# Set by push_offsite when an off-host copy fails; report_to_monitor turns it
++# into a "down" heartbeat.
++OFFSITE_FAILED=0
++
++# Optional Uptime Kuma push monitor, e.g. http://uptime-kuma:3001/api/push/<token>
++# (any query string is dropped and rebuilt). Unset -> no heartbeat.
++KUMA_PUSH_BACKUP_URL="${KUMA_PUSH_BACKUP_URL:-}"
+ 
+ # ── Helpers ────────────────────────────────────────────────────
+ # Encrypt stdin -> $1 with the shared AES256 passphrase.
+@@ -54,6 +61,7 @@ push_offsite() {
+     [ -n "$RCLONE_REMOTE" ] || return 0
+     if ! command -v rclone >/dev/null 2>&1; then
+         echo "[$(date)] WARN: RCLONE_REMOTE set but rclone not installed; skipping off-host push of $(basename "$1")" >&2
++        OFFSITE_FAILED=1
+         return 0
+     fi
+     echo "[$(date)] Pushing $(basename "$1") → ${RCLONE_REMOTE}"
+@@ -63,11 +71,27 @@ push_offsite() {
+     # operator go-live step.
+     if [ -n "${RCLONE_CONFIG:-}" ]; then
+         rclone --config "$RCLONE_CONFIG" copyto "$1" "${RCLONE_REMOTE}/$(basename "$1")" \
+-            || echo "[$(date)] WARN: off-host push of $(basename "$1") failed" >&2
++            || { echo "[$(date)] WARN: off-host push of $(basename "$1") failed" >&2; OFFSITE_FAILED=1; }
+     else
+         rclone copyto "$1" "${RCLONE_REMOTE}/$(basename "$1")" \
+-            || echo "[$(date)] WARN: off-host push of $(basename "$1") failed" >&2
++            || { echo "[$(date)] WARN: off-host push of $(basename "$1") failed" >&2; OFFSITE_FAILED=1; }
++    fi
++}
++
++# Heartbeat to the Uptime Kuma push monitor: "up" after a verified backup
++# whose off-host pushes all went through, "down" when one of them failed. A
++# failed run sends nothing (set -e ends it first), so the monitor alerts once
++# its interval passes. The push itself is best-effort: a short timeout, and a
++# failure is a warning, never a failed backup.
++report_to_monitor() {
++    [ -n "$KUMA_PUSH_BACKUP_URL" ] || return 0
++    if [ "$OFFSITE_FAILED" -eq 0 ]; then
++        query="status=up&msg=OK"
++    else
++        query="status=down&msg=off-host%20push%20failed"
+     fi
++    wget -q -T 10 -O /dev/null "${KUMA_PUSH_BACKUP_URL%%\?*}?${query}" 2>/dev/null \
++        || echo "[$(date)] WARN: heartbeat to the backup monitor failed" >&2
+ }
+ 
+ # ── DB backup ──────────────────────────────────────────────────
+@@ -233,6 +257,7 @@ case "${1:-scheduled}" in
+         do_backup
+         do_media_backup
+         export_gdpr_ledger || true
++        report_to_monitor
+         ;;
+     ledger)
+         # Refresh the GDPR deletion ledger (cron, and restore.sh before it
+@@ -249,6 +274,7 @@ case "${1:-scheduled}" in
+         do_backup
+         do_media_backup
+         export_gdpr_ledger || true
++        report_to_monitor
+         echo "${SCHEDULE} ${SELF} now >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+         # The ledger every 10 minutes, so an erasure reaches it (and its
+         # off-host copy) long before the next nightly backup.
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 4151331..9e10425 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -14,7 +14,8 @@
+ #   huey      - background task worker
+ #   frontend  - SPA served by nginx (built at image time)
+ #   gateway   - public-facing nginx (TLS, routing)
+-#   uptime-kuma - self-hosted uptime monitor (NOT publicly exposed; SSH tunnel)
++#   uptime-kuma - self-hosted uptime monitor (loopback port only; SSH tunnel)
++#   glitchtip-web / glitchtip-worker - error tracking (loopback port only)
+ #   certbot   - Let's Encrypt renewal loop
+ # =============================================================================
+ 
+@@ -228,6 +229,9 @@ services:
+       <<: *backend-env
+       SKIP_MIGRATIONS: "1"
+       SKIP_COLLECTSTATIC: "1"
++      # Uptime Kuma push URL (http://uptime-kuma:3001/api/push/<token>) that
++      # huey_heartbeat calls every minute. Empty = no push.
++      KUMA_PUSH_HUEY_URL: ${KUMA_PUSH_HUEY_URL:-}
+     volumes:
+       - media_volume:/app/media
+       - logs_volume:/app/logs
+@@ -242,9 +246,13 @@ services:
+       # huey_heartbeat (apps/notifications/tasks.py) rewrites this file every
+       # minute while the scheduler + a worker are alive. A missing/stale file
+       # means a dead OR wedged consumer (all threads blocked) — which otherwise
+-      # "looks up" while every job and periodic sweep silently stops — so fail
+-      # the check and let the restart policy replace it. Complements the
+-      # app-level reconcile_stale_background_jobs watchdog + its admin alert.
++      # "looks up" while every job and periodic sweep silently stops — so the
++      # check marks the container unhealthy. Nothing restarts it for that:
++      # ``restart: unless-stopped`` acts only when the process exits, never on
++      # an unhealthy status. The same task pushes to KUMA_PUSH_HUEY_URL, so
++      # Uptime Kuma alerts when the pushes stop; the restart is then manual
++      # (``docker compose restart huey``). Complements the app-level
++      # reconcile_stale_background_jobs watchdog + its admin alert.
+       test:
+         - CMD-SHELL
+         - "python -c 'import os,sys,time; sys.exit(0 if os.path.exists(sys.argv[1]) and time.time()-os.path.getmtime(sys.argv[1])<180 else 1)' /tmp/huey_heartbeat"
+@@ -299,6 +307,11 @@ services:
+       # so no compose edit is needed. Unset -> local-only backups.
+       RCLONE_REMOTE: ${RCLONE_REMOTE:-}
+       RCLONE_CONFIG: ${RCLONE_CONFIG:-}
++      # Uptime Kuma push URL (http://uptime-kuma:3001/api/push/<token>) that
++      # backup.sh calls after each nightly run: "up" once the dump is verified
++      # and every off-host push went through, "down" when a push failed. No
++      # push when the run fails. Empty = no push.
++      KUMA_PUSH_BACKUP_URL: ${KUMA_PUSH_BACKUP_URL:-}
+     volumes:
+       - ./backups:/backups:rw
+       # Read-only source for the media archive step in backup.sh.
+@@ -394,23 +407,31 @@ services:
+       retries: 3
+ 
+   uptime-kuma:
+-    # Self-hosted uptime monitor. NOT exposed to the public internet —
+-    # the UI is reachable only via SSH tunnel:
++    # Self-hosted uptime monitor, started by scripts/deploy.sh. NOT exposed to
++    # the public internet — the port below binds to the host's loopback only,
++    # so the UI is reachable only via SSH tunnel:
+     #
+     #     ssh -L 3001:localhost:3001 <host>
+     #     # then open http://localhost:3001 in your browser
+     #
++    # Keep the 127.0.0.1: a published Docker port is opened through Docker's
++    # own iptables chain, which ufw never sees, so "3001:3001" would put the
++    # admin UI on the internet whatever ufw says.
++    #
+     # When you want to flip this into a public status page, add an
+     # nginx server block under e.g. ``status.${FRONTEND_DOMAIN}`` that
+     # proxies to ``uptime-kuma:3001`` (it joins ``jasmin-net`` so the
+-    # gateway can reach it via service-name DNS), reuse the wildcard
+-    # TLS cert, and only THEN add an exposed port here. Until then,
+-    # tunnel access keeps the Node admin UI off the internet.
++    # gateway can reach it via service-name DNS) and reuse the wildcard
++    # TLS cert.
+     #
+     # Configure monitors against the public-facing URL, NOT the
+     # internal ``backend`` service. That way Kuma is testing what an
+     # actual user would hit — TLS, gateway, backend, all the way
+     # through.  Example: ``https://${FRONTEND_DOMAIN}/health/``
++    # backup.sh and huey push heartbeats to it over jasmin-net
++    # (KUMA_PUSH_BACKUP_URL, KUMA_PUSH_HUEY_URL). Kuma runs on the same VM,
++    # so it cannot report the whole host going down — that needs one check
++    # from another machine.
+     image: louislam/uptime-kuma:1
+     restart: unless-stopped
+     logging: *default-logging
+@@ -419,6 +440,8 @@ services:
+     mem_limit: 256m
+     pids_limit: 128
+     cpus: 0.5
++    ports:
++      - "127.0.0.1:3001:3001"
+     volumes:
+       - uptime_kuma_data:/app/data
+     networks: [jasmin-net]
+@@ -428,15 +451,22 @@ services:
+   #   - Separate database ``glitchtip`` on the same postgres instance, owned by
+   #     a DEDICATED least-privileged role (NOT the tenant-DB superuser) so a
+   #     GlitchTip compromise can't yield the tenant-DB credentials. One-time
+-  #     setup before first ``up`` (uses GLITCHTIP_DB_USER/GLITCHTIP_DB_PASSWORD
+-  #     from .env):
+-  #         docker compose exec postgres psql -U ${POSTGRES_USER} -c \
+-  #           "CREATE ROLE glitchtip LOGIN PASSWORD '<GLITCHTIP_DB_PASSWORD>';"
+-  #         docker compose exec postgres psql -U ${POSTGRES_USER} -c \
+-  #           "CREATE DATABASE glitchtip OWNER glitchtip;"
+-  #   - Redis DB index 2 (Jasmin uses 0).
++  #     setup before first ``up`` (replace <GLITCHTIP_DB_PASSWORD> with the
++  #     value in .env). The single quotes keep $POSTGRES_USER for the
++  #     container's shell, where it is set; the host shell has no such variable:
++  #         docker compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres' <<'SQL'
++  #         CREATE ROLE glitchtip LOGIN PASSWORD '<GLITCHTIP_DB_PASSWORD>';
++  #         CREATE DATABASE glitchtip OWNER glitchtip;
++  #         SQL
++  #     scripts/deploy.sh starts both services once that database exists.
++  #   - Redis DB index 2 (Jasmin uses 0). The index separates keys, not memory:
++  #     both share the instance's 384 MB noeviction cap, so a Celery backlog
++  #     that fills it makes redis refuse Huey's enqueues and the cache writes
++  #     as well. Watch ``redis-cli info memory``; if GlitchTip's share grows,
++  #     give it a redis of its own.
+   #
+-  # UI is NOT exposed publicly — reach via SSH tunnel:
++  # UI is NOT exposed publicly — the port below binds to the host's loopback
++  # only (keep the 127.0.0.1, see uptime-kuma). Reach it via SSH tunnel:
+   #     ssh -L 8004:localhost:8004 <host>
+   #     # open http://localhost:8004 to create admin + projects, copy DSN
+   #
+@@ -468,12 +498,17 @@ services:
+       DATABASE_URL: postgres://${GLITCHTIP_DB_USER:-glitchtip}:${GLITCHTIP_DB_PASSWORD:?GLITCHTIP_DB_PASSWORD is required (create the dedicated glitchtip DB role — see comment above)}@postgres:5432/glitchtip
+       SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?GLITCHTIP_SECRET_KEY is required}
+       PORT: "8000"
++      # consolemail:// only prints mail to the log, so GlitchTip sends no
++      # alerts until GLITCHTIP_EMAIL_URL is set, e.g.
++      # smtp+tls://<user>:<url-encoded password>@<host>:587
+       EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+       DEFAULT_FROM_EMAIL: ${SERVER_EMAIL:-noreply@jasmin.coop}
+       GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:?GLITCHTIP_DOMAIN is required}
+       CELERY_WORKER_AUTOSCALE: "1,3"
+       ENABLE_USER_REGISTRATION: "false"
+       REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/2
++    ports:
++      - "127.0.0.1:8004:8000"
+     depends_on:
+       postgres: { condition: service_healthy }
+       redis: { condition: service_healthy }
+diff --git a/jasmin-core/django-core/apps/notifications/tasks.py b/jasmin-core/django-core/apps/notifications/tasks.py
+index 71f8b5f..4eac6dd 100644
+--- a/jasmin-core/django-core/apps/notifications/tasks.py
++++ b/jasmin-core/django-core/apps/notifications/tasks.py
+@@ -3,7 +3,8 @@
+ Housekeeping tasks: ``cleanup_stale_email_logs`` (EmailLog retention pruning),
+ ``reconcile_stale_background_jobs`` (marks worker-lost jobs failed + alerts),
+ ``prune_old_background_jobs`` (BackgroundJob retention pruning), and
+-``huey_heartbeat`` (liveness signal for the consumer's Docker healthcheck).
++``huey_heartbeat`` (liveness signal for the consumer's Docker healthcheck and
++the Uptime Kuma push monitor).
+ 
+ Bootstrap reminder: nothing in this file runs until the ``HUEY`` config
+ block in ``config/settings.py`` is uncommented and a worker process
+@@ -13,9 +14,12 @@ starts.
+ from __future__ import annotations
+ 
+ import datetime
++import http.client
+ import logging
+ import os
+ import time
++import urllib.parse
++import urllib.request
+ 
+ from django.core.mail import mail_admins
+ from django.db.models import Q
+@@ -209,19 +213,51 @@ def prune_old_background_jobs() -> None:
+     )
+ 
+ 
+-# Liveness heartbeat for the Huey container's Docker healthcheck. The consumer
+-# rewrites HUEY_HEARTBEAT_FILE every minute; the compose healthcheck fails the
+-# container when the file is missing or stale (all workers wedged / scheduler
+-# dead), so orchestration restarts a consumer that "looks up" but runs nothing.
+-# ``periodic_task`` (no DB) on purpose: a DB hiccup must not mask a live
+-# consumer — DB liveness is the backend container's /health/ concern. This is
+-# infra, not a business job, so it is intentionally NOT in run_periodic_tasks_now.
++# Liveness heartbeat for the Huey container. The consumer rewrites
++# HUEY_HEARTBEAT_FILE every minute; the compose healthcheck marks the container
++# unhealthy when the file is missing or stale (all workers wedged / scheduler
++# dead). Docker does not restart an unhealthy container, so the same task also
++# pushes to the Uptime Kuma push monitor in KUMA_PUSH_HUEY_URL, which alerts
++# once the pushes stop. ``periodic_task`` (no DB) on purpose: a DB hiccup must
++# not mask a live consumer — DB liveness is the backend container's /health/
++# concern. This is infra, not a business job, so it is intentionally NOT in
++# run_periodic_tasks_now.
+ _HEARTBEAT_FILE = os.environ.get("HUEY_HEARTBEAT_FILE", "/tmp/huey_heartbeat")
+ 
++# Short: the push runs on a worker thread every minute, and Kuma sits on the
++# same Docker network.
++_MONITOR_PUSH_TIMEOUT_SECONDS = 5
++
++
++def _push_to_monitor() -> None:
++    """Report "up" to the Uptime Kuma push URL in ``KUMA_PUSH_HUEY_URL``.
++
++    No-op while the variable is unset. Any query string on the URL is replaced.
++    A failed push only logs a warning — the monitor alerts on the missing push,
++    and the task must keep running. The URL carries the monitor's token, so it
++    stays out of the log.
++    """
++    push_url = os.environ.get("KUMA_PUSH_HUEY_URL", "").strip()
++    if not push_url:
++        return
++    parts = urllib.parse.urlsplit(push_url)
++    if parts.scheme not in ("http", "https"):
++        log.warning("housekeeping.huey_heartbeat.push_skipped reason=scheme")
++        return
++    url = urllib.parse.urlunsplit(parts._replace(query="status=up&msg=OK", fragment=""))
++    try:
++        with urllib.request.urlopen(url, timeout=_MONITOR_PUSH_TIMEOUT_SECONDS):
++            pass
++    except (OSError, ValueError, http.client.HTTPException) as error:
++        log.warning(
++            "housekeeping.huey_heartbeat.push_failed error=%s",
++            type(error).__name__,
++        )
++
+ 
+ @periodic_task(crontab(minute="*"))
+ def huey_heartbeat() -> None:
+-    """Touch the heartbeat file so the container healthcheck sees a live consumer."""
++    """Touch the heartbeat file and push to the uptime monitor."""
+     try:
+         with open(_HEARTBEAT_FILE, "w") as handle:
+             handle.write(str(int(time.time())))
+@@ -229,3 +265,4 @@ def huey_heartbeat() -> None:
+         log.exception(
+             "housekeeping.huey_heartbeat.write_failed path=%s", _HEARTBEAT_FILE
+         )
++    _push_to_monitor()
+diff --git a/jasmin-core/django-core/apps/notifications/tests/test_huey_heartbeat.py b/jasmin-core/django-core/apps/notifications/tests/test_huey_heartbeat.py
+new file mode 100644
+index 0000000..d2ef02a
+--- /dev/null
++++ b/jasmin-core/django-core/apps/notifications/tests/test_huey_heartbeat.py
+@@ -0,0 +1,92 @@
++"""Tests for ``apps.notifications.tasks.huey_heartbeat``.
++
++The task touches the healthcheck file and pushes "up" to the Uptime Kuma push
++URL in ``KUMA_PUSH_HUEY_URL``. The push is optional and best-effort: unset
++means no request at all, and a failing push must neither raise nor stop the
++file from being written.
++"""
++
++from __future__ import annotations
++
++import http.client
++import logging
++import urllib.error
++from unittest import mock
++
++import pytest
++
++from apps.notifications import tasks as notification_tasks
++
++PUSH_URL = "http://uptime-kuma:3001/api/push/secret-token"
++
++
++@pytest.fixture
++def heartbeat_file(tmp_path, monkeypatch):
++    path = tmp_path / "huey_heartbeat"
++    monkeypatch.setattr(notification_tasks, "_HEARTBEAT_FILE", str(path))
++    return path
++
++
++def test_no_push_when_url_unset(heartbeat_file, monkeypatch):
++    monkeypatch.delenv("KUMA_PUSH_HUEY_URL", raising=False)
++    with mock.patch("urllib.request.urlopen") as urlopen:
++        notification_tasks.huey_heartbeat.call_local()
++    urlopen.assert_not_called()
++    assert heartbeat_file.exists()
++
++
++def test_no_push_when_url_blank(heartbeat_file, monkeypatch):
++    monkeypatch.setenv("KUMA_PUSH_HUEY_URL", "  ")
++    with mock.patch("urllib.request.urlopen") as urlopen:
++        notification_tasks.huey_heartbeat.call_local()
++    urlopen.assert_not_called()
++
++
++def test_pushes_up_with_short_timeout(heartbeat_file, monkeypatch):
++    monkeypatch.setenv("KUMA_PUSH_HUEY_URL", PUSH_URL + "?status=up&msg=OK&ping=")
++    with mock.patch("urllib.request.urlopen") as urlopen:
++        notification_tasks.huey_heartbeat.call_local()
++    urlopen.assert_called_once()
++    (url,), kwargs = urlopen.call_args
++    assert url == PUSH_URL + "?status=up&msg=OK"
++    assert kwargs["timeout"] <= 10
++    assert heartbeat_file.exists()
++
++
++def test_non_http_url_is_not_requested(heartbeat_file, monkeypatch):
++    monkeypatch.setenv("KUMA_PUSH_HUEY_URL", "file:///etc/passwd")
++    with mock.patch("urllib.request.urlopen") as urlopen:
++        notification_tasks.huey_heartbeat.call_local()
++    urlopen.assert_not_called()
++
++
++@pytest.mark.parametrize(
++    "error",
++    [
++        urllib.error.URLError("connection refused"),
++        urllib.error.HTTPError(PUSH_URL, 404, "Not Found", None, None),
++        TimeoutError("timed out"),
++        http.client.BadStatusLine("garbage"),
++        ValueError("bad url"),
++    ],
++)
++def test_failed_push_does_not_raise(heartbeat_file, monkeypatch, caplog, error):
++    monkeypatch.setenv("KUMA_PUSH_HUEY_URL", PUSH_URL)
++    with (
++        mock.patch("urllib.request.urlopen", side_effect=error),
++        caplog.at_level(logging.WARNING, logger="tasks"),
++    ):
++        notification_tasks.huey_heartbeat.call_local()
++    assert heartbeat_file.exists()
++    assert "push_failed" in caplog.text
++    assert "secret-token" not in caplog.text
++
++
++def test_push_still_runs_when_file_write_fails(tmp_path, monkeypatch):
++    monkeypatch.setattr(
++        notification_tasks, "_HEARTBEAT_FILE", str(tmp_path / "missing" / "beat")
++    )
++    monkeypatch.setenv("KUMA_PUSH_HUEY_URL", PUSH_URL)
++    with mock.patch("urllib.request.urlopen") as urlopen:
++        notification_tasks.huey_heartbeat.call_local()
++    urlopen.assert_called_once()
+diff --git a/scripts/deploy.sh b/scripts/deploy.sh
+index 0cab459..6389021 100755
+--- a/scripts/deploy.sh
++++ b/scripts/deploy.sh
+@@ -125,10 +125,10 @@ if ! docker compose build --pull; then
+     log "WARN: build with --pull failed — retrying with the base images already on this host"
+     docker compose build
+ fi
+-# The core stack's images that come from a registry as published (the others
+-# are built above). Glitchtip and Uptime Kuma aren't started here.
+-docker compose pull --quiet postgres redis gateway certbot || \
+-    log "WARN: couldn't pull newer postgres/redis/nginx/certbot images — keeping the ones on this host"
++# The images that come from a registry as published (the others are built
++# above). GlitchTip's is pinned to a patch release, so `up` fetches it once.
++docker compose pull --quiet postgres redis gateway certbot uptime-kuma || \
++    log "WARN: couldn't pull newer postgres/redis/nginx/certbot/uptime-kuma images — keeping the ones on this host"
+ 
+ # Compose always runs the IMAGE_TAG tag, which every build moves. Each release
+ # also keeps its images under a release tag, <UTC time>-<build id>, so
+@@ -177,9 +177,22 @@ if [ -n "$plain_dumps" ]; then
+     echo "$plain_dumps" | sed 's/^/    /'
+ fi
+ 
+-# ── 5. bring up the core stack (glitchtip/uptime deferred to Phase 5) ───────
+-log "starting core services"
+-docker compose up -d postgres redis backend huey frontend gateway certbot backup
++# ── 5. bring up the core stack and Uptime Kuma ──────────────────────────────
++log "starting core services and uptime-kuma"
++docker compose up -d postgres redis backend huey frontend gateway certbot backup uptime-kuma
++
++# GlitchTip needs its own role and database, created once by hand (see the
++# glitchtip comment in docker-compose.yml). Until that database exists its
++# services would only crash-loop, so they start once it is there.
++glitchtip_db="$(docker compose exec -T postgres sh -c \
++    'psql -U "$POSTGRES_USER" -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = '"'"'glitchtip'"'"'"' \
++    2>/dev/null || true)"
++if [ "$glitchtip_db" = "1" ]; then
++    log "starting glitchtip"
++    docker compose up -d glitchtip-web glitchtip-worker
++else
++    log "no glitchtip database yet — glitchtip stays stopped (see docker-compose.yml)"
++fi
+ 
+ # nginx resolves the backend/frontend upstream hostnames ONCE, at startup.
+ # `up -d` may RECREATE those containers with NEW network IPs while the
+@@ -215,3 +228,5 @@ echo "        docker compose restart gateway"
+ echo "   2. Log in at https://${ADMIN_HOST}.${DOMAIN} and create your tenants."
+ echo "   3. Configure EACH tenant's own SMTP before inviting its users."
+ echo "   4. Wire off-host backups (Phase 3), then run scripts/restore_drill.sh."
++echo "   5. Uptime Kuma: ssh -L 3001:localhost:3001 <host>, open http://localhost:3001"
++echo "      and add the monitors; set KUMA_PUSH_BACKUP_URL / KUMA_PUSH_HUEY_URL in .env."
+diff --git a/scripts/init-env.sh b/scripts/init-env.sh
+index bc3f691..d44d3ce 100755
+--- a/scripts/init-env.sh
++++ b/scripts/init-env.sh
+@@ -177,12 +177,25 @@ BACKUP_SCHEDULE=0 2 * * *
+ RCLONE_REMOTE=
+ RCLONE_CONFIG=
+ 
+-# --- monitoring (services stay STOPPED until Phase 5, but compose needs the
+-#     values to parse the file) ---
+-GLITCHTIP_DOMAIN=glitchtip.${DOMAIN}
++# --- monitoring ---
++# Uptime Kuma push monitors (http://uptime-kuma:3001/api/push/<token>), from
++# the Kuma UI behind ssh -L 3001:localhost:3001. Empty = no heartbeat.
++KUMA_PUSH_BACKUP_URL=
++KUMA_PUSH_HUEY_URL=
++# GlitchTip starts with deploy.sh once its database exists (see the glitchtip
++# comment in docker-compose.yml); compose needs these values to parse the file
++# before that. GLITCHTIP_DOMAIN is the URL the UI is opened at, scheme
++# included: the SSH tunnel, until a public route serves it.
++GLITCHTIP_DOMAIN=http://localhost:8004
+ GLITCHTIP_DB_USER=glitchtip
+ GLITCHTIP_DB_PASSWORD=${GLITCHTIP_DB_PASSWORD}
+ GLITCHTIP_SECRET_KEY=${GLITCHTIP_SECRET_KEY}
++# Alert mail from GlitchTip, e.g. smtp+tls://<user>:<url-encoded password>@<host>:587.
++# Empty = mail only goes to the container log.
++GLITCHTIP_EMAIL_URL=
++# Backend error reporting: http://<key>@glitchtip-web:8000/<project id>, from
++# the GlitchTip project's DSN. Empty = off.
++SENTRY_DSN=
+ 
+ # --- frontend build-time (baked into the bundle at 'docker compose build') ---
+ VITE_APP_NAME=Jasmin

@@ -7,11 +7,13 @@
  * antd Select is stubbed: the behavior under test is the reconciliation
  * effect that fires setSelectedShareType, not the rendered widget.
  */
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("antd", () => ({
-  Select: () => null,
+  Select: ({ className }: { className?: string }) => (
+    <div data-testid="select" className={className} />
+  ),
 }));
 
 const mockUseShareTypes = vi.fn();
@@ -120,5 +122,25 @@ describe("ShareTypeSelector — an emptied list", () => {
 
     await Promise.resolve();
     expect(setSelectedShareType).not.toHaveBeenCalled();
+  });
+});
+
+describe("ShareTypeSelector — look", () => {
+  it("adds a page's class to its own classes", () => {
+    mockUseShareTypes.mockReturnValue({ shareTypes: SHARE_TYPES, loading: false });
+
+    render(
+      <ShareTypeSelector
+        selectedShareType="veg"
+        setSelectedShareType={() => {}}
+        className="share-type-selector--outdented"
+      />,
+    );
+
+    expect(screen.getByTestId("select")).toHaveClass(
+      "bold-select",
+      "week-selector-select",
+      "share-type-selector--outdented",
+    );
   });
 });

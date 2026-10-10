@@ -11,5 +11,7 @@
     "warehouse": "Betriebsmittel",
     "economics": "Wirtschaft", 
     "exports": "Exporte",
-    "imports": "Importe"
+    "imports": "Importe",
+    "navigation": "Navigation",
+    "open_menu": "Navigation öffnen"
 }

@@ -10,9 +10,10 @@
  * the selectors are stubs.
  */
 
-import { act, render, screen } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Form } from "antd";
 import dayjs from "dayjs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -70,7 +71,13 @@ const VARIATIONS = [
   { id: "vlarge", size: "L", sort_order: 2, share_type: "harvest", valid_from: "2026-01-05" },
 ];
 const SHARE_ARTICLES = [
-  { id: "art-carrot", name: "Carrots", default_movement_unit: "KG" },
+  {
+    id: "art-carrot",
+    name: "Carrots",
+    default_movement_unit: "KG",
+    kg_per_piece_M: "0.150",
+    net_price_for_boxes_pieces: "0.40",
+  },
   {
     id: "art-apple",
     name: "Apples commissioning.purchased_name_suffix",
@@ -478,6 +485,50 @@ describe("PlanningShareContentBase", () => {
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: planningListKey() });
     expect(api.refetchGranularity).toHaveBeenCalled();
+  });
+});
+
+describe("PlanningShareContentBase article defaults", () => {
+  const changeSize = (values: Record<string, unknown>) => {
+    const [form] = renderHook(() => Form.useForm()).result.current;
+    form.setFieldsValue(values);
+    const size = grid().columns.find((c) => c.key === "size");
+    if (!size?.onFieldChange) throw new Error("no size column");
+    act(() => {
+      size.onFieldChange?.(values.size, { key: -1 }, form, "size");
+    });
+    return form.getFieldsValue(true);
+  };
+
+  it("takes a piece's weight and price from the article for the row's size", () => {
+    renderPage();
+
+    expect(
+      changeSize({ share_article: "art-carrot", unit: "PCS", size: "M" }),
+    ).toMatchObject({ kg_per_piece: "0.150", price_per_unit: "0.40" });
+  });
+
+  it("clears the weight for kilos and keeps the price the article has none for", () => {
+    renderPage();
+    changeSize({ share_article: "art-carrot", unit: "PCS", size: "M" });
+
+    expect(
+      changeSize({
+        share_article: "art-carrot",
+        unit: "KG",
+        size: "M",
+        kg_per_piece: "0.150",
+        price_per_unit: "0.40",
+      }),
+    ).toMatchObject({ kg_per_piece: null, price_per_unit: "0.40" });
+  });
+
+  it("clears the price of a newly picked article that has none for the unit", () => {
+    renderPage();
+
+    expect(
+      changeSize({ share_article: "art-carrot", unit: "BUNCH", size: "M", price_per_unit: "9.99" }),
+    ).toMatchObject({ kg_per_piece: null, price_per_unit: null });
   });
 });
 

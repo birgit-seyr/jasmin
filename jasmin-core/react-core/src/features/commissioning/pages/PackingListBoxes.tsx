@@ -405,10 +405,7 @@ export default function PackingListBoxes() {
       </MobileStack>
 
       {!isMobile && (
-        <div
-          className="section-divider"
-          style={{ display: "flex", gap: "1em" }}
-        >
+        <div className="section-divider flex-row gap-1em">
           <PackingBoxesMatrixPDFGenerator
             columns={matrixColumns.length ? matrixColumns : null}
             data={rows.length ? rows : null}

@@ -412,7 +412,7 @@ export default function LoggingStorage() {
       <h1>{t("commissioning.storage_logging")}</h1>
       <h5>{t("commissioning.storage_logging_explanation")}</h5>
 
-      <div style={{ marginBottom: "1em", marginLeft: "-2em" }}>
+      <div className="logging-storage-filters">
         <StorageSelector
           selectedStorage={selectedStorage}
           setSelectedStorage={setSelectedStorage}
@@ -423,7 +423,7 @@ export default function LoggingStorage() {
           setSelectedShareArticle={setSelectedShareArticle}
           include_null_option={true}
         />
-        <div style={{ marginTop: "1em", marginLeft: "2em" }}>
+        <div className="logging-storage-date-row">
           <RangePicker
             value={dateRange}
             onChange={(dates) => {

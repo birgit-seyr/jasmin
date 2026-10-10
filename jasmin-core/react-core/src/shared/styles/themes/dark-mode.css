@@ -294,9 +294,6 @@
 :root.dark .joker-taken-row td {
   color: var(--color-text-tertiary) !important;
 }
-:root.dark .changed-day {
-  color: #ff7875;
-}
 :root.dark .order-label {
   color: #a0a0a0;
 }

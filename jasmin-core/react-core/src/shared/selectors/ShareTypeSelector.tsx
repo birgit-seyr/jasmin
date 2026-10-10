@@ -1,6 +1,5 @@
 import { useShareTypes } from "@hooks/index";
 import { activeAtDateForWeek } from "@shared/utils/weekRange";
-import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import BaseEntitySelector, { type SelectorOption } from "./BaseEntitySelector";
@@ -26,7 +25,8 @@ interface ShareTypeSelectorProps {
   /** When provided, only these share type ids appear as options. Used by the
    *  packing pages to restrict the list to bulk- vs. box-packed share types. */
   allowedShareTypeIds?: Set<string> | null;
-  style?: CSSProperties;
+  /** Added to the selector's own classes, e.g. to place it in a page. */
+  className?: string;
 }
 
 const ShareTypeSelector = ({
@@ -39,7 +39,7 @@ const ShareTypeSelector = ({
   year = null,
   delivery_week = null,
   allowedShareTypeIds = null,
-  style,
+  className,
 }: ShareTypeSelectorProps) => {
   const { t } = useTranslation();
 
@@ -69,7 +69,11 @@ const ShareTypeSelector = ({
       options={options}
       loading={loading}
       placeholder={t("placeholder.share_type_selector")}
-      style={style}
+      className={
+        className
+          ? `bold-select week-selector-select ${className}`
+          : undefined
+      }
       autoSelectFirst={autoSelectFirst}
       preserveSelection={preserveSelection}
       emptyValue={null}

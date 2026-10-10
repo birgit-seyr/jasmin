@@ -364,7 +364,9 @@ class ShareContentFrontendData(ShareContentStock):
         tour_number = tour_number_lookup.get(
             (share_content.delivery_station_id, share.delivery_day_id)
         )
-        if tour_number:
+        # Tour 0 is a real tour (the field allows it and the save path writes
+        # its cells); only a station with no station day that day has no tour.
+        if tour_number is not None:
             tour_key = f"{base_key}_tour_{tour_number}"
             if tour_key not in group_row["tour_variations"]:
                 group_row["tour_variations"][tour_key] = amount_str

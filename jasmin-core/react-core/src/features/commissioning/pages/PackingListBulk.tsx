@@ -480,10 +480,7 @@ export default function PackingListBulk() {
       </div>
 
       {!isMobile && (
-        <div
-          className="section-divider"
-          style={{ display: "flex", gap: "1em" }}
-        >
+        <div className="section-divider flex-row gap-1em">
           <PackingListBulkPDFGenerator
             data={processedData}
             year={selectedYear}

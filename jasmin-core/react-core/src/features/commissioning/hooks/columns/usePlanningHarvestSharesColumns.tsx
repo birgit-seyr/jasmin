@@ -13,7 +13,7 @@ import {
   editableOnlyOnCreate,
   formatAmountForUnit,
 } from "@shared/utils";
-import { planningRowEmphasis } from "@shared/styles/planningColors";
+import { planningRowEmphasisClass } from "@shared/styles/planningRowEmphasis";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import {
   planningRowForecastUnit,
@@ -78,13 +78,13 @@ export function usePlanningHarvestSharesColumns(
         // told us to plant this". Stock-only rows pick up the colour
         // but stay at normal weight — they're a hint, not a directive.
         render: (value: unknown, record: TableRecord) => (
-          <span style={planningRowEmphasis(record)}>{value as string}</span>
+          <span className={planningRowEmphasisClass(record)}>{value as string}</span>
         ),
       },
       // Wrap the shared unit/size/amount columns so they pick up the
       // same forecast/stock highlight that the share-article-name cell
-      // uses (green when the row was scaffolded from a forecast, blue
-      // when there's leftover stock to work with). Done here rather
+      // uses (highlighted and bold when the row was scaffolded from a forecast,
+      // highlighted when there's leftover stock to work with). Done here rather
       // than inside ``useColumnsAmountSizeUnit`` so that other consumers
       // (orders, etc.) of the shared hook stay neutral — the colour
       // ladder is planning-specific.
@@ -94,7 +94,7 @@ export function usePlanningHarvestSharesColumns(
           const inner = col.render
             ? col.render(value, record, index)
             : (value as ReactNode);
-          return <span style={planningRowEmphasis(record)}>{inner}</span>;
+          return <span className={planningRowEmphasisClass(record)}>{inner}</span>;
         },
       })),
       {

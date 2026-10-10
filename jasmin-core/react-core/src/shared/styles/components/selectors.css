@@ -69,6 +69,22 @@
 .logging-storage-range-picker .ant-picker-input > input {
   color: var(--color-text-primary);
 }
+
+/* The storage selector's own left margin is pulled back so the filter row
+   starts flush with the page; the date row below keeps it. */
+.logging-storage-filters {
+  margin-bottom: 1em;
+  margin-left: -2em;
+}
+
+.logging-storage-date-row {
+  margin-top: 1em;
+  margin-left: 2em;
+}
+
+.documentation-source-select {
+  width: 12em;
+}
 /* Widths and spacing of the entity selectors in a page's filter row. */
 .delivery-station-selector {
   width: 18em;
@@ -92,4 +108,18 @@
 
 .reseller-selector--seller {
   margin-left: 2em;
+}
+
+.offer-group-selector {
+  width: 12em;
+  margin-top: 2em;
+}
+
+.storage-selector {
+  width: 15em;
+  margin-inline: 2em;
+}
+
+.share-type-selector--outdented {
+  margin-left: -1em;
 }

@@ -182,6 +182,26 @@ describe("ShareArticleSelector picks", () => {
     expect(screen.getAllByText(ALL).length).toBeGreaterThan(0);
   });
 
+  it("shows 'all share articles' as the pick while it is picked", async () => {
+    renderPage({ includeAll: true });
+    await waitFor(() => expect(api.shareArticles).toHaveBeenCalled());
+    await settle();
+
+    expect(picked).toBeNull();
+    expect(shownArticle()).toBe(ALL);
+  });
+
+  it("sends no share article once 'all share articles' is chosen again", async () => {
+    renderPage({ includeAll: true, initialArticle: LEEKS.id });
+    await waitFor(() => expect(shownArticle()).toBe("Leeks"));
+
+    await chooseArticle(ALL);
+
+    expect(picked).toBeNull();
+    expect(onShareArticleChange).toHaveBeenCalledWith(null);
+    expect(shownArticle()).toBe(ALL);
+  });
+
   it("without keeping a pick, leaves a share article that isn't listed", async () => {
     renderPage({ initialArticle: "sa-gone" });
     await waitFor(() => expect(api.shareArticles).toHaveBeenCalled());

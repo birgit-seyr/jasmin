@@ -23,4 +23,4 @@ apps/commissioning/viewsets/shares_viewsets.py: 2286
 apps/notifications/registry.py: 1051
 apps/payments/services.py: 1421
 apps/shared/super_admin/viewsets.py: 1161
-config/settings.py: 1364
+config/settings.py: 1327

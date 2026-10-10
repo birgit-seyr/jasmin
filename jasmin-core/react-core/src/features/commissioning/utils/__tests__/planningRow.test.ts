@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import type { ShareArticle } from "@shared/api/generated/models";
+
 import {
+  articlePriceField,
+  articleWeightField,
   forecastAmountInRowUnit,
   kgPerRowUnit,
+  pricePerRowUnit,
   planningRowForecastUnit,
   planningRowUnit,
 } from "../planningRow";
@@ -105,5 +110,67 @@ describe("kgPerRowUnit", () => {
     expect(kgPerRowUnit({ key: "r", unit: "PCS", size: "M" })).toBe(0);
     expect(kgPerRowUnit({ key: "r", unit: "PCS", ...article })).toBe(0);
     expect(kgPerRowUnit({ key: "r", unit: "L", size: "M", ...article })).toBe(0);
+  });
+});
+
+describe("articlePriceField", () => {
+  it.each([
+    ["KG", "net_price_for_boxes_kg"],
+    ["PCS", "net_price_for_boxes_pieces"],
+    ["BUNCH", "net_price_for_boxes_bunch"],
+  ])("prices a %s by the article's %s", (unit, field) => {
+    expect(articlePriceField(unit)).toBe(field);
+  });
+
+  it("prices no other unit", () => {
+    for (const unit of ["L", "G", "PIECES", "kg", undefined]) {
+      expect(articlePriceField(unit)).toBeUndefined();
+    }
+  });
+});
+
+describe("articleWeightField", () => {
+  it("weighs a piece and a bunch by the size's field", () => {
+    expect(articleWeightField("PCS", "S")).toBe("kg_per_piece_S");
+    expect(articleWeightField("BUNCH", "L")).toBe("kg_per_bunch_L");
+  });
+
+  it("has no weight field for kilos, other units or an unknown size", () => {
+    expect(articleWeightField("KG", "M")).toBeUndefined();
+    expect(articleWeightField("L", "M")).toBeUndefined();
+    expect(articleWeightField("PIECES", "M")).toBeUndefined();
+    expect(articleWeightField("PCS", "XL")).toBeUndefined();
+    expect(articleWeightField("PCS", undefined)).toBeUndefined();
+  });
+});
+
+describe("pricePerRowUnit", () => {
+  const pricedArticle: ShareArticle = {
+    name: "Carrots",
+    default_movement_unit: "KG",
+    net_price_for_boxes_kg: "2.50",
+    net_price_for_boxes_pieces: "0.80",
+    net_price_for_boxes_bunch: "1.20",
+  };
+  const unpricedArticle: ShareArticle = { name: "Dill", default_movement_unit: "BUNCH" };
+
+  it.each([
+    ["KG", 2.5],
+    ["PCS", 0.8],
+    ["BUNCH", 1.2],
+  ])("prices a %s by the article's net box price", (unit, price) => {
+    expect(pricePerRowUnit({ key: "r", unit }, pricedArticle)).toBe(price);
+  });
+
+  it("prefers the row's own price over the article's", () => {
+    expect(
+      pricePerRowUnit({ key: "r", unit: "KG", price_per_unit: "3.10" }, pricedArticle),
+    ).toBe(3.1);
+  });
+
+  it("knows no price without an article, a priced unit or an article price", () => {
+    expect(pricePerRowUnit({ key: "r", unit: "KG" }, undefined)).toBe(0);
+    expect(pricePerRowUnit({ key: "r", unit: "L" }, pricedArticle)).toBe(0);
+    expect(pricePerRowUnit({ key: "r", unit: "BUNCH" }, unpricedArticle)).toBe(0);
   });
 });

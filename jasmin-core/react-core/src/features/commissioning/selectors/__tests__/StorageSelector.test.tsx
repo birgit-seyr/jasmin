@@ -160,12 +160,14 @@ describe("StorageSelector options", () => {
 
   it("fills the width on a phone and keeps its fixed width on a desktop", () => {
     const desktop = renderPage();
-    expect(selectRoot()).toHaveStyle({ width: "15em" });
+    expect(selectRoot()).toHaveClass("storage-selector");
+    expect(selectRoot()).not.toHaveClass("w-full");
     desktop.view.unmount();
 
     device.mobile = true;
     renderPage();
-    expect(selectRoot()).toHaveStyle({ width: "100%" });
+    expect(selectRoot()).toHaveClass("w-full");
+    expect(selectRoot()).not.toHaveClass("storage-selector");
   });
 });
 

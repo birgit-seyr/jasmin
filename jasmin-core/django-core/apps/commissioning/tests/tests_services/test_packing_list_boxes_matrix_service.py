@@ -31,6 +31,7 @@ from apps.commissioning.tests.factories import (
     ShareTypeVariationFactory,
     SubscriptionFactory,
 )
+from apps.commissioning.tests.factories.days import store_legacy_tour_number_zero
 
 
 def _line(
@@ -842,6 +843,36 @@ class TestGetWeeklyCombinationMatrix:
         rows_by_station = {row["delivery_station_id"]: row for row in result["rows"]}
         assert rows_by_station[station_a.delivery_station_id][column_key] == 2
         assert rows_by_station[station_b.delivery_station_id][column_key] == 1
+
+    def test_tours_mode_keeps_a_legacy_tour_zero_apart_from_tour_one(self, tenant):
+        """A station day stored with tour 0 before tours started at 1 reads as
+        tour 0, as every other tour reader shows it — not folded into tour 1."""
+        day = SharesDeliveryDayFactory(day_number=0)
+        tour_one = DeliveryStationDayFactory(delivery_day=day, tour_number=1)
+        legacy = DeliveryStationDayFactory(delivery_day=day)
+        store_legacy_tour_number_zero(legacy)
+
+        base_var = _base_variation("M")
+        share = _share(base_var, day)
+        for station_day, member_count in ((tour_one, 2), (legacy, 1)):
+            for _ in range(member_count):
+                sub = SubscriptionFactory(
+                    member=MemberFactory(),
+                    share_type_variation=base_var,
+                    quantity=1,
+                    default_delivery_station_day=station_day,
+                )
+                ShareDeliveryFactory(
+                    share=share, delivery_station_day=station_day, subscription=sub
+                )
+
+        result = PackingListBoxesMatrixService.get_weekly_combination_matrix(
+            year=_YEAR, delivery_week=_WEEK, mode="tours"
+        )
+
+        column_key = result["columns"][0]["key"]
+        counts_by_tour = {row["tour"]: row[column_key] for row in result["rows"]}
+        assert counts_by_tour == {0: 1, 1: 2}
 
     def test_joker_flag_swaps_shipping_for_jokered_boxes(self, tenant):
         """The joker view (``joker=True``) counts the boxes skipped via a taken

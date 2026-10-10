@@ -97,24 +97,25 @@ if [[ "${DEBUG:-True}" != "True" && "${SKIP_COLLECTSTATIC:-0}" != "1" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Optional: create the platform SuperAdmin if env vars are set.
+# Bootstrap the platform SuperAdmin on a fresh install.
 #
 # The platform admin is a PUBLIC-schema ``apps.shared.super_admin.SuperAdmin``
 # (keyed on email) — NOT ``accounts.JasminUser``, which is a TENANT-only model
-# with no table in the public schema. The ``createsuperadmin`` command targets
-# the right model and is idempotent via --update-if-exists. Failures (e.g. a
-# password below the policy minimum) are non-fatal: log and boot anyway rather
-# than crash-looping the container under ``set -euo pipefail``.
+# with no table in the public schema. ``createsuperadmin --bootstrap`` creates
+# one from DJANGO_SUPERUSER_EMAIL / DJANGO_SUPERUSER_PASSWORD only while no
+# SuperAdmin exists, and never touches an existing account: a password rotated
+# in the UI, or an account deactivated during an incident, must survive the
+# next restart. With no SuperAdmin and the vars unset it prints a hint and
+# boot continues. Failures (e.g. a password below the policy minimum) are
+# non-fatal too: log and boot anyway rather than crash-looping the container
+# under ``set -euo pipefail``. To reset an existing account's password, run
+# ``createsuperadmin --email … --update-if-exists`` by hand.
 # -----------------------------------------------------------------------------
-if [[ -n "${DJANGO_SUPERUSER_EMAIL:-}" \
-   && -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]]; then
-    echo "Ensuring SuperAdmin '${DJANGO_SUPERUSER_EMAIL}' exists ..."
-    python manage.py createsuperadmin \
-        --email "${DJANGO_SUPERUSER_EMAIL}" \
-        --password "${DJANGO_SUPERUSER_PASSWORD}" \
-        --update-if-exists \
-        || echo "createsuperadmin failed — starting anyway; fix DJANGO_SUPERUSER_* and re-run 'docker compose exec backend python manage.py createsuperadmin --email … --password … --update-if-exists'."
-fi
+echo "Checking for a SuperAdmin ..."
+python manage.py createsuperadmin --bootstrap \
+    --email "${DJANGO_SUPERUSER_EMAIL:-}" \
+    ${DJANGO_SUPERUSER_PASSWORD:+--password "${DJANGO_SUPERUSER_PASSWORD}"} \
+    || echo "createsuperadmin failed — starting anyway; fix DJANGO_SUPERUSER_* and restart, or run 'docker compose exec backend python manage.py createsuperadmin --email …' (it asks for the password)."
 
 # -----------------------------------------------------------------------------
 # Optional: seed a local DEV test tenant (test.localhost) + admin & persona

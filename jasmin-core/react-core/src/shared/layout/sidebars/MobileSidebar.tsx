@@ -3,10 +3,12 @@ import { Drawer, Menu } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { usePackingListVisibility } from "./usePackingListVisibility";
 
 export default function MobileSidebar() {
   const [visible, setVisible] = useState(false);
   const { t } = useTranslation();
+  const { showBoxesPackingList } = usePackingListVisibility();
 
   const menuItemsCommissioning = [
     {
@@ -33,7 +35,7 @@ export default function MobileSidebar() {
         </Link>
       ),
     },
-    
+
     {
       key: "commissioning-washing-list",
       label: (
@@ -50,19 +52,32 @@ export default function MobileSidebar() {
         </Link>
       ),
     },
+    // Box packing only, as in the desktop sidebar.
+    ...(showBoxesPackingList
+      ? [
+          {
+            key: "commissioning-packing-lists",
+            label: (
+              <Link to="/commissioning/packing-list-boxes">
+                {t("commissioning.packing_lists")}
+              </Link>
+            ),
+          },
+          {
+            key: "commissioning-commissioning-list-packing",
+            label: (
+              <Link to="/commissioning/commissioning-list-packing">
+                {t("commissioning.commissioning_list_packing")}
+              </Link>
+            ),
+          },
+        ]
+      : []),
     {
-      key: "commissioning-packing-lists",
+      key: "commissioning-commissioning-list-resellers",
       label: (
-        <Link to="/commissioning/packing-list-boxes">
-          {t("commissioning.packing_lists")}
-        </Link>
-      ),
-    },
-    {
-      key: "commissioning-commissioning-lists",
-      label: (
-        <Link to="/commissioning/commissioning-list">
-          {t("commissioning.commissioning_lists")}
+        <Link to="/commissioning/commissioning-list-resellers">
+          {t("commissioning.commissioning_list_resellers_short")}
         </Link>
       ),
     },
@@ -74,7 +89,7 @@ export default function MobileSidebar() {
       <div
         role="button"
         tabIndex={0}
-        aria-label="Navigation"
+        aria-label={t("nav.open_menu")}
         style={{
           position: "fixed",
           top: "10px",
@@ -94,7 +109,7 @@ export default function MobileSidebar() {
 
       {/* Sidebar drawer */}
       <Drawer
-        title="Navigation"
+        title={t("nav.navigation")}
         placement="left"
         onClose={() => setVisible(false)}
         open={visible}
@@ -107,7 +122,6 @@ export default function MobileSidebar() {
           items={menuItemsCommissioning}
           onClick={() => setVisible(false)}
         />
-        <div className="sidebar-header">{t("nav.cultivation")}</div>
       </Drawer>
     </>
   );

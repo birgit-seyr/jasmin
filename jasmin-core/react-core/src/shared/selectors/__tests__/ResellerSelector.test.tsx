@@ -11,8 +11,22 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("antd", () => ({
-  Select: ({ className, style }: { className?: string; style?: object }) => (
-    <div data-testid="select" className={className} style={style} />
+  Select: ({
+    className,
+    style,
+    value,
+    placeholder,
+    options = [],
+  }: {
+    className?: string;
+    style?: object;
+    value?: unknown;
+    placeholder?: string;
+    options?: { value: unknown; label: React.ReactNode }[];
+  }) => (
+    <div data-testid="select" className={className} style={style}>
+      {options.find((option) => option.value === value)?.label ?? placeholder}
+    </div>
   ),
 }));
 
@@ -93,5 +107,23 @@ describe("ResellerSelector — look", () => {
   it("indents a seller select through the stylesheet", () => {
     renderSelector({ userType: "seller" });
     expect(screen.getByTestId("select")).toHaveClass("reseller-selector", "reseller-selector--seller");
+  });
+});
+
+describe("ResellerSelector — all resellers", () => {
+  it("shows 'all resellers' as the pick while it is picked", () => {
+    listHookMock.mockReturnValue({
+      data: [{ id: "res-1", company_name: "Bistro Blau" }],
+      isLoading: false,
+    });
+    renderSelector({ include_null_option: true });
+
+    expect(screen.getByTestId("select")).toHaveTextContent("commissioning.all_resellers");
+  });
+
+  it("shows the placeholder while nothing is picked and no 'all' entry is offered", () => {
+    renderSelector();
+
+    expect(screen.getByTestId("select")).toHaveTextContent("placeholder.reseller_selector");
   });
 });

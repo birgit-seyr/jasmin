@@ -11,7 +11,7 @@ import {
 import type { ShareArticleOption } from "./useShareArticles";
 import type { ShareTypeVariationOption } from "./useShareTypeVariations";
 import type { DeliveryDay } from "./columns/useDeliveryDayColumns";
-import { kgPerRowUnit } from "../utils/planningRow";
+import { kgPerRowUnit, pricePerRowUnit } from "../utils/planningRow";
 import { dayCellKeys } from "./columns/columnKeys";
 
 interface UsePlanningSummaryDataParams {
@@ -150,39 +150,11 @@ export function usePlanningSummaryData({
           const amount = parseFloat(String(item[dayVariationKey])) || 0;
           if (amount === 0) return;
 
-          const rowPriceOverride = parseFloat(String(item.price_per_unit)) || 0;
-          let price = rowPriceOverride;
-
-          if (!price) {
-            const shareArticle = priceMap.get(item.share_article as string);
-            if (!shareArticle) return;
-
-            if (item.unit === "KG") {
-              price =
-                parseFloat(
-                  String(
-                    (shareArticle as unknown as Record<string, unknown>)
-                      .net_price_for_boxes_kg,
-                  ),
-                ) || 0;
-            } else if (item.unit === "PCS") {
-              price =
-                parseFloat(
-                  String(
-                    (shareArticle as unknown as Record<string, unknown>)
-                      .net_price_for_boxes_pieces,
-                  ),
-                ) || 0;
-            } else if (item.unit === "BUNCH") {
-              price =
-                parseFloat(
-                  String(
-                    (shareArticle as unknown as Record<string, unknown>)
-                      .net_price_for_boxes_bunch,
-                  ),
-                ) || 0;
-            }
-          }
+          const article =
+            typeof item.share_article === "string"
+              ? priceMap.get(item.share_article)
+              : undefined;
+          const price = pricePerRowUnit(item, article);
 
           total += amount * price;
         });
@@ -206,9 +178,7 @@ export function usePlanningSummaryData({
   const averageWeightSubData = useMemo(() => {
     const subData: Record<string, number> = {};
     activeCells.forEach(({ key, variation }) => {
-      const avgWeight = parseFloat(
-        String((variation as unknown as Record<string, unknown>).average_weight ?? ""),
-      );
+      const avgWeight = parseFloat(variation.average_weight ?? "");
       if (avgWeight) subData[key] = avgWeight;
     });
     return subData;
@@ -218,7 +188,7 @@ export function usePlanningSummaryData({
     const subData: Record<string, number> = {};
     activeCells.forEach(({ key, variation }) => {
       const priceSumArticles = parseFloat(
-        String((variation as unknown as Record<string, unknown>).active_price_sum_articles ?? ""),
+        variation.active_price_sum_articles ?? "",
       );
       if (priceSumArticles) subData[key] = priceSumArticles;
     });
@@ -261,7 +231,7 @@ export function usePlanningSummaryData({
       {
         columns: summaryColumns,
         label: t("commissioning.historical_average_2y"),
-        data: (historicalAverages || {}) as Record<string, string | number>,
+        data: historicalAverages ?? {},
         suffix: "kg",
         style: SUMMARY_ROW_STYLE_HIGHLIGHT,
       },

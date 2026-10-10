@@ -136,7 +136,6 @@ export function useOffersColumns({
                       ] as number) || 0;
                     break;
                   case "PCS":
-                  case "PIECES":
                     defaultPrice =
                       (shareArticleFields[
                         `net_price_for_orders_pieces_${index + 1}`

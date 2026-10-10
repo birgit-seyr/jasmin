@@ -100,9 +100,9 @@ const column = (id: string, overrides: Partial<Args> = {}) =>
 const cellElement = (col: Column, value: unknown, record: TableRecord) =>
   renderCell(col, value, record).firstElementChild as HTMLElement;
 
-/** The inline style of a cell's outermost element. */
-const cellStyle = (col: Column, value: unknown, record: TableRecord) =>
-  cellElement(col, value, record).style;
+/** The class list of a cell's outermost element. */
+const cellClasses = (col: Column, value: unknown, record: TableRecord) =>
+  Array.from(cellElement(col, value, record).classList);
 
 beforeEach(() => {
   tenantState.settings = {};
@@ -256,25 +256,20 @@ describe("usePlanningHarvestSharesColumns column set", () => {
 });
 
 describe("usePlanningHarvestSharesColumns row emphasis", () => {
-  it("shows a forecast row's article green and bold", () => {
-    const style = cellStyle(column("share_article_name"), "Karotten", forecastRow);
-
-    expect(style.color).toBe("green");
-    expect(style.fontWeight).toBe("bold");
+  it("highlights a forecast row's article in bold", () => {
+    expect(cellClasses(column("share_article_name"), "Karotten", forecastRow)).toEqual([
+      "planning-row-forecast",
+    ]);
   });
 
-  it("shows a stock-only row's article green at normal weight", () => {
-    const style = cellStyle(column("share_article_name"), "Lauch", stockRow);
-
-    expect(style.color).toBe("green");
-    expect(style.fontWeight).toBe("normal");
+  it("highlights a stock-only row's article at normal weight", () => {
+    expect(cellClasses(column("share_article_name"), "Lauch", stockRow)).toEqual([
+      "planning-row-stock",
+    ]);
   });
 
-  it("leaves a plain row's article in the surrounding colour", () => {
-    const style = cellStyle(column("share_article_name"), "Salat", plainRow);
-
-    expect(style.color).toBe("inherit");
-    expect(style.fontWeight).toBe("normal");
+  it("leaves a plain row's article in the surrounding style", () => {
+    expect(cellClasses(column("share_article_name"), "Salat", plainRow)).toEqual([]);
   });
 
   it("emphasises the unit and size the same way, through their own render", () => {
@@ -282,9 +277,15 @@ describe("usePlanningHarvestSharesColumns row emphasis", () => {
     const size = column("size");
 
     expect(cellText(unit, "KG", forecastRow)).toBe("unit:KG");
-    expect(cellStyle(unit, "KG", forecastRow).color).toBe("green");
+    expect(cellClasses(unit, "KG", forecastRow)).toEqual(["planning-row-forecast"]);
     expect(cellText(size, "M", forecastRow)).toBe("M");
-    expect(cellStyle(size, "M", plainRow).color).toBe("inherit");
+    expect(cellClasses(size, "M", plainRow)).toEqual([]);
+  });
+
+  it("styles the highlight without inline colours", () => {
+    expect(
+      cellElement(column("share_article_name"), "Karotten", forecastRow).getAttribute("style"),
+    ).toBeNull();
   });
 });
 

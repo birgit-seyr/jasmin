@@ -10,7 +10,6 @@ interface OfferGroupSelectorProps {
   /** Gets `null` once the list loads empty, so no stale group stays picked. */
   setSelectedOfferGroup: (value: string | null) => void;
   onOfferGroupChange?: ((value: string | null) => void) | null;
-  include_null_option?: boolean;
   preserveSelection?: boolean;
 }
 
@@ -40,7 +39,7 @@ const OfferGroupSelector = ({
       options={options}
       loading={loading}
       placeholder={t("placeholder.offer_group_selector")}
-      style={{ width: "12em", marginLeft: "0em", marginTop: "2em" }}
+      className="bold-select week-selector-select offer-group-selector"
       autoSelectFirst
       preserveSelection={preserveSelection}
       emptyValue={null}

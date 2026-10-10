@@ -53,6 +53,15 @@ export interface BaseEntitySelectorProps<V> {
   emptyValue?: V;
 }
 
+// AntD Select treats a `null` value as "nothing picked" and shows the
+// placeholder, so a `null` option (an "all" entry) goes through the Select
+// under this stand-in value instead.
+const NULL_OPTION_VALUE = "__base-entity-selector-null__";
+
+const toSelectValue = <V extends string | number | null>(
+  value: V,
+): string | number => (value === null ? NULL_OPTION_VALUE : value);
+
 const matchesOptionLabel = (
   input: string,
   option?: DefaultOptionType,
@@ -111,12 +120,30 @@ export default function BaseEntitySelector<V extends string | number | null>({
     emptyValue,
   ]);
 
+  const selectOptions = useMemo<DefaultOptionType[]>(
+    () =>
+      options.map((option) => ({
+        value: toSelectValue(option.value),
+        label: option.label,
+      })),
+    [options],
+  );
+
+  const selectValue =
+    value === null && options.some((option) => option.value === null)
+      ? NULL_OPTION_VALUE
+      : (value ?? undefined);
+
   const handleChange = useCallback(
-    (next: V) => {
-      onValueChange(next);
-      onChange?.(next);
+    (next: string | number) => {
+      const picked = options.find(
+        (option) => toSelectValue(option.value) === next,
+      );
+      if (!picked) return;
+      onValueChange(picked.value);
+      onChange?.(picked.value);
     },
-    [onValueChange, onChange],
+    [options, onValueChange, onChange],
   );
 
   const effectiveFilterOption = useMemo(() => {
@@ -125,13 +152,13 @@ export default function BaseEntitySelector<V extends string | number | null>({
   }, [showSearch, filterOption]);
 
   return (
-    <Select
-      value={value ?? undefined}
+    <Select<string | number>
+      value={selectValue}
       style={style}
       className={className}
       size={size}
       onChange={handleChange}
-      options={options as DefaultOptionType[]}
+      options={selectOptions}
       placeholder={placeholder}
       aria-label={ariaLabel ?? placeholder}
       loading={loading}

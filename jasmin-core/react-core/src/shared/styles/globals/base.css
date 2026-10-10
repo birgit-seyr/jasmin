@@ -49,6 +49,11 @@
   flex-direction: column;
 }
 
+/* Plain flex row; pair with a gap util. */
+.flex-row {
+  display: flex;
+}
+
 /* Right-aligned action rows (modal footers). */
 .flex-end {
   display: flex;
@@ -70,6 +75,10 @@
 
 .gap-16 {
   gap: 16px;
+}
+
+.gap-1em {
+  gap: 1em;
 }
 
 /* Sizing, spacing and alignment utilities for one-declaration needs that
