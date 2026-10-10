@@ -515,7 +515,7 @@ services:
     # Initial issuance: ./certbots/init-wildcard-cert.sh
     # Pinned (not :latest) for reproducible TLS renewals — a silent certbot
     # swap could break renewals. Bump via the docker Dependabot entry.
-    image: certbot/dns-linode:v5.6.0
+    image: certbot/dns-linode:v5.8.0
     restart: unless-stopped
     logging: *default-logging
     mem_limit: 128m
