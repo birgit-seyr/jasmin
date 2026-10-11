@@ -404,9 +404,8 @@ ALLOWED_HOSTS = os.environ.get(
 CORS_ALLOW_CREDENTIALS = True
 CORS_EXPOSE_HEADERS = ["Authorization"]
 
-# In development, be permissive — but NOT a wildcard, because cookies
-# (HttpOnly refresh tokens) require an explicit origin in
-# Access-Control-Allow-Origin together with Allow-Credentials: true.
+# In development, be permissive — but NOT a wildcard: cookies (HttpOnly refresh
+# tokens) need an explicit Access-Control-Allow-Origin with Allow-Credentials.
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = [
@@ -420,6 +419,7 @@ if DEBUG:
         r"^http://([a-z0-9-]+\.)?localhost(:\d+)?$",
         r"^http://([a-z0-9-]+\.)?127\.0\.0\.1(:\d+)?$",
     ]
+    FRONTEND_BASE_URL = "http://localhost:3000"
 else:
     # Production - strict CORS, with wildcard support for tenant subdomains.
     CORS_ALLOW_ALL_ORIGINS = False
@@ -429,12 +429,12 @@ else:
     else:
         CORS_ALLOWED_ORIGINS = []
 
-    # Allow https://<anything>.<FRONTEND_DOMAIN> (tenant subdomains).
-    # Define the regex list UNCONDITIONALLY so a prod branch with
-    # FRONTEND_DOMAIN unset has an explicit (empty) value rather than leaving
-    # the setting undefined.
+    # Allow https://<anything>.<FRONTEND_DOMAIN> (tenant subdomains), defined even
+    # with FRONTEND_DOMAIN unset. FRONTEND_BASE_URL is the link base for a tenant
+    # that resolves no Domain row (a FakeTenant in a Huey task or a command).
     CORS_ALLOWED_ORIGIN_REGEXES = []
     _frontend_domain = os.environ.get("FRONTEND_DOMAIN", "").strip()
+    FRONTEND_BASE_URL = f"https://{_frontend_domain}"
     if _frontend_domain:
         import re as _re
 

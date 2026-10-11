@@ -461,6 +461,22 @@ describe("storno flow", () => {
     expect(within(rowActions).queryByText("commissioning.create_storno")).not.toBeInTheDocument();
   });
 
+  it("offers a new invoice once the invoice is cancelled", () => {
+    ordersOverviewHookMock.mockReturnValue({
+      data: [makeRow({ invoice_cancelled_by: "u-99" })],
+      refetch: vi.fn(),
+    });
+    renderPage();
+    const rowActions = screen.getByTestId("row-actions");
+    expect(within(rowActions).getByText("commissioning.create_invoice")).toBeInTheDocument();
+  });
+
+  it("offers no new invoice while the invoice stands", () => {
+    renderPage();
+    const rowActions = screen.getByTestId("row-actions");
+    expect(within(rowActions).queryByText("commissioning.create_invoice")).not.toBeInTheDocument();
+  });
+
   it("opens the storno modal when the Storno button is clicked", async () => {
     renderPage();
     await userEvent.click(

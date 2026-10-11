@@ -6,7 +6,7 @@ from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, transaction
-from django.db.models import QuerySet
+from django.db.models import QuerySet, prefetch_related_objects
 from drf_spectacular.utils import (
     extend_schema,
     inline_serializer,
@@ -31,10 +31,8 @@ from ..errors import (
     OrderNotFound,
 )
 from ..models import (
-    CrateContentInvoiceReseller,
     DeliveryNoteReseller,
     InvoiceReseller,
-    InvoiceResellerContent,
     OfferGroup,
     OfferSending,
     Order,
@@ -75,6 +73,10 @@ from ..services.bulk_operations import bulk_with_savepoints
 from ..services.bulk_results import (
     format_order_error,
     get_delivery_note_or_error,
+)
+from ..services.delivery_note_invoices import (
+    billed_invoices_by_delivery_note,
+    current_invoices_by_delivery_note,
 )
 from ..services.finalization_quota import (
     FinalizationReservation,
@@ -881,8 +883,8 @@ class CombinedOrderOverviewView(APIViewRolePermissionsMixin, APIView):
             order.pk: getattr(order, "delivery_note", None) for order in orders
         }
 
-        # Batch the per-order invoice lookup (``get_invoice_for_delivery_note``
-        # plus a ``cancelled_by_invoice`` fetch) into one query.
+        # Batch the per-order invoice lookup (``get_invoice_for_delivery_note``)
+        # over the whole page.
         invoice_by_delivery_note = self._invoices_by_delivery_note(
             [
                 delivery_note.id
@@ -907,52 +909,15 @@ class CombinedOrderOverviewView(APIViewRolePermissionsMixin, APIView):
     @staticmethod
     def _invoices_by_delivery_note(delivery_note_ids: list[Any]) -> dict[Any, Any]:
         """Map ``delivery_note_id -> InvoiceReseller`` for the whole page in a
-        single query (batched form of
-        ``InvoiceService.get_invoice_for_delivery_note``).
-        ``delivery_note_contents`` is prefetched so the inner mapping stays
-        query-free; the invoice's line items + cancelled-by invoice ride along
-        for ``sum_netto`` and the storno fields."""
-        if not delivery_note_ids:
-            return {}
-        id_set = set(delivery_note_ids)
-        out: dict[Any, Any] = {}
-        contents = (
-            InvoiceResellerContent.objects.filter(
-                delivery_note_contents__delivery_note_id__in=delivery_note_ids
-            )
-            .select_related("invoice", "invoice__cancelled_by_invoice")
-            .prefetch_related(
-                "delivery_note_contents",
-                "invoice__items",
-                "invoice__crate_items",
-            )
-            .distinct()
+        constant number of queries (batched form of
+        ``InvoiceService.get_invoice_for_delivery_note``). The invoice's line
+        items ride along for ``sum_netto``, its cancelling storno for the
+        storno fields."""
+        invoice_by_delivery_note = current_invoices_by_delivery_note(delivery_note_ids)
+        prefetch_related_objects(
+            list(invoice_by_delivery_note.values()), "items", "crate_items"
         )
-        for content in contents:
-            for delivery_note_content in content.delivery_note_contents.all():
-                delivery_note_id = delivery_note_content.delivery_note_id
-                if delivery_note_id in id_set and delivery_note_id not in out:
-                    out[delivery_note_id] = content.invoice
-        # Crate-only delivery notes have no article lines, so they link to their
-        # invoice only via the crate provenance M2M — query that too.
-        crate_contents = (
-            CrateContentInvoiceReseller.objects.filter(
-                crate_delivery_note_contents__delivery_note_id__in=delivery_note_ids
-            )
-            .select_related("invoice", "invoice__cancelled_by_invoice")
-            .prefetch_related(
-                "crate_delivery_note_contents",
-                "invoice__items",
-                "invoice__crate_items",
-            )
-            .distinct()
-        )
-        for crate_content in crate_contents:
-            for crate_dn_content in crate_content.crate_delivery_note_contents.all():
-                delivery_note_id = crate_dn_content.delivery_note_id
-                if delivery_note_id in id_set and delivery_note_id not in out:
-                    out[delivery_note_id] = crate_content.invoice
-        return out
+        return invoice_by_delivery_note
 
     def _build_order_overview(self, order: Order, invoice: Any) -> dict[str, Any]:
         """Build overview data for a single order. ``invoice`` is resolved by
@@ -1245,23 +1210,15 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
         delivery_note_by_order = {
             order.id: getattr(order, "delivery_note", None) for order in orders
         }
-        # One query for the whole batch: which of these delivery notes already
-        # have content on an invoice.
+        # Which of these delivery notes an invoice that isn't cancelled already
+        # holds, in a constant number of queries for the whole batch.
         all_delivery_note_ids = [
             delivery_note.id
             for delivery_note in delivery_note_by_order.values()
             if delivery_note is not None
         ]
         already_invoiced_delivery_note_ids = set(
-            InvoiceResellerContent.objects.filter(
-                delivery_note_contents__delivery_note_id__in=all_delivery_note_ids
-            ).values_list("delivery_note_contents__delivery_note_id", flat=True)
-        )
-        # Crate-only delivery notes are already-invoiced via the crate link only.
-        already_invoiced_delivery_note_ids.update(
-            CrateContentInvoiceReseller.objects.filter(
-                crate_delivery_note_contents__delivery_note_id__in=all_delivery_note_ids
-            ).values_list("crate_delivery_note_contents__delivery_note_id", flat=True)
+            billed_invoices_by_delivery_note(all_delivery_note_ids)
         )
 
         # The view finalizes each usable delivery note that isn't final yet
@@ -1299,7 +1256,7 @@ class BulkCreateSummaryInvoiceFromOrdersView(APIViewRolePermissionsMixin, APIVie
                 )
                 continue
 
-            # M2M: any delivery-note content already on an invoice blocks reuse.
+            # A note an uncancelled invoice holds can't be billed again.
             if delivery_note.id in already_invoiced_delivery_note_ids:
                 errors.append(
                     {

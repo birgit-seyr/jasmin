@@ -20,10 +20,8 @@ from ..errors import (
     OrderContentNotFound,
 )
 from ..models import (
-    CrateContentInvoiceReseller,
     CrateOrderContent,
     Forecast,
-    InvoiceResellerContent,
     MovementShareArticle,
     Offer,
     Order,
@@ -37,6 +35,7 @@ from ..models import (
 )
 from ..utils.iso_week_utils import date_from_order
 from ..utils.tax_rate_utils import resolve_article_tax_rate, resolve_crate_tax_rate
+from .delivery_note_invoices import current_invoices_by_delivery_note
 from .snapshot_service import SnapshotService
 
 
@@ -259,7 +258,7 @@ class OrderContentService:
     # ──────────────────────────────────────────────
 
     @staticmethod
-    def _serialize_order_metadata(order, invoice_content) -> dict[str, Any]:
+    def _serialize_order_metadata(order, invoice) -> dict[str, Any]:
         """Top-level order identity + delivery-note / invoice state for a period.
 
         Surfaced independently of OrderContent rows so the Orders page can
@@ -269,7 +268,6 @@ class OrderContentService:
         reads it identically.
         """
         delivery_note = getattr(order, "delivery_note", None)
-        invoice = invoice_content.invoice if invoice_content else None
         return {
             **OrderContentService._order_identity_dict(order),
             **OrderContentService._delivery_note_identity_dict(delivery_note),
@@ -369,55 +367,14 @@ class OrderContentService:
         # order_contents to harvest it from) still resolves its invoice below.
         if order is not None and getattr(order, "delivery_note", None):
             delivery_note_ids.append(order.delivery_note.id)
-        invoice_by_delivery_note: dict[
-            int, InvoiceResellerContent | CrateContentInvoiceReseller
-        ] = {}
-        if delivery_note_ids:
-            invoice_contents = (
-                InvoiceResellerContent.objects.filter(
-                    delivery_note_contents__delivery_note_id__in=delivery_note_ids
-                )
-                .select_related("invoice")
-                .distinct()
-            )
-            for invoice_content in invoice_contents:
-                for (
-                    delivery_note_id
-                ) in invoice_content.delivery_note_contents.values_list(
-                    "delivery_note_id", flat=True
-                ):
-                    if delivery_note_id in delivery_note_ids:
-                        invoice_by_delivery_note[delivery_note_id] = invoice_content
-            # Crate-only delivery notes link to their invoice only via the crate
-            # provenance M2M. Both content types expose ``.invoice`` — all the
-            # downstream serialization reads — so a crate content is a drop-in.
-            crate_invoice_contents = (
-                CrateContentInvoiceReseller.objects.filter(
-                    crate_delivery_note_contents__delivery_note_id__in=delivery_note_ids
-                )
-                .select_related("invoice")
-                .distinct()
-            )
-            for crate_invoice_content in crate_invoice_contents:
-                for (
-                    delivery_note_id
-                ) in crate_invoice_content.crate_delivery_note_contents.values_list(
-                    "delivery_note_id", flat=True
-                ):
-                    if (
-                        delivery_note_id in delivery_note_ids
-                        and delivery_note_id not in invoice_by_delivery_note
-                    ):
-                        invoice_by_delivery_note[delivery_note_id] = (
-                            crate_invoice_content
-                        )
+        invoice_by_delivery_note = current_invoices_by_delivery_note(delivery_note_ids)
 
         result: list[dict[str, Any]] = []
 
         for order_content in order_contents:
             delivery_note = getattr(order_content.order, "delivery_note", None)
 
-            invoice_content = (
+            invoice = (
                 invoice_by_delivery_note.get(delivery_note.id)
                 if delivery_note
                 else None
@@ -437,23 +394,7 @@ class OrderContentService:
                     "delivery_note_is_finalized": (
                         delivery_note.is_finalized if delivery_note else False
                     ),
-                    "invoice_id": (
-                        invoice_content.invoice.id if invoice_content else None
-                    ),
-                    "invoice_number": (
-                        invoice_content.invoice.display_number
-                        if invoice_content
-                        else None
-                    ),
-                    "invoice_prefix": (
-                        invoice_content.invoice.prefix if invoice_content else None
-                    ),
-                    "has_invoice": invoice_content is not None,
-                    "has_finalized_invoice": (
-                        invoice_content.invoice.is_finalized
-                        if invoice_content
-                        else False
-                    ),
+                    **OrderContentService._invoice_identity_dict(invoice),
                 }
             )
             result.append(item)
@@ -464,13 +405,13 @@ class OrderContentService:
         order_block = None
         if order is not None:
             order_delivery_note = getattr(order, "delivery_note", None)
-            order_invoice_content = (
+            order_invoice = (
                 invoice_by_delivery_note.get(order_delivery_note.id)
                 if order_delivery_note
                 else None
             )
             order_block = OrderContentService._serialize_order_metadata(
-                order, order_invoice_content
+                order, order_invoice
             )
 
         return {

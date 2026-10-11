@@ -104,7 +104,9 @@ def onboarding_mode_enabled_for_schema(schema_name: str) -> bool:
     """
     from django_tenants.utils import get_public_schema_name
 
-    from .models import Tenant, TenantSettings
+    from apps.shared.tenant_lookup import tenants_with_schema
+
+    from .models import TenantSettings
 
     if schema_name == get_public_schema_name():
         return False
@@ -112,7 +114,7 @@ def onboarding_mode_enabled_for_schema(schema_name: str) -> bool:
     if getattr(active_tenant, "schema_name", None) == schema_name:
         settings = TenantSettings.get_current_settings(active_tenant)
     else:
-        tenant = Tenant.objects.filter(schema_name=schema_name).first()
+        tenant = tenants_with_schema(schema_name).first()
         if tenant is None:
             return False
         settings = TenantSettings.get_current_settings(tenant)

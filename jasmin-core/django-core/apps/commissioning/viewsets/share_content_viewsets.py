@@ -146,6 +146,7 @@ class HarvestSharePlanningViewSet(RolePermissionsMixin, viewsets.ViewSet):
         self, request: Request, pk: str | None = None, *, partial: bool = False
     ) -> Response:
         slot = PlanningSlot.parse(pk, code="share_content.invalid_pk")
+        slot.refuse_unknown_unit_or_size(code="share_content.invalid_pk")
         serializer = HarvestSharePlanningUpdateRequestSerializer(
             data=request.data, partial=partial
         )

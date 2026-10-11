@@ -25,6 +25,10 @@ from ..models import (
     InvoiceResellerContent,
 )
 from ..utils.iso_week_utils import coerce_document_date
+from .delivery_note_invoices import (
+    billed_invoices_by_delivery_note,
+    current_invoices_by_delivery_note,
+)
 from .email_dispatch import load_pdf_attachments, send_document_email
 from .finalize_utils import finalize_children
 
@@ -65,73 +69,26 @@ class InvoiceService:
     def get_invoice_for_delivery_note(
         delivery_note,
     ) -> InvoiceReseller | None:
-        """Return the invoice linked to *delivery_note*, or ``None``."""
+        """Return the current invoice of *delivery_note*, or ``None``.
+
+        The current one is the newest that isn't cancelled, else the newest
+        overall, reached through article and crate lines alike (see
+        ``current_invoices_by_delivery_note``).
+        """
         if not delivery_note:
             return None
-        content = (
-            InvoiceResellerContent.objects.filter(
-                delivery_note_contents__delivery_note=delivery_note
-            )
-            .select_related("invoice", "invoice__cancelled_by_invoice")
-            .first()
+        return current_invoices_by_delivery_note([delivery_note.pk]).get(
+            delivery_note.pk
         )
-        if content:
-            return content.invoice
-        # Crate-only delivery note: no article lines, so the article M2M above
-        # misses. Fall back to the crate-line provenance link.
-        crate_content = (
-            CrateContentInvoiceReseller.objects.filter(
-                crate_delivery_note_contents__delivery_note=delivery_note
-            )
-            .select_related("invoice", "invoice__cancelled_by_invoice")
-            .first()
-        )
-        return crate_content.invoice if crate_content else None
 
     @staticmethod
     def get_invoices_for_delivery_notes(
         delivery_note_ids,
     ) -> dict[str, InvoiceReseller]:
         """Batch form of ``get_invoice_for_delivery_note``: map each delivery
-        note id → its invoice in a constant number of queries instead of 1-2
-        per note (the per-order N+1 in bulk reminder sends).
-
-        A delivery note's article lines all belong to one invoice, so the first
-        content per note is authoritative; crate-only notes fall back to the
-        crate-line provenance. ``values_list`` over the SAME M2M path used in
-        the filter reuses one join (no filter-vs-annotate join mismatch).
-        """
-        ids = list(delivery_note_ids)
-        if not ids:
-            return {}
-
-        invoice_id_by_dn: dict[str, str] = {}
-        for dn_id, invoice_id in InvoiceResellerContent.objects.filter(
-            delivery_note_contents__delivery_note_id__in=ids
-        ).values_list("delivery_note_contents__delivery_note_id", "invoice_id"):
-            invoice_id_by_dn.setdefault(dn_id, invoice_id)
-
-        missing = [dn_id for dn_id in ids if dn_id not in invoice_id_by_dn]
-        if missing:
-            for dn_id, invoice_id in CrateContentInvoiceReseller.objects.filter(
-                crate_delivery_note_contents__delivery_note_id__in=missing
-            ).values_list(
-                "crate_delivery_note_contents__delivery_note_id", "invoice_id"
-            ):
-                invoice_id_by_dn.setdefault(dn_id, invoice_id)
-
-        if not invoice_id_by_dn:
-            return {}
-        invoices = (
-            InvoiceReseller.objects.filter(id__in=set(invoice_id_by_dn.values()))
-            .select_related("cancelled_by_invoice")
-            .in_bulk()
-        )
-        return {
-            dn_id: invoices[invoice_id]
-            for dn_id, invoice_id in invoice_id_by_dn.items()
-            if invoice_id in invoices
-        }
+        note id to its current invoice in a constant number of queries, however
+        many notes are asked for. Notes without an invoice are left out."""
+        return current_invoices_by_delivery_note(delivery_note_ids)
 
     @staticmethod
     def unfinalized_upstream_delivery_note_ids(invoice_ids) -> set[str]:
@@ -364,9 +321,11 @@ class InvoiceService:
         DeliveryNoteReseller.objects.select_for_update().get(pk=delivery_note.pk)
 
         # Matches via BOTH the article-line and crate-line provenance links, so
-        # a crate-only DN can't be double-billed (the article M2M is empty for
-        # it — see get_invoice_for_delivery_note).
-        existing_invoice = InvoiceService.get_invoice_for_delivery_note(delivery_note)
+        # a crate-only DN can't be double-billed. A cancelled invoice doesn't
+        # count: its storno frees the DN for a new invoice.
+        existing_invoice = billed_invoices_by_delivery_note([delivery_note.pk]).get(
+            delivery_note.pk
+        )
 
         if existing_invoice:
             raise ConflictError(
@@ -695,34 +654,20 @@ class InvoiceService:
     ) -> None:
         """Lock the source delivery notes (deterministic pk order to avoid
         deadlocks) so concurrent summary-invoice runs over the same DNs
-        serialize, then refuse to bill a DN whose lines are already on an
-        invoice — together this prevents double-billing."""
+        serialize, then refuse to bill a DN an invoice that isn't cancelled
+        already holds — together this prevents double-billing."""
         delivery_note_pks = [delivery_note.pk for delivery_note in delivery_notes]
         list(
             DeliveryNoteReseller.objects.select_for_update()
             .filter(pk__in=delivery_note_pks)
             .order_by("pk")
         )
-        already_invoiced = (
-            InvoiceResellerContent.objects.filter(
-                delivery_note_contents__delivery_note__in=delivery_note_pks
-            )
-            .select_related("invoice")
-            .first()
-        )
-        # Crate-only DNs link only via the crate provenance M2M.
-        already_invoiced_crate = (
-            CrateContentInvoiceReseller.objects.filter(
-                crate_delivery_note_contents__delivery_note__in=delivery_note_pks
-            )
-            .select_related("invoice")
-            .first()
-        )
-        existing = already_invoiced or already_invoiced_crate
-        if existing:
+        billed = billed_invoices_by_delivery_note(delivery_note_pks)
+        if billed:
+            existing = billed[min(billed)]
             raise ConflictError(
                 "One or more delivery notes are already invoiced: "
-                f"{existing.invoice.number}",
+                f"{existing.number}",
                 code="invoice.already_exists",
             )
 

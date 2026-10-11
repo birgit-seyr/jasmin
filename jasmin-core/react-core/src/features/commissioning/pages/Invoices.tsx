@@ -81,6 +81,10 @@ interface GroupData {
   canInvoice: boolean;
 }
 
+/** A cancelled invoice frees its delivery note to be invoiced again. */
+const canCreateInvoice = (record: InvoiceOverviewRow) =>
+  !record.has_invoice || Boolean(record.invoice_cancelled_by);
+
 export default function Invoices() {
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const [groupingMode, setGroupingMode] = useState<GroupingMode>(
@@ -272,7 +276,7 @@ export default function Invoices() {
       groups[groupKey].items.push(item);
       groups[groupKey].totalAmount += parseFloat(item.sum_netto || "0");
 
-      if (item.has_invoice) {
+      if (!canCreateInvoice(item)) {
         groups[groupKey].canInvoice = false;
       }
     });
@@ -577,7 +581,7 @@ export default function Invoices() {
                   buttonSize="small"
                 />
               )}
-              {!record.has_invoice && (
+              {canCreateInvoice(record) && (
                 <BulkActionButton
                   selectedIds={[record.id]}
                   apiFunction={(payload) =>

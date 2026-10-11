@@ -14,8 +14,9 @@ from typing import Any, ClassVar, TypeVar
 
 from django.db.models import Model, Q, QuerySet
 
-from ..errors import ShareContentError
+from ..errors import CompositeIdInvalid, ShareContentError
 from ..models import ShareContent, ShareTypeVariation
+from ..models.choices import UnitOptions, VegetableSizeOptions
 from ..utils.composite_id_utils import parse_slot_id
 
 _ModelT = TypeVar("_ModelT", bound=Model)
@@ -78,6 +79,16 @@ class PlanningSlot:
         """The slot a grid row's id names; ``CompositeIdInvalid`` with
         ``code`` for a malformed one."""
         return cls(**parse_slot_id(raw, fields=cls._ID_FIELDS, code=code))
+
+    def refuse_unknown_unit_or_size(self, *, code: str) -> None:
+        """Refuse a unit or size its column doesn't allow, which the id carries
+        unchecked into rows that ``bulk_create`` doesn't validate. Only a write
+        that builds rows from the slot needs this: reads, deletes and finalizing
+        match the stored rows by their unit and size."""
+        if self.unit not in UnitOptions.values:
+            raise CompositeIdInvalid(f"Invalid unit {self.unit!r} in id.", code=code)
+        if self.size not in VegetableSizeOptions.values:
+            raise CompositeIdInvalid(f"Invalid size {self.size!r} in id.", code=code)
 
     @property
     def key(self) -> tuple[Any, ...]:

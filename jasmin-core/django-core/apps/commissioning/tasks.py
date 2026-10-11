@@ -1,7 +1,6 @@
 import datetime
 import logging
 
-from django.conf import settings
 from django.utils import timezone
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task, db_task
@@ -10,6 +9,7 @@ from apps.commissioning.services import InvoiceService
 from apps.shared.display_formats import DisplayFormats
 from apps.shared.ops_alerts import alert_operator
 from apps.shared.retention import IMPORT_BATCH_RETENTION_DAYS
+from apps.shared.tenant_urls import frontend_base_url
 from apps.shared.tenants.sweep import for_each_tenant
 
 log = logging.getLogger("django.security")
@@ -202,13 +202,9 @@ def _build_renewal_failures_text(failed: list[dict], language: str):
 
 
 def _office_review_url(tenant, path: str) -> str:
-    """Absolute frontend URL for the tenant, built from its primary domain (the
-    sweep runs with no request, so ``connection.tenant`` isn't reliably set)."""
-    domain = tenant.domains.filter(is_primary=True).first() or tenant.domains.first()
-    if domain:
-        scheme = "http" if settings.DEBUG else "https"
-        return f"{scheme}://{domain.domain}{path}"
-    return f"{getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3000')}{path}"
+    """Absolute frontend URL for the tenant (the sweep runs with no request, so
+    the tenant is passed in rather than read off ``connection.tenant``)."""
+    return f"{frontend_base_url(tenant)}{path}"
 
 
 def _notify_office_of_renewal_failures(tenant, failed: list[dict], run_date) -> None:
