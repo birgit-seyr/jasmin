@@ -1085,12 +1085,12 @@ const EditableTable = <T extends TableRecord = TableRecord>({
               {permissions.canAdd && (
                 <Button
                   size="small"
-                  icon={<PlusOutlined />}
+                  icon={<PlusOutlined aria-hidden />}
+                  aria-label={t("table.add_record")}
+                  title={t("table.add_record")}
                   onClick={handleAddClick}
                   style={{ width: "2em" }}
-                >
-                  {t("table.add_plus_icon")}
-                </Button>
+                />
               )}
             </div>
             <div>

@@ -42,7 +42,7 @@
   "status_pending_approval_description": "Diese Person hat die Einladung angenommen, benötigt aber noch eine Admin-Freigabe.",
   "status_pending_invitation_description": "Eine Einladungs-E-Mail wurde gesendet. Wartet auf Annahme.",
   "status_inactive_description": "Dieses Benutzerkonto ist deaktiviert und kann sich nicht anmelden.",
-  "status_no_user_description": "Es ist kein Benutzerkonto verknüpft. Du kannst eine Einladung senden, um eines anzulegen.",
+  "status_no_user_description": "Es ist kein Benutzerkonto verknüpft. Mit einer Einladung lässt sich eines anlegen.",
 
   "role_admin": "Admin",
   "role_management": "Vorstand",

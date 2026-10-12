@@ -759,7 +759,7 @@ describe("ShareWeights roles", () => {
     renderPage();
     await screen.findByText(SMALL);
 
-    expect(screen.queryByRole("button", { name: /table\.add_plus_icon/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /table\.add_record/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();
     await userEvent.keyboard("+");
 

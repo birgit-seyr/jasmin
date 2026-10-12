@@ -212,7 +212,7 @@ const DISABLED_CELL = "ant-picker-cell-disabled";
 
 async function startNewPrice() {
   await userEvent.click(
-    screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+    screen.getByRole("button", { name: /table\.add_record/ }),
   );
 }
 
@@ -579,7 +579,7 @@ describe("CratePriceModal existing prices", () => {
       await screen.findByText("1,50 €");
 
       expect(
-        screen.queryByRole("button", { name: /table\.add_plus_icon/ }),
+        screen.queryByRole("button", { name: /table\.add_record/ }),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "table.edit" }),

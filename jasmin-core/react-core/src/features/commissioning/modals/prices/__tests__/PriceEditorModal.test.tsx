@@ -195,7 +195,7 @@ function editingRow(): HTMLElement {
 }
 
 const addButton = () =>
-  screen.queryByRole("button", { name: /table\.add_plus_icon/ });
+  screen.queryByRole("button", { name: /table\.add_record/ });
 
 beforeEach(() => {
   auth.roles = ["office"];

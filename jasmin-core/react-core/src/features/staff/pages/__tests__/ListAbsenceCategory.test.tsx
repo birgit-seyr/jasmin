@@ -217,7 +217,7 @@ describe("ListAbsenceCategory", () => {
     const { user } = renderList();
     await screen.findByText("Vacation");
 
-    await user.click(screen.getByRole("button", { name: /table\.add_plus_icon/ }));
+    await user.click(screen.getByRole("button", { name: /table\.add_record/ }));
     await user.type(editedInputs().year, "2027");
     await user.type(editedInputs().name, "Vacation");
     await user.click(screen.getByRole("button", { name: "table.save" }));
@@ -235,7 +235,7 @@ describe("ListAbsenceCategory", () => {
     const { user } = renderList();
     await screen.findByText("Vacation");
 
-    await user.click(screen.getByRole("button", { name: /table\.add_plus_icon/ }));
+    await user.click(screen.getByRole("button", { name: /table\.add_record/ }));
     await user.type(editedInputs().year, "2026");
     await user.type(editedInputs().name, "Vacation");
     await user.click(screen.getByRole("button", { name: "table.save" }));
@@ -315,7 +315,7 @@ describe("ListAbsenceCategory role gating", () => {
       await screen.findByText("Vacation");
 
       expect(
-        screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+        screen.getByRole("button", { name: /table\.add_record/ }),
       ).toBeEnabled();
       expect(
         within(rowOf("Sick leave")).getByRole("button", { name: "table.edit" }),
@@ -338,7 +338,7 @@ describe("ListAbsenceCategory role gating", () => {
     await screen.findByText("Vacation");
 
     expect(
-      screen.queryByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.queryByRole("button", { name: /table\.add_record/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "table.delete" }),

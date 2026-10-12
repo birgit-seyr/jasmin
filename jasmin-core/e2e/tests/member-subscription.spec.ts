@@ -51,8 +51,7 @@ test("office creates a member with a subscription from next week, and the share 
 
   // The member, added inline on the member list.
   await page.goto("/members/members");
-  // EditableTable's add button carries only its icon's name.
-  await page.getByRole("button", { name: "plus" }).click();
+  await page.getByRole("button", { name: t("table.add_record"), exact: true }).click();
   await page.getByRole("textbox", { name: t("members.first_name") }).fill("E2E");
   await page.getByRole("textbox", { name: t("members.last_name") }).fill(lastName);
   const memberCreated = page.waitForResponse(

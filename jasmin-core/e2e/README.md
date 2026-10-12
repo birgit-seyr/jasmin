@@ -78,8 +78,7 @@ Step-up asks for the password only (the personas have no TOTP device);
   seeded in English and the browser runs as `en-US`. Tests read the copy from
   react-core's English locale files with `t("ns.key")` from `support/i18n.ts`,
   never as a literal, so a copy edit doesn't break a test and a missing key
-  fails loudly. The only literals are seeded names and the few strings the app
-  hardcodes outside i18n (the tests say so where they use one).
+  fails loudly. The only literals are seeded names.
 - **No fixed waits.** Never `waitForTimeout`; wait for a visible result or for
   the response (`waitForResponse`).
 - **Dates come from the real clock.** The stack can't be given a frozen clock,

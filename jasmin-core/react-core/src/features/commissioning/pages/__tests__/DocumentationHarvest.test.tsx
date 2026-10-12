@@ -249,7 +249,7 @@ const UNIT = "commissioning.unit";
 const EXPECTED = "commissioning.expected_harvest";
 const ACTUAL = "commissioning.actual_harvest";
 const NOTE = "commissioning.note";
-const ADD = /table\.add_plus_icon/;
+const ADD = /table\.add_record/;
 
 /**
  * The same number in either decimal notation, with or without trailing zeros:

@@ -859,7 +859,7 @@ describe("PackingListBulk is read-only", () => {
     renderPage();
     await screen.findByText("Carrots");
 
-    expect(screen.queryByRole("button", { name: /table\.add_plus_icon/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /table\.add_record/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "table.actions" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /table\.(edit|delete)/ })).not.toBeInTheDocument();
 

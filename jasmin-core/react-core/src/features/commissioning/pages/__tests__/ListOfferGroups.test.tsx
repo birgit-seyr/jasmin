@@ -272,7 +272,7 @@ const cellTexts = (row: HTMLElement, titles: string[]) =>
 const shownNumbers = () => bodyRows().map((row) => cellOf(row, NUMBER).textContent);
 
 const rowButton = (row: HTMLElement, name: string) => within(row).queryByRole("button", { name });
-const addButton = () => screen.queryByRole("button", { name: /table\.add_plus_icon/ });
+const addButton = () => screen.queryByRole("button", { name: /table\.add_record/ });
 const spinner = () => document.querySelector(".ant-spin-spinning");
 const heading = () => screen.getByRole("heading", { level: 1, name: TITLE });
 

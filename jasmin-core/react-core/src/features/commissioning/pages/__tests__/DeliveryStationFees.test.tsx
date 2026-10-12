@@ -432,7 +432,7 @@ describe("DeliveryStationFees rows", () => {
   it("shows the fees read-only, with nothing to add, edit or delete", async () => {
     const { user } = await renderLoaded();
 
-    expect(screen.queryByRole("button", { name: /table\.add_plus_icon/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /table\.add_record/ })).not.toBeInTheDocument();
     expect(columnTitles()).not.toContain("table.actions");
     expect(screen.queryByRole("button", { name: /table\.(edit|delete)/ })).not.toBeInTheDocument();
 

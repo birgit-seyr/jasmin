@@ -727,7 +727,7 @@ describe("ShareDays read-only plans", () => {
       expect(screen.queryByText(WEEK_BEGUN)).not.toBeInTheDocument();
       expect(screen.getAllByRole("button", { name: "table.edit" })).toHaveLength(2);
       expect(screen.queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "table.add_plus_icon" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "table.add_record" })).not.toBeInTheDocument();
       expect(await openRow(FRIDAY, PACKING)).toBeInTheDocument();
     },
   );

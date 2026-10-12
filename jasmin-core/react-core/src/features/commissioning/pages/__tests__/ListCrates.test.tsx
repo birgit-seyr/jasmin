@@ -292,7 +292,7 @@ const activeFlag = (row: HTMLElement) => within(cellOf(row, ACTIVE)).getByRole("
 
 const rowButton = (text: string, name: string) => within(rowOf(text)).getByRole("button", { name });
 const deleteButton = (text: string) => within(rowOf(text)).queryByRole("button", { name: "table.delete" });
-const addButton = () => screen.queryByRole("button", { name: /table\.add_plus_icon/ });
+const addButton = () => screen.queryByRole("button", { name: /table\.add_record/ });
 // AntD's Spin turns itself off in an effect, a render after the rows arrive,
 // so a test waits for it to go.
 const spinner = () => document.querySelector(".ant-spin-spinning");

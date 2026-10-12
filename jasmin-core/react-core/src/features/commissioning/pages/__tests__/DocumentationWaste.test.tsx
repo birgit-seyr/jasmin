@@ -171,7 +171,7 @@ const UNIT = "commissioning.unit";
 const SIZE = "commissioning.size";
 const AMOUNT = "commissioning.amount";
 const NOTE = "commissioning.note";
-const ADD_ROW = /table\.add_plus_icon/;
+const ADD_ROW = /table\.add_record/;
 const ADD_ARTICLE = /commissioning\.add_share_article/;
 const EDIT_OR_DELETE = /table\.(edit|delete)/;
 

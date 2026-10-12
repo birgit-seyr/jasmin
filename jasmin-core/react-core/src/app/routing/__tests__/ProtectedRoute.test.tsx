@@ -2,7 +2,17 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
-// ProtectedRoute consumes exactly one hook. Mock it before importing.
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback?: unknown) =>
+      typeof fallback === "string" ? fallback : key,
+    i18n: { language: "de", changeLanguage: () => Promise.resolve() },
+  }),
+  Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  initReactI18next: { type: "3rdParty", init: () => {} },
+}));
+
+// ProtectedRoute reads auth through one hook. Mock it before importing.
 const useAuthMock = vi.fn();
 vi.mock("@shared/contexts/AuthContext", () => ({
   useAuth: () => useAuthMock(),
@@ -43,7 +53,7 @@ describe("ProtectedRoute", () => {
   it("renders a loading indicator while auth is initialising", () => {
     useAuthMock.mockReturnValue({ loading: true, isAuthenticated: false });
     renderAt("/private");
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("app.loading");
     expect(screen.queryByTestId("protected")).not.toBeInTheDocument();
   });
 

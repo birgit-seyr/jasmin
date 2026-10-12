@@ -308,7 +308,7 @@ const CAPACITY = "commissioning.capacity";
 
 async function startNewVariation() {
   await userEvent.click(
-    screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+    screen.getByRole("button", { name: /table\.add_record/ }),
   );
 }
 
@@ -687,7 +687,7 @@ describe("ShareTypeVariationModal deleting and roles", () => {
     await loaded();
 
     expect(
-      screen.queryByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.queryByRole("button", { name: /table\.add_record/ }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "table.edit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();

@@ -384,7 +384,7 @@ const editingRow = () =>
 
 const select = (title: string) => within(editingRow()).getByRole("combobox", { name: title });
 const textField = (title: string) => within(editingRow()).getByRole("textbox", { name: title });
-const addButton = () => within(dialog()).queryByRole("button", { name: /table\.add_plus_icon$/ });
+const addButton = () => within(dialog()).queryByRole("button", { name: /table\.add_record$/ });
 
 async function waitForEditing() {
   await within(dialog()).findByRole("button", { name: "table.save" });

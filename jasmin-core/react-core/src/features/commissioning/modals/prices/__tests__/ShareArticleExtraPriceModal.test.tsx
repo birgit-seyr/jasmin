@@ -286,7 +286,7 @@ describe("ShareArticleExtraPriceModal saving", () => {
     await screen.findByText("3,20 €");
 
     await userEvent.click(
-      screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.getByRole("button", { name: /table\.add_record/ }),
     );
 
     expect(within(editingRow()).getByLabelText(VAT)).toHaveValue("7,00");
@@ -298,7 +298,7 @@ describe("ShareArticleExtraPriceModal saving", () => {
     await screen.findByText("3,20 €");
 
     await userEvent.click(
-      screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.getByRole("button", { name: /table\.add_record/ }),
     );
     await userEvent.click(
       within(editingRow()).getByLabelText("configuration.valid_from"),
@@ -362,7 +362,7 @@ describe("ShareArticleExtraPriceModal saving", () => {
     await screen.findByText("3,20 €");
 
     expect(
-      screen.queryByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.queryByRole("button", { name: /table\.add_record/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "table.edit" }),

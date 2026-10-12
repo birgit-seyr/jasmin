@@ -224,7 +224,7 @@ describe("ListEmployees", () => {
     const { user } = renderList();
     await screen.findByText("Anna");
 
-    await user.click(screen.getByRole("button", { name: /table\.add_plus_icon/ }));
+    await user.click(screen.getByRole("button", { name: /table\.add_record/ }));
     await user.type(within(editingRow()).getByRole("textbox"), "Dora");
     await user.click(screen.getByRole("button", { name: "table.save" }));
 
@@ -338,7 +338,7 @@ describe("ListEmployees role gating", () => {
       await screen.findByText("Anna");
 
       expect(
-        screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+        screen.getByRole("button", { name: /table\.add_record/ }),
       ).toBeEnabled();
       expect(
         within(rowOf("Ben")).getByRole("button", { name: "table.edit" }),
@@ -359,7 +359,7 @@ describe("ListEmployees role gating", () => {
     await screen.findByText("Anna");
 
     expect(
-      screen.queryByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.queryByRole("button", { name: /table\.add_record/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "table.delete" }),

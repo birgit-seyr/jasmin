@@ -186,7 +186,7 @@ const LINK = "resellers.organic_certificate_link";
 
 async function startNewCertificate() {
   await userEvent.click(
-    screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+    screen.getByRole("button", { name: /table\.add_record/ }),
   );
 }
 
@@ -286,7 +286,7 @@ describe("OrganicCertificatesModal certificate history", () => {
     renderModal();
 
     await waitFor(() => expect(api.list).toHaveBeenCalledTimes(1));
-    await screen.findByRole("button", { name: /table\.add_plus_icon/ });
+    await screen.findByRole("button", { name: /table\.add_record/ });
     expect(bodyRows()).toHaveLength(0);
   });
 
@@ -500,7 +500,7 @@ describe("OrganicCertificatesModal existing certificates", () => {
       renderModal();
       await screen.findByText("AT-BIO-301-0002");
 
-      expect(screen.queryByRole("button", { name: /table\.add_plus_icon/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /table\.add_record/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "table.edit" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();
     },

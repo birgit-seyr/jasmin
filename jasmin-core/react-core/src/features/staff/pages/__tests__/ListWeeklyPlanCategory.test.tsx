@@ -157,7 +157,7 @@ async function addCategory(
     maxLines,
   }: { sortOrder?: string; name?: string; maxLines?: string },
 ) {
-  await user.click(screen.getByRole("button", { name: /table\.add_plus_icon/ }));
+  await user.click(screen.getByRole("button", { name: /table\.add_record/ }));
   if (sortOrder) await user.type(editedInputs().sortOrder, sortOrder);
   if (name) await user.type(editedInputs().name, name);
   if (maxLines) await user.type(editedInputs().maxLines, maxLines);
@@ -398,7 +398,7 @@ describe("ListWeeklyPlanCategory role gating", () => {
       await screen.findByText("Harvest");
 
       expect(
-        screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+        screen.getByRole("button", { name: /table\.add_record/ }),
       ).toBeEnabled();
       expect(
         within(rowOf("Packing")).getByRole("button", { name: "table.edit" }),
@@ -419,7 +419,7 @@ describe("ListWeeklyPlanCategory role gating", () => {
     await screen.findByText("Harvest");
 
     expect(
-      screen.queryByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.queryByRole("button", { name: /table\.add_record/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "table.delete" }),

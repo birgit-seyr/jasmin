@@ -331,7 +331,7 @@ const infoButton = (row: HTMLElement) =>
   within(row).queryByRole("button", { name: "delivery_stations.member_info_title" });
 const feeButton = (row: HTMLElement) => within(row).queryByRole("button", { name: "delivery_stations.fee_title" });
 const deleteButton = (name: string) => within(rowOf(name)).queryByRole("button", { name: "table.delete" });
-const addButton = () => screen.queryByRole("button", { name: /table\.add_plus_icon/ });
+const addButton = () => screen.queryByRole("button", { name: /table\.add_record/ });
 // AntD's Spin turns itself off in an effect, a render after the rows arrive,
 // so a test waits for it to go.
 const spinner = () => document.querySelector(".ant-spin-spinning");

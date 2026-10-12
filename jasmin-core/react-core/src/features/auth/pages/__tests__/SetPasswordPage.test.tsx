@@ -115,7 +115,7 @@ describe("SetPasswordPage (integration)", () => {
     );
 
     expect(
-      await screen.findByText("Passwort gesetzt! Du wirst zur Anmeldung weitergeleitet…"),
+      await screen.findByText("Passwort gesetzt! Weiterleitung zur Anmeldung…"),
     ).toBeInTheDocument();
     expect(acceptBody).toEqual({
       token: TOKEN,
@@ -158,7 +158,7 @@ describe("SetPasswordPage (integration)", () => {
 
     expect(
       await screen.findByText(
-        "Passwort gesetzt! Du wirst zur Anmeldung weitergeleitet…",
+        "Passwort gesetzt! Weiterleitung zur Anmeldung…",
       ),
     ).toBeInTheDocument();
 

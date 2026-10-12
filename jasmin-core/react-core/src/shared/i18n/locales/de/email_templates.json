@@ -35,7 +35,7 @@
   "category_office": "Büro",
   "body": "Inhalt",
   "show_default": "Standardvorlage anzeigen",
-  "default_reference_help": "Schreibgeschützte Referenz der ausgelieferten Standardvorlage in der Sprache deiner Organisation. Über 'Auf Standard zurücksetzen' kannst du deine Anpassung jederzeit durch diesen Inhalt ersetzen.",
+  "default_reference_help": "Schreibgeschützte Referenz der ausgelieferten Standardvorlage in der Sprache der Organisation. Über 'Auf Standard zurücksetzen' lässt sich die Anpassung jederzeit durch diesen Inhalt ersetzen.",
   "label": {
     "accounts_invitation": "Einladung",
     "accounts_password_reset": "Passwort zurücksetzen",

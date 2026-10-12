@@ -337,7 +337,7 @@ const rowButton = (text: string, name: string) =>
 const ordersLink = (company: string) => within(rowOf(company)).getByRole("link", { name: "resellers.go_to_orders" });
 const statusButton = (company: string) =>
   within(cellOf(rowOf(company), "members.user_status")).getByRole("button");
-const addButton = () => screen.queryByRole("button", { name: /table\.add_plus_icon/ });
+const addButton = () => screen.queryByRole("button", { name: /table\.add_record/ });
 // AntD's Spin turns itself off in an effect, a render after the rows arrive,
 // so a test waits for it to go.
 const spinner = () => document.querySelector(".ant-spin-spinning");

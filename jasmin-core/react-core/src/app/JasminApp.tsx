@@ -42,7 +42,7 @@ export default function JasminApp() {
   const themeTokens = useTheme();
   const { language, theme: userTheme } = useLocale();
   const { user, isAuthenticated, bootstrapping } = useAuth();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   useErrorDateFormat();
   // Pages a link in an email opens. The token in the URL is the credential, so
   // they open whatever the visitor's session: the layouts for signed-in users
@@ -113,7 +113,7 @@ export default function JasminApp() {
             height: "100vh",
           }}
         >
-          Loading...
+          {t("app.loading")}
         </div>
       </ConfigProvider>
     );
@@ -191,7 +191,7 @@ export default function JasminApp() {
               <Suspense
                 fallback={
                   <div role="status" aria-live="polite">
-                    Loading...
+                    {t("app.loading")}
                   </div>
                 }
               >
@@ -242,7 +242,7 @@ export default function JasminApp() {
               <Suspense
                 fallback={
                   <div role="status" aria-live="polite">
-                    Loading...
+                    {t("app.loading")}
                   </div>
                 }
               >

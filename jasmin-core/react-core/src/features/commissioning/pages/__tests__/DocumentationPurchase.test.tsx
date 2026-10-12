@@ -281,7 +281,7 @@ const PRICE = "commissioning.price_per_unit";
 const NOTE = "commissioning.note";
 const STORAGE = "placeholder.storage_selector";
 const TAKE_OVER = "commissioning.set_as_expected_purchase_for";
-const ADD_ROW = /table\.add_plus_icon/;
+const ADD_ROW = /table\.add_record/;
 const ADD_ARTICLE = /commissioning\.add_share_article/;
 const EDIT_OR_DELETE = /table\.(edit|delete)/;
 

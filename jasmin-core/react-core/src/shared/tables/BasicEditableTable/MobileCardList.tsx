@@ -187,7 +187,7 @@ function MobileCardList<T extends TableRecord>({
       {permissions.canAdd && (
         <Button
           type="primary"
-          icon={<PlusOutlined />}
+          icon={<PlusOutlined aria-hidden />}
           onClick={onAdd}
           block
           className="mobile-card-add-btn"

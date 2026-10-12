@@ -308,7 +308,7 @@ describe("EditableTable rows", () => {
     );
 
     await userEvent.click(
-      await screen.findByRole("button", { name: /table\.add_plus_icon/ }),
+      await screen.findByRole("button", { name: /table\.add_record/ }),
     );
     await userEvent.type(await screen.findByRole("textbox", { name: "Name" }), "Leeks");
     await userEvent.click(screen.getByRole("button", { name: "table.save" }));

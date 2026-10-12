@@ -293,7 +293,7 @@ const flag = (row: HTMLElement, columnTitle: string) =>
 const shownCompanies = () => bodyRows().map((row) => cellOf(row, COMPANY).textContent);
 
 const rowButton = (text: string, name: string) => within(rowOf(text)).getByRole("button", { name });
-const addButton = () => screen.queryByRole("button", { name: /table\.add_plus_icon/ });
+const addButton = () => screen.queryByRole("button", { name: /table\.add_record/ });
 // AntD's Spin turns itself off in an effect, a render after the rows arrive,
 // so a test waits for it to go.
 const spinner = () => document.querySelector(".ant-spin-spinning");

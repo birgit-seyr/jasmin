@@ -6,8 +6,7 @@ import {
 } from "../support/auth";
 import { t } from "../support/i18n";
 
-// ``RequireRole``'s fallback is a literal in the app, not an i18n key.
-const NOT_AUTHORIZED = "Not authorized.";
+const NOT_AUTHORIZED = t("auth.not_authorized.title");
 const MEMBER_PAGE = /\/members\/members\/(\w+)$/;
 
 test.describe("member", () => {

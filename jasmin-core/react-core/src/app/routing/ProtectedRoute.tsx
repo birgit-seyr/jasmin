@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@shared/contexts/AuthContext";
 
@@ -19,13 +20,14 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({
   children,
 }: ProtectedRouteProps): ReactNode => {
+  const { t } = useTranslation();
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
     return (
       <div role="status" aria-live="polite">
-        Loading...
+        {t("app.loading")}
       </div>
     );
   }

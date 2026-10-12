@@ -107,7 +107,7 @@
   "invalid_email": "Ungültige E-Mail-Adresse",
   "no_data": "Keine Daten verfügbar",
   "no_orders_available": "Keine Bestellungen verfügbar",
-  "offline_banner": "Du bist offline — manche Aktionen sind deaktiviert.",
+  "offline_banner": "Offline — manche Aktionen sind deaktiviert.",
   "new_version_banner": "Eine neue Version ist verfügbar.",
   "reload": "Neu laden",
   "required": "Pflichtfeld",

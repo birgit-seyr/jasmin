@@ -888,7 +888,7 @@ describe("DeliveryStationsDetails access", () => {
     session.roles = roles;
     renderPage();
 
-    expect(await screen.findByText("Not authorized.")).toBeInTheDocument();
+    expect(await screen.findByText("auth.not_authorized.title")).toBeInTheDocument();
     expect(screen.queryByRole("heading")).not.toBeInTheDocument();
     await settle();
     expect(api.deliveryDays).not.toHaveBeenCalled();

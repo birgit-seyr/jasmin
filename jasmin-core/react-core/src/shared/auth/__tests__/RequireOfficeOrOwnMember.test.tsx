@@ -12,6 +12,16 @@ const viewer = vi.hoisted(() => ({
   memberId: "member-7" as string | null,
 }));
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback?: unknown) =>
+      typeof fallback === "string" ? fallback : key,
+    i18n: { language: "de", changeLanguage: () => Promise.resolve() },
+  }),
+  Trans: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  initReactI18next: { type: "3rdParty", init: () => {} },
+}));
+
 vi.mock("@shared/contexts/AuthContext", () => ({
   useAuth: () => ({ user: { id: "user-1", member_id: viewer.memberId } }),
 }));
@@ -90,6 +100,6 @@ describe("RequireOfficeOrOwnMember", () => {
     renderPage("member-8");
 
     expect(screen.queryByText("member page")).not.toBeInTheDocument();
-    expect(screen.getByText("Not authorized.")).toBeInTheDocument();
+    expect(screen.getByText("auth.not_authorized.title")).toBeInTheDocument();
   });
 });

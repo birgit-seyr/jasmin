@@ -13,7 +13,7 @@
   "paper_received_hint": "Datum, an dem das unterschriebene Papiermandat im Büro eingegangen ist. Leer lassen, um es zu entfernen.",
   "paper_saved": "Papiereingang gespeichert.",
   "setup_title": "SEPA-Lastschriftmandat einrichten",
-  "setup_intro": "Lies den Mandatstext unten und gib anschließend deine Bankverbindung ein. Die akzeptierte Version des Mandats wird zusammen mit deiner Autorisierung gespeichert. Beim Speichern werden IBAN/BIC aktualisiert und eine neue Mandats-Einwilligung erfasst.",
+  "setup_intro": "Bitte zuerst den Mandatstext unten lesen und anschließend die Bankverbindung eingeben. Die akzeptierte Version des Mandats wird zusammen mit der Autorisierung gespeichert. Beim Speichern werden IBAN/BIC aktualisiert und eine neue Mandats-Einwilligung erfasst.",
   "office_setup_intro": "Erfasse das dem Büro (z. B. auf Papier) erteilte SEPA-Mandat des Mitglieds: Bankverbindung, Unterschriftsdatum und – falls gewünscht – eine eigene Mandatsnummer. Bestätige unten, dass das unterschriebene Mandat vorliegt.",
   "save": "Mandat erteilen",
   "saved": "SEPA-Mandat gespeichert.",
@@ -57,7 +57,7 @@
   "iban_locked_hint": "Gesperrt, solange das bestehende Mandat weiterläuft. Zum Ändern oben „Neues Mandat erteilen“ auswählen.",
   "mandate_reference_replaced_hint": "Beim neuen Mandat wird die Mandatsreferenz automatisch neu vergeben.",
   "mandate_reference_locked_hint": "Gesperrt, solange das bestehende Mandat weiterläuft – die Bank ordnet die Einzüge über diese Referenz zu. Zum Ändern oben „Neues Mandat erteilen“ auswählen.",
-  "mandate_in_use_member_notice": "Über dieses Mandat wurde bereits eingezogen. Die Bankverbindung kann hier nicht mehr geändert werden – dafür muss ein neues Mandat erteilt werden. Bitte wende dich dafür an das Büro.",
+  "mandate_in_use_member_notice": "Über dieses Mandat wurde bereits eingezogen. Die Bankverbindung kann hier nicht mehr geändert werden – dafür muss ein neues Mandat erteilt werden. Dafür bitte an das Büro wenden.",
   "mandate_deactivated_title": "Mandat deaktiviert",
-  "mandate_deactivated_member_notice": "Das Büro hat dieses Mandat deaktiviert. Die Bankverbindung kann hier nicht geändert werden – bitte wende dich dafür an das Büro."
+  "mandate_deactivated_member_notice": "Das Büro hat dieses Mandat deaktiviert. Die Bankverbindung kann hier nicht geändert werden – dafür bitte an das Büro wenden."
 }

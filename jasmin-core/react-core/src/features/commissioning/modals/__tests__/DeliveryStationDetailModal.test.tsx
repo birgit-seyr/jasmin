@@ -297,7 +297,7 @@ async function typeInto(label: string, text: string) {
 
 async function startNewDay() {
   await userEvent.click(
-    screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+    screen.getByRole("button", { name: /table\.add_record/ }),
   );
 }
 
@@ -928,7 +928,7 @@ describe("DeliveryStationDetailModal for read-only roles", () => {
       auth.roles = roles;
       await renderLoaded();
 
-      expect(screen.queryByRole("button", { name: /table\.add_plus_icon/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /table\.add_record/ })).not.toBeInTheDocument();
       expect(screen.queryByRole("columnheader", { name: HEADER.actions })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();
 

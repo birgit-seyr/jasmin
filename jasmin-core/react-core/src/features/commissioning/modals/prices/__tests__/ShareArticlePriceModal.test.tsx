@@ -349,7 +349,7 @@ describe("ShareArticlePriceModal saving", () => {
     await screen.findByText("2,40 €");
 
     await userEvent.click(
-      screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.getByRole("button", { name: /table\.add_record/ }),
     );
 
     expect(
@@ -362,7 +362,7 @@ describe("ShareArticlePriceModal saving", () => {
     await screen.findByText("2,40 €");
 
     await userEvent.click(
-      screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.getByRole("button", { name: /table\.add_record/ }),
     );
 
     expect(
@@ -376,7 +376,7 @@ describe("ShareArticlePriceModal saving", () => {
     await screen.findByText("2,40 €");
 
     await userEvent.click(
-      screen.getByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.getByRole("button", { name: /table\.add_record/ }),
     );
     await pickValidFrom("2026-10-12");
     await typeInto(boxField("kg"), "2,60");
@@ -493,7 +493,7 @@ describe("ShareArticlePriceModal saving", () => {
     await screen.findByText("2,40 €");
 
     expect(
-      screen.queryByRole("button", { name: /table\.add_plus_icon/ }),
+      screen.queryByRole("button", { name: /table\.add_record/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "table.edit" }),

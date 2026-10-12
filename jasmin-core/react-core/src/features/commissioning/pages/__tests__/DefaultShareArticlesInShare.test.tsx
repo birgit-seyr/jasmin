@@ -763,7 +763,7 @@ describe("DefaultShareArticlesInShare roles", () => {
     for (const name of ["Apples", "Beetroot", "Carrots", "Parsley"]) {
       expect(within(rowOf(name)).getByRole("button", { name: "table.edit" })).toBeEnabled();
     }
-    expect(screen.queryByRole("button", { name: /table\.add_plus_icon/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /table\.add_record/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();
   });
 
@@ -773,7 +773,7 @@ describe("DefaultShareArticlesInShare roles", () => {
 
     expect(columnTitles()).not.toContain(ACTIONS);
     expect(amountsOf("Carrots")).toEqual(["", "", "0,5", "1", "1,25"]);
-    expect(screen.queryByRole("button", { name: /table\.(edit|save|delete|add_plus_icon)/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /table\.(edit|save|delete|add_record)/ })).not.toBeInTheDocument();
 
     await user.click(cellOf(rowOf("Carrots"), VEGETABLES_S_COLUMN));
 

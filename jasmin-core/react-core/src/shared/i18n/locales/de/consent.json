@@ -37,7 +37,7 @@
     "title_placeholder": "Anzeigetitel (optional)",
     "body_label": "Text (wortgetreu, wie er Mitgliedern angezeigt wird)",
     "append_only_notice": "Eine neue Version ersetzt die bisherige automatisch ab dem gewählten Datum. Bestehende Versionen bleiben unverändert und auditierbar.",
-    "append_only_explainer": "Einwilligungsdokumente sind append-only. Um einen Text zu ändern, legst du eine neue Version mit späterem Gültigkeitsdatum an. Die vorherige Version wird automatisch geschlossen — bereits erteilte Zustimmungen bleiben mit ihrer ursprünglichen Version verknüpft."
+    "append_only_explainer": "Einwilligungsdokumente sind append-only. Um einen Text zu ändern, wird eine neue Version mit späterem Gültigkeitsdatum angelegt. Die vorherige Version wird automatisch geschlossen — bereits erteilte Zustimmungen bleiben mit ihrer ursprünglichen Version verknüpft."
   },
   "block": {
     "missing_document_title": "Einwilligungstext nicht verfügbar",

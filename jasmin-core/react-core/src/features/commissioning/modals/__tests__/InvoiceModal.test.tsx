@@ -927,7 +927,7 @@ describe("InvoiceModal crate lines", () => {
     const { show } = renderModal();
     await waitFor(() => expect(crateRows()).toHaveLength(1));
 
-    await user.click(screen.getByRole("button", { name: /table\.add_plus_icon/ }));
+    await user.click(screen.getByRole("button", { name: /table\.add_record/ }));
     await pickCrateType(user, "Large");
     await user.type(within(editingRow()).getByLabelText(AMOUNT), "2");
     // Meanwhile a large-crate line was added to the invoice elsewhere.

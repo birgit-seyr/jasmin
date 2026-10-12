@@ -26,6 +26,7 @@ export { default as SummaryStatsCard } from './SummaryStatsCard';
 export type { SummaryStat } from './SummaryStatsCard';
 export { default as ComingSoon } from './ComingSoon';
 export { default as EmptyHint } from './EmptyHint';
+export { default as NotAuthorizedResult } from './NotAuthorizedResult';
 export { default as TenantHeaderLogo } from './TenantHeaderLogo';
 export { default as CheckboxMultiSelectList } from './CheckboxMultiSelectList';
 export type {

@@ -199,7 +199,7 @@ const ONLY_EVEN = "commissioning.only_even_weeks";
 const SELLER = "commissioning.seller";
 const TARGET = "commissioning.planning_long_term.target_total";
 const MODE_TOTAL = "commissioning.planning_long_term.mode_total";
-const ADD_ROW = /table\.add_plus_icon/;
+const ADD_ROW = /table\.add_record/;
 const ADD_ARTICLE = /commissioning\.add_share_article/;
 
 function renderPlanner({

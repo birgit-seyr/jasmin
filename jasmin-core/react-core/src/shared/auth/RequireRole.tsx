@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
+import NotAuthorizedResult from "@shared/ui/NotAuthorizedResult";
 import { useRoles, type RoleFlags } from "./useRoles";
 
 interface RequireRoleProps {
   /** Name of a flag from `useRoles()` that must be true (e.g. "isOffice"). */
   flag: keyof RoleFlags;
-  /** Rendered when the user doesn't have access. Defaults to a simple message. */
+  /** Rendered when the user doesn't have access. Defaults to the shared "no access" view. */
   fallback?: ReactNode;
   children: ReactNode;
 }
@@ -21,9 +22,7 @@ interface RequireRoleProps {
 export function RequireRole({ flag, fallback, children }: RequireRoleProps) {
   const flags = useRoles();
   if (!flags[flag]) {
-    return (
-      <>{fallback ?? <div style={{ padding: 24 }}>Not authorized.</div>}</>
-    );
+    return <>{fallback ?? <NotAuthorizedResult />}</>;
   }
   return <>{children}</>;
 }

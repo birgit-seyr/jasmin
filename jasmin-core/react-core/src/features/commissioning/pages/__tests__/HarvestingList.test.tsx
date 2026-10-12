@@ -276,7 +276,7 @@ const CRATE = "commissioning.harvesting_crate", NOTE = "commissioning.note", ACT
 const OFFICE_VIEW = "commissioning.office_view", TEAM_VIEW = "commissioning.gardener_view";
 const ROUND_UP = "commissioning.round_up_to_full_vpe", CRATES_NEEDED = "commissioning.needed_harvesting_crates";
 const CONFIRM = "commissioning.actual_harvest", SET_AS_EXPECTED = "commissioning.set_as_expected_harvest";
-const ADD_ROW = /table\.add_plus_icon/, EDIT = "table.edit", SAVE = "table.save";
+const ADD_ROW = /table\.add_record/, EDIT = "table.edit", SAVE = "table.save";
 const KG = "commissioning.units.kg", PCS = "commissioning.units.pcs", BUNCHES = "commissioning.units.bunch", PU = "commissioning.pu";
 
 /** A grouped column's leaf, named after the group and the leaf. */

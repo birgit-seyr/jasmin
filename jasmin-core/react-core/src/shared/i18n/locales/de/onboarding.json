@@ -14,7 +14,7 @@
   },
   "stage2": {
     "title": "2. Mitglieder importieren",
-    "body": "Importiere die Mitglieder aus deiner CSV. Jedes Mitglied bekommt eine Mitgliedsnummer, auf die die Abos verweisen.",
+    "body": "Importiere die Mitglieder aus der CSV. Jedes Mitglied bekommt eine Mitgliedsnummer, auf die die Abos verweisen.",
     "link": "Zur Mitglieder-Seite"
   },
   "stage3": {
