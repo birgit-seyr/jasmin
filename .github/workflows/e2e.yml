@@ -1,0 +1,117 @@
+name: E2E
+
+# Nightly and on demand only, in a workflow of its own so the schedule never
+# re-runs the CI jobs in ci.yml. Moves to pull requests once it has run two
+# weeks without a flaky test.
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  COMPOSE: docker compose -f docker-compose.dev.yml
+
+jobs:
+  e2e:
+    name: Playwright against the dev stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: jasmin-core/e2e
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Map the E2E tenant hosts to loopback
+        # Chromium resolves *.localhost itself, but the suite's API requests go
+        # through Node's resolver, which reads /etc/hosts.
+        run: echo "127.0.0.1 e2e.localhost e2e-other.localhost" | sudo tee -a /etc/hosts
+
+      - name: Build + start the stack (gateway, frontend, backend, postgres, redis)
+        # ``up gateway`` also starts its depends_on. Huey and MailHog stay down
+        # until a flow sends mail or runs a background job. The dev compose is
+        # self-contained (every var has a ${VAR:-default}), so no .env file.
+        working-directory: .
+        run: $COMPOSE up -d --build gateway
+
+      - name: Wait for the backend and the frontend
+        # Fresh-DB migrations and the dev-tenant seed run before runserver.
+        # /health/ is answered before tenant resolution; the SPA through the
+        # gateway answers once Vite is up.
+        working-directory: .
+        run: |
+          timeout 300 bash -c '
+            until [ "$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health/)" = "200" ]; do
+              echo "waiting for backend /health/ ..."
+              sleep 5
+            done
+            until [ "$(curl -s -o /dev/null -w "%{http_code}" http://e2e.localhost:3000/)" = "200" ]; do
+              echo "waiting for the frontend through the gateway ..."
+              sleep 5
+            done
+          '
+
+      - name: Seed the E2E tenants
+        working-directory: .
+        run: $COMPOSE exec -T backend python manage.py seed_e2e
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: jasmin-core/e2e/.nvmrc
+          cache: npm
+          cache-dependency-path: jasmin-core/e2e/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('jasmin-core/e2e/package-lock.json') }}
+
+      - name: Install Chromium with its system dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium's system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run the suite
+        run: npx playwright test
+
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            jasmin-core/e2e/playwright-report/
+            jasmin-core/e2e/test-results/
+          retention-days: 14
+
+      - name: Dump compose logs on failure
+        if: failure()
+        working-directory: .
+        run: |
+          $COMPOSE ps
+          $COMPOSE logs --no-color --tail=500
+
+      - name: Tear down
+        if: always()
+        working-directory: .
+        run: $COMPOSE down -v

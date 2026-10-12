@@ -107,12 +107,9 @@ class TenantService:
             # Any failure after the Tenant row exists would otherwise strand a
             # fully-migrated orphan schema (and possibly an admin-less, locked-out
             # tenant). Drop it (row + schema + cascaded Domain/TenantSettings).
-            # Re-fetch in the public schema — django-tenants forbids deleting a
-            # tenant from another tenant's schema_context.
             if tenant is not None:
                 try:
-                    with schema_context("public"):
-                        Tenant.objects.get(pk=tenant.pk).delete(force_drop=True)
+                    self.drop_tenant(tenant)
                 except Exception:
                     logger.exception(
                         "Failed to clean up orphaned tenant schema=%s after "
@@ -125,3 +122,13 @@ class TenantService:
             "tenant": tenant,
             "admin_user": admin_user,
         }
+
+    def drop_tenant(self, tenant: Tenant) -> None:
+        """Delete the Tenant row and ``DROP SCHEMA CASCADE`` its schema.
+
+        Cascades the Domain / TenantSettings rows. Re-fetched in the public
+        schema: django-tenants forbids deleting a tenant from another tenant's
+        ``schema_context``.
+        """
+        with schema_context("public"):
+            Tenant.objects.get(pk=tenant.pk).delete(force_drop=True)

@@ -1069,6 +1069,29 @@ npm run test:run                 # Run tests
 npm run type-check               # TypeScript check (no emit)
 ```
 
+**E2E tests (Playwright):**
+
+```bash
+make e2e-install                     # once: npm ci + Chromium in jasmin-core/e2e
+make e2e                             # seed_e2e, then the suite (dev stack must be up)
+make e2e E2E_ARGS="--repeat-each=3"  # extra Playwright args
+make e2e-ui                          # Playwright UI mode
+```
+
+`jasmin-core/e2e/` is a package of its own (pinned `@playwright/test`, its own
+`npm run type-check`), outside react-core's lint, type-check and tests. It runs
+against the dev stack in its own `e2e` / `e2e_other` tenants, never in `test`.
+CI runs it nightly and on demand (`.github/workflows/e2e.yml`), not on PRs. Its
+README holds the details; the rules:
+
+- Select by role and accessible name; a `data-testid` only where none fits.
+- The E2E tenants run in English. Assert copy through `t("ns.key")` from
+  `support/i18n.ts` (react-core's `en` locale files), never as a literal.
+- No `waitForTimeout`: wait for a visible result or a response.
+- The stack runs on the real clock: compute weeks and dates at run time.
+- Every test creates the rows it changes, with a unique run id.
+- `workers: 1`. A flaky test is fixed or removed within the week.
+
 ### Linting & code quality
 
 `make check` runs the whole CI gate in one shot: black, ruff, import-contracts,
@@ -1180,11 +1203,12 @@ their schemas themselves. In production, run them in the backend container
 | `rotate_field_encryption` | prod | Re-encrypts every encrypted field with the first key in `FIELD_ENCRYPTION_KEY` — step 3 of the key rotation its docstring describes. `--dry-run`, `--schema`. |
 | `run_periodic_tasks_now` | dev, QA | Runs every Huey periodic task once, in-process (`--only`, `--skip`). Nothing stops it in production, where it does at once what the schedule would. |
 | `seed_dev_tenant` | dev | Creates or refreshes the `test` tenant at `test.localhost` with an admin and the persona logins (`make dev-seed`). |
+| `seed_e2e` | dev | Creates or refreshes the E2E suite's `e2e` and `e2e_other` tenants (`e2e.localhost`, `e2e-other.localhost`) with the persona logins, and in `e2e` the share type, day and station the office flows book into (`seed_e2e_commissioning`). `--reset` drops and recreates those two tenants only. `make e2e` runs it. |
 | `seed_test_users` | dev | Creates or resets the `test-*@example.com` persona logins, password `Test-Test-2026`. |
 | `seed_user_status_demo` | dev | Seeds members and resellers in every account status, for the status-button demos (`--schema`, `--clean`). |
 
 Every `rotate_*` command but `rotate_field_encryption` shares its code with the
-super-admin "Run rotation" buttons. The three seed commands refuse to run with
+super-admin "Run rotation" buttons. The seed commands refuse to run with
 `DEBUG=False`.
 
 ## Test fixtures & patterns

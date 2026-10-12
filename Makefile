@@ -266,6 +266,27 @@ build:
 size: build
 	$(COMPOSE_DEV) exec frontend npm run size
 
+# --- End-to-end (Playwright, runs on the host against the dev stack) ---------
+# The dev stack must be up (make dev-up). The suite runs in its own e2e and
+# e2e_other tenants (e2e.localhost / e2e-other.localhost), never in `test`;
+# seed_e2e creates or refreshes them first. Extra Playwright args via E2E_ARGS,
+# e.g.  make e2e E2E_ARGS="--repeat-each=3".
+E2E_DIR = jasmin-core/e2e
+
+.PHONY: e2e-install
+e2e-install:
+	cd $(E2E_DIR) && npm ci && npx playwright install chromium
+
+.PHONY: e2e
+e2e:
+	$(COMPOSE_DEV) exec -T backend python manage.py seed_e2e
+	cd $(E2E_DIR) && npx playwright test $(E2E_ARGS)
+
+.PHONY: e2e-ui
+e2e-ui:
+	$(COMPOSE_DEV) exec -T backend python manage.py seed_e2e
+	cd $(E2E_DIR) && npx playwright test --ui $(E2E_ARGS)
+
 # --- Inventory drift (runs on the host) --------------------------------------
 # Sweeps the code for module-level numeric constants and reports them. Where a
 # curated numeric-constants inventory is present it also reports the drift both

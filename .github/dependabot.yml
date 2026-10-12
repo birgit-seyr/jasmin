@@ -90,6 +90,17 @@ updates:
       - dependency-name: "jsdom"
         update-types: ["version-update:semver-major"]
 
+  # The Playwright end-to-end suite's own package (Playwright, TypeScript).
+  - package-ecosystem: "npm"
+    directory: "/jasmin-core/e2e"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 2
+    labels: ["dependencies", "ci"]
+    groups:
+      patch-and-minor:
+        update-types: ["minor", "patch"]
+
   # GitHub Actions versions themselves
   - package-ecosystem: "github-actions"
     directory: "/"

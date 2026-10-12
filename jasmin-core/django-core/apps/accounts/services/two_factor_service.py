@@ -260,6 +260,18 @@ def disable(*, user: JasminUser, code: str) -> None:
     logger.info("2fa.disabled user=%s", user.pk)
 
 
+def remove_all_devices(*, user: JasminUser) -> None:
+    """Remove every TOTP and recovery-code device without asking for a code.
+
+    For the dev seeders, which reset fixed persona logins to a known state; a
+    user-facing path goes through ``disable``.
+    """
+    removed_totp, _ = TOTPDevice.objects.filter(user=user).delete()
+    removed_static, _ = StaticDevice.objects.filter(user=user).delete()
+    if removed_totp or removed_static:
+        logger.info("2fa.devices_removed user=%s", user.pk)
+
+
 def regenerate_recovery_codes(*, user: JasminUser, code: str) -> list[str]:
     """Mint a fresh batch of recovery codes. Requires a valid TOTP code."""
     if not has_two_factor(user):

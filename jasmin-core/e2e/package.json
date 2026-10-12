@@ -1,0 +1,21 @@
+{
+  "name": "jasmin-e2e",
+  "private": true,
+  "description": "Playwright end-to-end suite against the dev stack's e2e tenants",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "install-browsers": "playwright install chromium",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  }
+}
