@@ -44,8 +44,12 @@ export default function EraseSubjectModal({
   const queryClient = useQueryClient();
   const [channel, setChannel] = useState<ChannelEnum | undefined>();
   const [blockers, setBlockers] = useState<string[] | null>(null);
-  const eraseMember = useGdprAdminMembersEraseCreate();
-  const eraseReseller = useGdprAdminResellersEraseCreate();
+  const eraseMember = useGdprAdminMembersEraseCreate({
+    mutation: { meta: { silent: true } },
+  });
+  const eraseReseller = useGdprAdminResellersEraseCreate({
+    mutation: { meta: { silent: true } },
+  });
   const erasing = eraseMember.isPending || eraseReseller.isPending;
 
   const close = () => {

@@ -112,7 +112,7 @@ export default function PlanningShareContentBase({
   explainerKey,
   genericArticleColumn = false,
 }: PlanningShareContentBaseProps) {
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek, currentWeek } =
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
     useYearWeekState();
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -189,7 +189,7 @@ export default function PlanningShareContentBase({
     variationsLoading: shareTypeVariationsLoading,
   } = usePlanningAxes({
     year: selectedYear,
-    week: selectedWeek ?? currentWeek,
+    week: selectedWeek,
     shareOption,
     requireStations: true,
     needTours: true,
@@ -200,7 +200,7 @@ export default function PlanningShareContentBase({
   // ShareTypeVariationViewSet, so no `share_type_variation_ids` are passed.
   const { data: historicalAverages } = useHistoricalShareTypeVariationAverages({
     year: selectedYear,
-    delivery_week: selectedWeek ?? currentWeek,
+    delivery_week: selectedWeek,
     share_option: shareOption,
     active_at_date: activeAtDate,
     years_back: 2,
@@ -223,10 +223,10 @@ export default function PlanningShareContentBase({
       share_option: shareOption,
       get_price_info: true,
       price_date: toApiDate(
-        mondayOfIsoWeek(selectedYear, selectedWeek ?? currentWeek).add(1, "day"),
+        mondayOfIsoWeek(selectedYear, selectedWeek).add(1, "day"),
       )!,
     }),
-    [shareArticleFilters, shareOption, selectedYear, selectedWeek, currentWeek],
+    [shareArticleFilters, shareOption, selectedYear, selectedWeek],
   );
   const { shareArticles: pricingArticles } = useShareArticles(
     pricingArticleFilters,
@@ -508,7 +508,7 @@ export default function PlanningShareContentBase({
         return { ...record, ...defaultValues };
       }
 
-      const processedRecord = { ...record } as Record<string, unknown>;
+      const processedRecord: TableRecord = { ...record };
       const formValues: Record<string, unknown> = {};
 
       // First, initialize ALL possible day_ fields based on your column structure
@@ -554,7 +554,7 @@ export default function PlanningShareContentBase({
       // Set all values to the form - this ensures ALL fields are initialized
       form.setFieldsValue(formValues);
 
-      return processedRecord as TableRecord;
+      return processedRecord;
     },
     [shareDeliveryDays, shareTypeVariations, planningMode],
   );
@@ -641,11 +641,11 @@ export default function PlanningShareContentBase({
   const listParams = useMemo<CommissioningHarvestSharePlanningListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek ?? currentWeek,
+      delivery_week: selectedWeek,
       share_option: shareOption,
       is_past: isPast,
     }),
-    [selectedYear, selectedWeek, currentWeek, shareOption, isPast],
+    [selectedYear, selectedWeek, shareOption, isPast],
   );
 
   // `useShareContentGranularity` accepts a partial — the hook gates the
@@ -784,10 +784,7 @@ export default function PlanningShareContentBase({
       shareTypeVariationAmounts,
       t,
       currencySymbol,
-      historicalAverages: historicalAverages as
-        | Record<string, string | number>
-        | null
-        | undefined,
+      historicalAverages,
     });
 
   // Live still-free indicator: forecast + current stock − Σ (planned per day),
@@ -1161,7 +1158,7 @@ export default function PlanningShareContentBase({
         }}
         data={selectedBackupData}
         year={selectedYear}
-        delivery_week={selectedWeek ?? currentWeek}
+        delivery_week={selectedWeek}
         shareOption={shareOption}
         showDaysTogether={showDaysTogether}
         onSave={() => {

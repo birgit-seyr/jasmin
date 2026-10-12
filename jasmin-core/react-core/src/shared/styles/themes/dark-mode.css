@@ -174,16 +174,6 @@
   background: linear-gradient(145deg, #112b11, #0d1f0d) !important;
 }
 
-/* --- Download button dark --- */
-:root.dark .download-button {
-  background-color: rgb(100, 70, 130) !important;
-  color: var(--color-text-primary) !important;
-}
-:root.dark .download-button:disabled {
-  background: linear-gradient(145deg, #262626, #1a1a1a) !important;
-  color: var(--color-text-disabled) !important;
-}
-
 /* --- Mark state buttons dark --- */
 :root.dark .mark-state {
   color: var(--color-text-primary) !important;

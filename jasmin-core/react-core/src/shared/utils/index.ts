@@ -41,7 +41,6 @@ export {
     syncPurchasedName,
 } from './purchasedName';
 export { default as notify } from './notify';
-export { logger } from './logger';
 export { buildCsvString, csvDecimal, downloadCsvBlob, resolveCsvDialect } from './csv';
 export { downloadBlob } from './downloadBlob';
 export { openStoredPdf } from './openStoredPdf';

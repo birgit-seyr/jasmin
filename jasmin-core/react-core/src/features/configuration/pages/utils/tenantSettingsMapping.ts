@@ -31,12 +31,13 @@ export const TENANT_FILE_FIELDS = [
 /** Copy of ``tenant`` safe to send as a JSON PATCH body. */
 export function withoutTenantFileFields<T extends Record<string, unknown>>(
   tenant: T,
-): Partial<T> {
-  const payload: Partial<T> = { ...tenant };
+): Omit<T, (typeof TENANT_FILE_FIELDS)[number]> {
+  const payload: Record<string, unknown> = { ...tenant };
   for (const field of TENANT_FILE_FIELDS) {
-    delete payload[field as keyof T];
+    delete payload[field];
   }
-  return payload;
+  // Every key ``Omit`` drops was deleted just above.
+  return payload as Omit<T, (typeof TENANT_FILE_FIELDS)[number]>;
 }
 
 // Tenant response fields that are NOT user-editable settings — never copy

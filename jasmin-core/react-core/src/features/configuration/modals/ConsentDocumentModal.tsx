@@ -101,6 +101,7 @@ export default function ConsentDocumentModal({
   // so toasts pick up the global styling + accessibility shims.
   const createMutation = useCommissioningConsentDocumentsCreate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: getCommissioningConsentDocumentsListQueryKey(),

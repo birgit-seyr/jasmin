@@ -60,10 +60,6 @@ const ALLOWED: ReadonlyArray<{ path: string; why: string }> = [
   // Content-Type per request + a raw FormData body, so each call site
   // talks to ``axiosInstance`` directly.
   {
-    path: "src/shared/ui/DownloadCsvTemplateButton.tsx",
-    why: "Multipart CSV upload.",
-  },
-  {
     path: "src/shared/ui/usePictureUpload.ts",
     why: "Shared multipart picture-upload hook (Content-Type + raw FormData body).",
   },

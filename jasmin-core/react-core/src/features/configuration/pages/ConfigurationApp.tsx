@@ -2,7 +2,6 @@ import { Card, Col, Row, Space, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useTranslation } from "react-i18next";
-import type { Tenant } from "@shared/api/generated/models";
 import {
   tenantsSettingsUpdateCurrentSettingsUpdate,
   tenantsTenantsPartialUpdate,
@@ -300,7 +299,7 @@ export default function ConfigurationApp() {
       await tenantsTenantsPartialUpdate(tenantId, {
         ...dataToSend,
         ...mappedTenantFields,
-      } as unknown as Tenant);
+      });
 
       // ``TenantSettings`` overlay (versioned, not on the Tenant row) needs
       // its own endpoint. Skip the call when nothing in the overlay changed.

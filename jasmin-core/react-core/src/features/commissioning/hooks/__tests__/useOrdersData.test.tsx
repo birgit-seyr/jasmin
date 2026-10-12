@@ -503,6 +503,28 @@ describe("useOrdersData order note", () => {
       note: "Leave at the back door",
     });
   });
+
+  it("tells the office when the note saved on leaving the page could not be saved", async () => {
+    api.setOrderNote.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 503, data: {} },
+    });
+    const { result, unmount } = await renderLoadedOrder();
+
+    // Left before the debounced save ran: the leave flushes the note.
+    act(() => result.current.setOrderNote("Leave at the back door"));
+    unmount();
+
+    await waitFor(() =>
+      expect(notifyMock.error).toHaveBeenCalledWith(
+        "commissioning.order_note_save_failed",
+      ),
+    );
+    expect(api.setOrderNote).toHaveBeenCalledTimes(1);
+    expect(api.setOrderNote).toHaveBeenCalledWith("order-1", {
+      note: "Leave at the back door",
+    });
+  });
 });
 
 describe("useOrdersData PDFs after finalizing", () => {

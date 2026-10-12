@@ -214,8 +214,6 @@ describe("BulkActionButton", () => {
       response: { data: { message: "Cannot delete: in use" } },
     });
     const onError = vi.fn();
-    // Silence the page's console.error.
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     render(
       <BulkActionButton
@@ -232,12 +230,29 @@ describe("BulkActionButton", () => {
     expect(notify.error).toHaveBeenCalledTimes(1);
     expect(notify.error).toHaveBeenCalledWith("Cannot delete: in use");
     expect(onError).toHaveBeenCalledTimes(1);
-    errSpy.mockRestore();
+  });
+
+  it("falls back to the translated message when the server gives no reason", async () => {
+    const apiFunction = vi.fn().mockRejectedValue(
+      Object.assign(new Error("Request failed with status code 503"), {
+        isAxiosError: true,
+        response: { status: 503, data: {} },
+      }),
+    );
+
+    render(
+      <BulkActionButton selectedIds={["a"]} apiFunction={apiFunction} buttonText="Delete" />,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /delete/i }));
+
+    expect(notify.error).toHaveBeenCalledWith(i18n.t("common.action_failed"));
+    expect(i18n.t("common.action_failed")).not.toBe("common.action_failed");
   });
 
   it("uses the custom errorMessage prop verbatim when provided (overrides extracted message)", async () => {
     const apiFunction = vi.fn().mockRejectedValue(new Error("boom"));
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     render(
       <BulkActionButton
@@ -254,6 +269,5 @@ describe("BulkActionButton", () => {
     expect(notify.error).toHaveBeenCalledWith(
       "Could not delete the selected rows.",
     );
-    errSpy.mockRestore();
   });
 });

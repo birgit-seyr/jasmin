@@ -27,6 +27,7 @@ export default function ConsentWithdrawalAlert({ member }: { member: Member }) {
   const { mutate: markReviewed, isPending } =
     useCommissioningMembersMarkConsentReviewedCreate({
       mutation: {
+        meta: { silent: true },
         onSuccess: () => {
           notify.success(t("consent.review.marked_done"));
           void queryClient.invalidateQueries({

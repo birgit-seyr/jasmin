@@ -1,16 +1,16 @@
-import { forwardRef } from "react";
+import { forwardRef, useCallback } from "react";
 import type {
   AriaAttributes,
   ChangeEvent,
   ComponentPropsWithRef,
   FocusEvent,
+  ForwardedRef,
   KeyboardEvent,
   KeyboardEventHandler,
   MouseEvent as ReactMouseEvent,
-  Ref,
 } from "react";
 import { Input, Select, Checkbox, DatePicker, TimePicker, Switch } from "antd";
-import type { GetRef, InputProps, InputRef, SelectProps } from "antd";
+import type { InputProps, SelectProps } from "antd";
 import dayjs from "dayjs";
 import { toApiDate } from "@shared/utils/apiDate";
 import { useDateFormat, useTimeFormat } from "@hooks/index";
@@ -40,7 +40,27 @@ const TEXT_LIKE_TYPES = new Set([
   "percentage",
 ]);
 
-const FormInput = forwardRef<InputRef, FormInputProps>(
+/**
+ * What a cell reaches through FormInput's ref, whichever widget it renders:
+ * every widget can take focus, and the text-like ones expose their input.
+ */
+export interface FormInputRef {
+  focus: () => void;
+  input?: HTMLInputElement | null;
+}
+
+/** One callback ref for every widget: each widget's instance is a ``FormInputRef``. */
+function useFormInputRef(ref: ForwardedRef<FormInputRef>) {
+  return useCallback(
+    (instance: FormInputRef | null) => {
+      if (typeof ref === "function") ref(instance);
+      else if (ref) ref.current = instance;
+    },
+    [ref],
+  );
+}
+
+const FormInput = forwardRef<FormInputRef, FormInputProps>(
   (
     {
       inputType = "text",
@@ -48,7 +68,6 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
       required,
       size,
       placeholder,
-      title: _title,
       isModal = false,
       onKeyDown,
       onFieldChange,
@@ -70,6 +89,8 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
     },
     ref,
   ) => {
+    const setRef = useFormInputRef(ref);
+
     const controlSize = isModal ? undefined : size || "small";
     const controlStyle = isModal ? { width: "100%" } : style;
 
@@ -86,7 +107,7 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
     // real Input props so field names/types stay checked. `value` arrives as
     // `unknown` (injected by Form.Item), so it gets the one localized cast.
     const inputProps: Partial<ComponentPropsWithRef<typeof Input>> = {
-      ref,
+      ref: setRef,
       size: controlSize,
       style: controlStyle,
       suffix,
@@ -343,11 +364,7 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
         const selectOptions = withClearOption(options, required);
         return (
           <Select
-            // The shared forwarded ref is typed for Input (the dominant
-            // text-like case); the Select instance only ever gets `.focus()`
-            // called through it (EditableCell shouldFocus), so this
-            // directional cast is safe.
-            ref={ref as unknown as Ref<GetRef<typeof Select>>}
+            ref={setRef}
             size={controlSize}
             style={controlStyle}
             disabled={disabled}
@@ -388,8 +405,7 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
       case "datepicker":
         return (
           <DatePicker
-            // See the Select ref note — only `.focus()` is called through it.
-            ref={ref as unknown as Ref<GetRef<typeof DatePicker>>}
+            ref={setRef}
             size={controlSize}
             style={controlStyle}
             disabled={disabled}
@@ -425,8 +441,7 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
       case "time":
         return (
           <TimePicker
-            // See the Select ref note — only `.focus()` is called through it.
-            ref={ref as unknown as Ref<GetRef<typeof TimePicker>>}
+            ref={setRef}
             size={controlSize}
             style={controlStyle}
             disabled={disabled}
@@ -566,9 +581,7 @@ const FormInput = forwardRef<InputRef, FormInputProps>(
       case "checkbox":
         return (
           <Checkbox
-            // See the Select ref note — the Checkbox instance exposes
-            // `.input`/`.focus()`, which is all EditableCell uses.
-            ref={ref as unknown as Ref<GetRef<typeof Checkbox>>}
+            ref={setRef}
             style={controlStyle}
             disabled={disabled}
             {...ariaProps}

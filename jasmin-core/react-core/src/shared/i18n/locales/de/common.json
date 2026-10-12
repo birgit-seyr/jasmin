@@ -60,6 +60,7 @@
   "import": "Importieren",
   "copy": "Kopieren",
   "copied": "Kopiert",
+  "copy_failed": "Die Zwischenablage ist nicht beschreibbar. Bitte den Text markieren und manuell kopieren.",
   "loading_sidebar": "Seitenleiste wird geladen…",
   "paste": "Einfügen",
   "cut": "Ausschneiden",

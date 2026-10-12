@@ -1,4 +1,4 @@
-import { getSizeLabelOrEmpty } from "../components/mobileCards/sizeLabel";
+import { getSizeLabelOrEmpty } from "./sizeLabel";
 
 interface OrderLineArticle {
   share_article_name: string;

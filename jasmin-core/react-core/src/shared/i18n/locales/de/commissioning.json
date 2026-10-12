@@ -735,6 +735,7 @@
   "copied_to_offer_group_some_skipped": "{{count}} Angebot(e) in {{offerGroup}} kopiert, {{skipped}} waren dort schon vorhanden",
   "copied_to_offer_group_none": "Nichts kopiert: {{offerGroup}} hat diese Angebote schon",
   "copy_failed": "Kopieren fehlgeschlagen",
+  "order_note_save_failed": "Die Notiz zur Bestellung wurde nicht gespeichert. Bitte die Bestellung öffnen und die Notiz erneut eingeben.",
   "crate_price": "Kisten-Preis",
   "delivery_note_send_failed": "Versand des Lieferscheins fehlgeschlagen",
   "delivery_note_sent_to_reseller": "Lieferschein an Wiederverkäufer:in gesendet",

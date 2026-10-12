@@ -269,7 +269,7 @@ export default function ShareTypeVariationModal({
       try {
         await commissioningShareTypeVariationsPartialUpdate(
           String(selectedDescriptionRecord.id),
-          { description: htmlContent } as unknown as ShareTypeVariation,
+          { description: htmlContent },
         );
         notify.success(t("common.saved_successfully"));
         invalidateData();

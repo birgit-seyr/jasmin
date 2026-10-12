@@ -96,8 +96,8 @@ export function buildInvoicePdfData(
   invoiceData: InvoiceReseller,
   bankDetails: BankDetails,
 ): InvoicePDFData {
-  const lineItems = invoiceData.line_items as unknown as LineItemBase[];
-  const crateItems = invoiceData.crate_items as unknown as LineItemBase[];
+  const lineItems: LineItemBase[] = [...(invoiceData.line_items ?? [])];
+  const crateItems: LineItemBase[] = [...(invoiceData.crate_items ?? [])];
 
   const taxBreakdown = taxBreakdownFromBackend(invoiceData.tax_breakdown) ?? [];
   const netto =
@@ -167,7 +167,7 @@ export function buildDeliveryNotePdfData(
       document_hash:
         (deliveryNoteData as { document_hash?: string | null }).document_hash ?? "",
     },
-    lineItems: deliveryNoteData.line_items as unknown as LineItemBase[],
-    crateItems: deliveryNoteData.crate_items as unknown as LineItemBase[],
+    lineItems: [...(deliveryNoteData.line_items ?? [])],
+    crateItems: [...(deliveryNoteData.crate_items ?? [])],
   };
 }

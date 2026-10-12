@@ -8,22 +8,27 @@ import SteppedSelect from "./SteppedSelect";
 
 const { Option } = Select;
 
-interface DaySelectorProps {
-  selectedDay: number | null;
-  setSelectedDay: (day: number | null) => void;
+/**
+ * ``TDay`` is the page's own day type — plain ``number`` by default, or a
+ * narrower one such as the backend's ``DayNumberEnum``, which ``days`` then
+ * has to list and ``setSelectedDay`` receives unchanged.
+ */
+interface DaySelectorProps<TDay extends number = number> {
+  selectedDay: TDay | null;
+  setSelectedDay: (day: TDay | null) => void;
   selectedWeek: number;
   selectedYear: number;
-  days: (number | null)[];
+  days: (TDay | null)[];
   suffix?: string | null;
   include_null_option?: boolean;
   usesDaysWithOrders?: boolean;
   daysWithOrders?: number[];
   daysWithLabels?: number[];
   daysWithDeliveryNotes?: number[];
-  customDateCalculator?: ((day: number | null) => string) | null;
+  customDateCalculator?: ((day: TDay | null) => string) | null;
 }
 
-export default function DaySelector({
+export default function DaySelector<TDay extends number = number>({
   selectedDay,
   setSelectedDay,
   selectedWeek,
@@ -36,8 +41,8 @@ export default function DaySelector({
   daysWithLabels: _daysWithLabels = [],
   daysWithDeliveryNotes: _daysWithDeliveryNotes = [],
   customDateCalculator = null,
-}: DaySelectorProps) {
-  const handleDayChange = (value: number | null) => {
+}: DaySelectorProps<TDay>) {
+  const handleDayChange = (value: TDay | null) => {
     setSelectedDay(value);
   };
 
@@ -45,7 +50,7 @@ export default function DaySelector({
   const isMobile = useIsMobile();
   const deliveryDayLabel = useDeliveryDayLabel();
 
-  const calculateDate = (day: number | null, week = selectedWeek) => {
+  const calculateDate = (day: TDay | null, week = selectedWeek) => {
     if (customDateCalculator) {
       return customDateCalculator(day);
     }
@@ -56,7 +61,7 @@ export default function DaySelector({
   const nextDay = useCallback(() => {
     if (days.length === 0) return;
 
-    const validDays = days.filter((day): day is number => day !== null);
+    const validDays = days.filter((day): day is TDay => day !== null);
     const currentIndex = validDays.indexOf(selectedDay!);
 
     if (currentIndex < validDays.length - 1) {
@@ -67,7 +72,7 @@ export default function DaySelector({
   const prevDay = useCallback(() => {
     if (days.length === 0) return;
 
-    const validDays = days.filter((day): day is number => day !== null);
+    const validDays = days.filter((day): day is TDay => day !== null);
     const currentIndex = validDays.indexOf(selectedDay!);
 
     if (currentIndex > 0) {
@@ -77,13 +82,13 @@ export default function DaySelector({
 
   // Create options array with null option if requested
   const dayOptions = useMemo(() => {
-    let options: (number | null)[] = [];
+    let options: (TDay | null)[] = [];
 
     if (include_null_option) {
       options.push(null);
     }
 
-    const validDays = days.filter((day): day is number => day !== null);
+    const validDays = days.filter((day): day is TDay => day !== null);
 
     const sortedValidDays = [...validDays].sort((a, b) => {
       if (customDateCalculator) {
@@ -103,7 +108,7 @@ export default function DaySelector({
     return options;
   }, [days, include_null_option, customDateCalculator, selectedYear, selectedWeek]);
 
-  const validDays = days.filter((day): day is number => day !== null);
+  const validDays = days.filter((day): day is TDay => day !== null);
 
   // Check if we can navigate (only consider non-null days for navigation)
   const currentIndex = validDays.indexOf(selectedDay!);

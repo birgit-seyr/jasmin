@@ -238,6 +238,11 @@ services:
       # (see backups/backup.sh) — huey only prunes, never produces
       # backups.
       - ./backups:/backups:rw
+    # backup.sh gives /backups this group with mode 2770; without it the
+    # non-root django user can neither list nor prune the backups. Keep the
+    # default in step with the backup service's BACKUP_GID below.
+    group_add:
+      - "${BACKUP_GID:-61000}"
     command: ["huey"]
     healthcheck:
       # huey_heartbeat (apps/notifications/tasks.py) rewrites this file every
@@ -291,6 +296,11 @@ services:
       BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY is required for backups}
       # Cron expression; defaults to 02:00 daily (matches backup.sh).
       BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      # The group backup.sh gives /backups (mode 2770), which huey joins through
+      # group_add to prune the backups and check their freshness. 61000 lies in
+      # the GID range systemd leaves unused, so no host group owns it; override
+      # it only if one does on this host.
+      BACKUP_GID: ${BACKUP_GID:-61000}
       # Uploaded media (invoice/delivery-note PDFs, e-invoice XML, tenant
       # logos) is archived alongside the DB dump from this read-only mount.
       MEDIA_DIR: /app/media

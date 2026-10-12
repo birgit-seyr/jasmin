@@ -62,7 +62,7 @@ export default function ShareWeights() {
   const listParams = useMemo<CommissioningSharesListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek!,
+      delivery_week: selectedWeek,
       delivery_day: selectedDay!,
     }),
     [selectedYear, selectedWeek, selectedDay],

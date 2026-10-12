@@ -335,10 +335,13 @@ test_documentation_viewsets.py (85 tests)
   TestBulkSetAsExpectedAmountPrecision     3   the confirmed harvest / purchase amount is stored exactly; one
                                                finer than the 2dp column is refused
 
-test_forecast_query_count.py (2 tests) — frozen clock
+test_forecast_query_count.py (5 tests) — frozen clock
 ─────────────────────────────────────────────────────
-  (module-level)                           2   forecast list is scale-invariant; the serializer's variation /
-                                               offer-group flags cost no query per link
+  (module-level)                           5   forecast list is scale-invariant; the serializer's variation /
+                                               offer-group flags cost no query per link; a PATCH rewriting the
+                                               links answers with the new ones; validating the flags is one
+                                               lookup per kind; a loaded forecast renders with only the
+                                               deletability probes
 
 test_imports_viewsets.py (29 tests)
 ───────────────────────────────────

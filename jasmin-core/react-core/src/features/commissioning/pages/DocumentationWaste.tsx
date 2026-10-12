@@ -52,7 +52,6 @@ export default function DocumentationWaste() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(
     () => dayjs().isoWeekday() - 1,
@@ -100,7 +99,7 @@ export default function DocumentationWaste() {
   const listParams = useMemo<CommissioningWasteListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek!,
+      delivery_week: selectedWeek,
       day_number: selectedDay!,
       is_past: isPast,
     }),
@@ -134,10 +133,10 @@ export default function DocumentationWaste() {
       ...transformedData,
       storage: selectedStorage,
       year: selectedYear,
-      delivery_week: selectedWeek ?? currentWeek,
+      delivery_week: selectedWeek,
       day_number: selectedDay,
     }),
-    [selectedYear, selectedWeek, currentWeek, selectedDay, selectedStorage],
+    [selectedYear, selectedWeek, selectedDay, selectedStorage],
   );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
@@ -187,7 +186,7 @@ export default function DocumentationWaste() {
         />
         <DaySelector
           selectedYear={selectedYear}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
           days={[0, 1, 2, 3, 4, 5, 6]}

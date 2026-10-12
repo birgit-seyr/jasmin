@@ -16,8 +16,6 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDocumentationSummaryAddAdditionalTheoreticalAmountCreateBody,
-  CommissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdateBody,
-  Harvest,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import {
@@ -68,14 +66,9 @@ export default function HarvestingList() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
   const [selectedDay, setSelectedDay] = useState(() =>
     toDayNumber(dayjs().isoWeekday() - 1),
-  );
-  const selectDay = useCallback(
-    (day: number | null) => setSelectedDay(toDayNumber(day)),
-    [],
   );
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -113,7 +106,6 @@ export default function HarvestingList() {
     selectedYear,
     selectedWeek,
     selectedDay,
-    fallbackWeek: currentWeek,
     isPast,
     isGardenerView,
     roundUpToFullPU,
@@ -128,7 +120,6 @@ export default function HarvestingList() {
     selectedYear,
     selectedWeek,
     selectedDay,
-    fallbackWeek: currentWeek,
     onSaved: invalidateData,
   });
 
@@ -195,7 +186,7 @@ export default function HarvestingList() {
         update: (id, payload) =>
           commissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdate(
             id,
-            payload as unknown as CommissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdateBody,
+            payload,
           ),
       }),
     [],
@@ -225,8 +216,8 @@ export default function HarvestingList() {
 
         <DaySelector
           selectedDay={selectedDay}
-          setSelectedDay={selectDay}
-          selectedWeek={selectedWeek ?? currentWeek}
+          setSelectedDay={setSelectedDay}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={[0, 1, 2, 3, 4, 5, 6]}
           suffix={t("commissioning.harvesting_day")}
@@ -237,7 +228,7 @@ export default function HarvestingList() {
         <RelatedDayInfo
           label={t("commissioning.delivery_day_shares")}
           relatedDayNumbers={deliveryDaysForHarvesting}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           formatDate={(day) =>
             deliveryDateOf(day).format(`dddd, ${dateFormat}`)

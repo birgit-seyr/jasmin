@@ -80,7 +80,7 @@ export default function WeeklyStaffPlan() {
   const [selectedYear, setSelectedYear] = useState<number>(() =>
     dayjs().isoWeekYear(),
   );
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(() =>
+  const [selectedWeek, setSelectedWeek] = useState<number>(() =>
     dayjs().isoWeek(),
   );
   const [copyFromWeek, setCopyFromWeek] = useState<number | null>(null);

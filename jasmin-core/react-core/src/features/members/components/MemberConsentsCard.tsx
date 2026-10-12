@@ -72,6 +72,7 @@ const MemberConsentsCard = ({
 
   const revokeMutation = useCommissioningConsentsRevokeCreate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         // The key without params prefix-matches this member's list.
         void queryClient.invalidateQueries({

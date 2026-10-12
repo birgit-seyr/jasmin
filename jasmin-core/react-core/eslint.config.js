@@ -112,8 +112,7 @@ export default [
         { allowConstantExport: true },
       ],
       // Bare `console.log` / `info` / `debug` is forbidden (debug leftovers
-      // mustn't ship). `warn` / `error` are allowed; for intentional dev
-      // logging use the `logger` util in src/shared/utils/logger.ts.
+      // mustn't ship). `warn` / `error` are allowed.
       'no-console': ['error', { allow: ['warn', 'error'] }],
       'no-restricted-syntax': ['error', ...noInlineI18nFallback, noRawInputNumber],
     },
@@ -153,8 +152,7 @@ export default [
         'error',
         { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' },
       ],
-      // See the js/jsx block: forbid bare console.log/info/debug; route
-      // intentional dev logging through the `logger` util.
+      // See the js/jsx block: forbid bare console.log/info/debug.
       'no-console': ['error', { allow: ['warn', 'error'] }],
       'no-restricted-syntax': ['error', ...noInlineI18nFallback, noRawInputNumber],
     },
@@ -214,12 +212,10 @@ export default [
       'jsx-a11y/no-autofocus': 'off',
     },
   },
-  // The logger façade wraps `console.*`, and test files print diagnostics —
-  // both may use bare console freely. Placed last so it overrides the
-  // no-console rules above for these files.
+  // Test files print diagnostics, so they may use bare console freely. Placed
+  // last so it overrides the no-console rules above for these files.
   {
     files: [
-      'src/shared/utils/logger.ts',
       '**/__tests__/**',
       '**/*.test.{ts,tsx}',
       'src/test/**',

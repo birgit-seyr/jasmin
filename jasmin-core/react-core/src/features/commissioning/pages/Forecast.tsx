@@ -100,13 +100,13 @@ async function copyForecastsToNextWeek(
     }
     return true;
   } catch (error) {
-    notify.error(getErrorMessage(error, "Failed to load data"));
+    notify.error(getErrorMessage(error, t("commissioning.copy_failed")));
     return false;
   }
 }
 
 export default function Forecast() {
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek, currentWeek } =
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
     useYearWeekState();
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -237,7 +237,7 @@ export default function Forecast() {
   const listParams = useMemo<CommissioningForecastListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek!,
+      delivery_week: selectedWeek,
       is_past: isPast,
     }),
     [selectedYear, selectedWeek, isPast],
@@ -461,13 +461,13 @@ export default function Forecast() {
   const nextWeekInfo = useMemo(() => {
     const nextWeekDate = mondayOfIsoWeek(
       selectedYear,
-      selectedWeek ?? currentWeek,
+      selectedWeek,
     ).add(1, "week");
     return {
       week: nextWeekDate.isoWeek(),
       year: nextWeekDate.isoWeekYear(),
     };
-  }, [selectedYear, selectedWeek, currentWeek]);
+  }, [selectedYear, selectedWeek]);
 
   const apiFunctions = useMemo<ApiFunctions>(
     () =>

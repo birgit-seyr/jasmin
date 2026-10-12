@@ -17,6 +17,7 @@ import {
   type AuthEndpoints,
 } from "@shared/services/authEndpoints";
 import { isSuperAdminHostname as isSuperAdminHost } from "@shared/auth/superAdminHost";
+import i18n from "@shared/i18n";
 import { getErrorMessage } from "@shared/utils/apiError";
 import type {
   LoginOrChallengeResponse,
@@ -336,7 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await _completePostLoginSuccess(response.data);
         return response.data;
       } catch (err) {
-        setError(getErrorMessage(err, "Login failed"));
+        setError(getErrorMessage(err, i18n.t("auth.login_card.login_failed")));
         throw err;
       } finally {
         setLoading(false);
@@ -365,7 +366,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await _completePostLoginSuccess(response.data);
         return response.data;
       } catch (err) {
-        setError(getErrorMessage(err, "Two-factor verification failed"));
+        setError(getErrorMessage(err, i18n.t("auth.two_factor.error_verify")));
         throw err;
       } finally {
         setLoading(false);
@@ -389,7 +390,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // approved), so there is no session to seed here.
         return response.data;
       } catch (err) {
-        setError(getErrorMessage(err, "Registration failed"));
+        setError(getErrorMessage(err, i18n.t("auth.apply.error")));
         throw err;
       } finally {
         setLoading(false);

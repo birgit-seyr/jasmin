@@ -27,7 +27,6 @@ import type {
 import type {
   AdminUserCreateRequest,
   AdminUserRow,
-  AdminUserUpdateRequest,
   ErrorResponse,
   InvitationAcceptRequest,
   InvitationVerifyResponse,
@@ -36,6 +35,8 @@ import type {
   MessageResponse,
   PasswordResetConfirmRequest,
   PasswordResetRequestRequest,
+  PatchedAdminUserUpdateRequest,
+  PatchedUserProfileUpdateRequest,
   PublicRegisterRequest,
   PublicRegisterResponse,
   RefreshResponse,
@@ -45,8 +46,7 @@ import type {
   RegisterVerifyCodeResponse,
   StepUpRequest,
   StepUpResponse,
-  UserProfileResponse,
-  UserProfileUpdateRequest
+  UserProfileResponse
 } from '.././models';
 
 import { axiosService } from '../../../services/api';
@@ -59,14 +59,14 @@ import { axiosService } from '../../../services/api';
  */
 export const authPartialUpdate = (
     userId: string,
-    userProfileUpdateRequest: UserProfileUpdateRequest,
+    patchedUserProfileUpdateRequest: PatchedUserProfileUpdateRequest,
  ) => {
       
       
       return axiosService<UserProfileResponse>(
       {url: `/api/auth/${userId}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: userProfileUpdateRequest
+      data: patchedUserProfileUpdateRequest
     },
       );
     }
@@ -74,8 +74,8 @@ export const authPartialUpdate = (
 
 
 export const getAuthPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authPartialUpdate>>, TError,{userId: string;data: UserProfileUpdateRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof authPartialUpdate>>, TError,{userId: string;data: UserProfileUpdateRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authPartialUpdate>>, TError,{userId: string;data: PatchedUserProfileUpdateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof authPartialUpdate>>, TError,{userId: string;data: PatchedUserProfileUpdateRequest}, TContext> => {
 
 const mutationKey = ['authPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -87,7 +87,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authPartialUpdate>>, {userId: string;data: UserProfileUpdateRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authPartialUpdate>>, {userId: string;data: PatchedUserProfileUpdateRequest}> = (props) => {
           const {userId,data} = props ?? {};
 
           return  authPartialUpdate(userId,data,)
@@ -99,18 +99,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AuthPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof authPartialUpdate>>>
-    export type AuthPartialUpdateMutationBody = UserProfileUpdateRequest
+    export type AuthPartialUpdateMutationBody = PatchedUserProfileUpdateRequest
     export type AuthPartialUpdateMutationError = ErrorResponse
 
     /**
  * @summary Update user profile
  */
 export const useAuthPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authPartialUpdate>>, TError,{userId: string;data: UserProfileUpdateRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authPartialUpdate>>, TError,{userId: string;data: PatchedUserProfileUpdateRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof authPartialUpdate>>,
         TError,
-        {userId: string;data: UserProfileUpdateRequest},
+        {userId: string;data: PatchedUserProfileUpdateRequest},
         TContext
       > => {
 
@@ -291,14 +291,14 @@ by ``apps.accounts.urls`` via ``DefaultRouter``.
  */
 export const authAdminUsersPartialUpdate = (
     id: string,
-    adminUserUpdateRequest: AdminUserUpdateRequest,
+    patchedAdminUserUpdateRequest: PatchedAdminUserUpdateRequest,
  ) => {
       
       
       return axiosService<AdminUserRow>(
       {url: `/api/auth/admin/users/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: adminUserUpdateRequest
+      data: patchedAdminUserUpdateRequest
     },
       );
     }
@@ -306,8 +306,8 @@ export const authAdminUsersPartialUpdate = (
 
 
 export const getAuthAdminUsersPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, TError,{id: string;data: AdminUserUpdateRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, TError,{id: string;data: AdminUserUpdateRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, TError,{id: string;data: PatchedAdminUserUpdateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, TError,{id: string;data: PatchedAdminUserUpdateRequest}, TContext> => {
 
 const mutationKey = ['authAdminUsersPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -319,7 +319,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, {id: string;data: AdminUserUpdateRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, {id: string;data: PatchedAdminUserUpdateRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  authAdminUsersPartialUpdate(id,data,)
@@ -331,18 +331,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AuthAdminUsersPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>>
-    export type AuthAdminUsersPartialUpdateMutationBody = AdminUserUpdateRequest
+    export type AuthAdminUsersPartialUpdateMutationBody = PatchedAdminUserUpdateRequest
     export type AuthAdminUsersPartialUpdateMutationError = ErrorResponse
 
     /**
  * @summary Update a tenant user (admin)
  */
 export const useAuthAdminUsersPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, TError,{id: string;data: AdminUserUpdateRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>, TError,{id: string;data: PatchedAdminUserUpdateRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof authAdminUsersPartialUpdate>>,
         TError,
-        {id: string;data: AdminUserUpdateRequest},
+        {id: string;data: PatchedAdminUserUpdateRequest},
         TContext
       > => {
 

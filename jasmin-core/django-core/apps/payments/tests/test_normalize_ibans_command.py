@@ -118,6 +118,19 @@ class TestNormalizeIbans:
         assert profile.iban == NORMALISED
         assert f"Tenant {tenant.schema_name}" in output
 
+    def test_reports_a_profile_the_model_refuses_to_save(self, tenant):
+        # An active SEPA profile without its account holder fails the model's
+        # own check; the row stays as it was and the report names the column.
+        profile = _profile(UNNORMALISED, 6008)
+        BillingProfile.objects.filter(pk=profile.pk).update(account_holder="")
+
+        output = _run(tenant=tenant.schema_name)
+
+        profile.refresh_from_db()
+        assert profile.iban == UNNORMALISED
+        assert "1 could not be saved" in output
+        assert "account_holder" in output
+
     def test_unknown_tenant_is_refused(self, tenant):
         with pytest.raises(CommandError):
             _run(tenant="no_such_schema")

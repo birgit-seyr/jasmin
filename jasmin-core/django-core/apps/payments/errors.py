@@ -157,6 +157,23 @@ class MandateReferenceTaken(ConflictError):
     code = "billing_profile.mandate_reference_taken"
 
 
+class SepaMandateIncomplete(BadRequestError):
+    """An active SEPA Direct Debit profile lacks a detail collection needs: the
+    IBAN, the account holder, the mandate reference or the date the mandate was
+    signed. ``details["fields"]`` names the missing columns; ``field`` names the
+    one when only one is missing. The reference is minted on save once an IBAN
+    is there, so in practice it is the other three."""
+
+    code = "billing_profile.sepa_details_missing"
+
+
+class SepaFirstUseBeforeSigned(BadRequestError):
+    """``sepa_mandate_first_use_at`` lies before ``sepa_mandate_signed_at``: a
+    mandate cannot be collected against before it was signed."""
+
+    code = "billing_profile.first_use_before_signed"
+
+
 __all__ = [
     "BillingRunInvalidPeriod",
     "BillingRunInvalidCollectionDate",
@@ -174,4 +191,6 @@ __all__ = [
     "SepaMandateTextNotCurrent",
     "BillingProfileAlreadyExists",
     "MandateReferenceTaken",
+    "SepaMandateIncomplete",
+    "SepaFirstUseBeforeSigned",
 ]

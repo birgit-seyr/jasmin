@@ -391,7 +391,9 @@
     "mandate_already_used": "This SEPA mandate has already been collected against. The bank details can no longer be changed here — that requires a new mandate. Please contact the office.",
     "mandate_deactivated": "The office has deactivated this SEPA mandate. It can't be reactivated here — please contact the office.",
     "mandate_reference_locked": "The SEPA mandate has already been used — its mandate reference can no longer be changed. Set up a new mandate if a different reference is needed.",
-    "sepa_mandate_text_not_current": "The SEPA mandate text has been updated in the meantime. Please reload the page and accept the current text."
+    "sepa_mandate_text_not_current": "The SEPA mandate text has been updated in the meantime. Please reload the page and accept the current text.",
+    "sepa_details_missing": "An active SEPA Direct Debit needs the IBAN, the account holder, the mandate reference and the date the mandate was signed.",
+    "first_use_before_signed": "The first SEPA collection cannot be before the date the mandate was signed."
   },
   "billing_run": {
     "invalid_period": "The end date must be on or after the start date.",

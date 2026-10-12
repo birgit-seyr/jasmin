@@ -161,6 +161,7 @@ export default function DefaultShareArticlesInShare() {
   }, [filteredShareArticles, variations, defaultsIndex]);
 
   const bulkUpsert = useMutation({
+    meta: { silent: true },
     mutationFn: (payload: DefaultShareArticleInShareBulkUpsertRequest) =>
       commissioningDefaultShareArticlesInShareBulkUpsertCreate(payload),
     onSuccess: () => {

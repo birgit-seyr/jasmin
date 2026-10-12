@@ -1,0 +1,16 @@
+/* The renew button sits beside the table's selection, lowered to line up
+   with the filters next to it. */
+.abos-bulk-actions__button {
+  margin-top: 2.5em;
+  height: 1.8em;
+}
+
+.abos-bulk-actions__reasons {
+  margin: 4px 0 10px;
+  padding-left: 1.2em;
+}
+
+.abos-bulk-actions__date {
+  width: 100%;
+  margin-top: 6px;
+}

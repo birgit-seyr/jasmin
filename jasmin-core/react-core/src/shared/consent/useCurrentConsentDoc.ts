@@ -26,7 +26,7 @@ export function useCurrentConsentDoc(kind: CommissioningConsentDocumentsListKind
       (d) =>
         d.valid_from <= today && (!d.valid_until || d.valid_until >= today),
     );
-    return inForce.find((d) => !d.valid_until) ?? inForce[0];
+    return inForce.find((d) => !d.valid_until) ?? inForce.at(0);
   }, [data]);
   return { doc, isLoading };
 }

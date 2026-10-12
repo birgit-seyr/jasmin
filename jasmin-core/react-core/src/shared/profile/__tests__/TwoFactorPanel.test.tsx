@@ -69,9 +69,39 @@ describe("TwoFactorPanel while off", () => {
     render(<TwoFactorPanel />);
 
     await user.click(screen.getByRole("button", { name: /profile.two_factor.enable/ }));
-    await user.click(await screen.findByRole("img", { name: "copy" }));
+    await user.click(await screen.findByRole("button", { name: "common.copy" }));
 
-    expect(notify.success).toHaveBeenCalledWith("common.copied");
+    await waitFor(() => expect(notify.success).toHaveBeenCalledWith("common.copied"));
+    await expect(navigator.clipboard.readText()).resolves.toBe("ABC123");
+  });
+
+  it("says so when the clipboard refuses the setup key", async () => {
+    api.enrollStart.mockResolvedValue({ provisioning_uri: "otpauth://x", secret: "ABC123" });
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(
+      new DOMException("Write permission denied.", "NotAllowedError"),
+    );
+    render(<TwoFactorPanel />);
+
+    await user.click(screen.getByRole("button", { name: /profile.two_factor.enable/ }));
+    await user.click(await screen.findByRole("button", { name: "common.copy" }));
+
+    await waitFor(() => expect(notify.error).toHaveBeenCalledWith("common.copy_failed"));
+    expect(notify.success).not.toHaveBeenCalled();
+  });
+
+  it("shows the server's reason when an enrolment could not start", async () => {
+    api.enrollStart.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { message: "Two-factor is already being set up." } },
+    });
+    render(<TwoFactorPanel />);
+
+    await userEvent.click(screen.getByRole("button", { name: /profile.two_factor.enable/ }));
+
+    await waitFor(() =>
+      expect(notify.error).toHaveBeenCalledWith("Two-factor is already being set up."),
+    );
   });
 });
 

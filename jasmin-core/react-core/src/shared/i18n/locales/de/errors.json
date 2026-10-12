@@ -391,7 +391,9 @@
     "mandate_already_used": "Über dieses SEPA-Mandat wurde bereits eingezogen. Die Bankverbindung kann hier nicht mehr geändert werden – dafür muss ein neues Mandat erteilt werden. Bitte wende dich dafür an das Büro.",
     "mandate_deactivated": "Das Büro hat dieses SEPA-Mandat deaktiviert. Es kann hier nicht wieder aktiviert werden – bitte wende dich dafür an das Büro.",
     "mandate_reference_locked": "Das SEPA-Mandat wurde bereits eingesetzt — die Mandatsreferenz kann nicht mehr geändert werden. Für eine andere Referenz bitte ein neues Mandat anlegen.",
-    "sepa_mandate_text_not_current": "Der SEPA-Mandatstext wurde inzwischen aktualisiert. Bitte lade die Seite neu und bestätige den aktuellen Text."
+    "sepa_mandate_text_not_current": "Der SEPA-Mandatstext wurde inzwischen aktualisiert. Bitte lade die Seite neu und bestätige den aktuellen Text.",
+    "sepa_details_missing": "Für eine aktive SEPA-Lastschrift werden IBAN, Kontoinhaber, Mandatsreferenz und das Unterschriftsdatum des Mandats benötigt.",
+    "first_use_before_signed": "Der erste SEPA-Einzug kann nicht vor dem Unterschriftsdatum des Mandats liegen."
   },
   "billing_run": {
     "invalid_period": "Das End-Datum muss nach dem Start-Datum liegen.",

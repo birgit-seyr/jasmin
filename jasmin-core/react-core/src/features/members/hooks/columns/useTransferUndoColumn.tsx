@@ -38,6 +38,7 @@ export function useTransferUndoColumn({
   const { mutate, isPending, variables } =
     useCommissioningCoopSharesReverseTransferCreate({
       mutation: {
+        meta: { silent: true },
         onSuccess: (result) => {
           // Both members' rows changed, and the giver's membership may have.
           void queryClient.invalidateQueries({

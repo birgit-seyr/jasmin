@@ -19,15 +19,21 @@ import {
   useCommissioningMyMemberDataPartialUpdate,
   useCommissioningMyMemberDataRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
-import {
-  MyMemberDataRead,
+import type {
   MyDataCoopShare,
+  MyMemberDataRead,
+  PatchedMyMemberDataUpdate,
 } from "@shared/api/generated/models";
 import { useDateFormat } from "@hooks/index";
 import { notify } from "@shared/utils";
 import StoredOrEditField from "./StoredOrEditField";
 
 const { Title, Paragraph } = Typography;
+
+/** The form's values: the birth-date picker holds a dayjs instance. */
+type MemberDataFormValues = Omit<PatchedMyMemberDataUpdate, "birth_date"> & {
+  birth_date?: dayjs.Dayjs | null;
+};
 
 const MEMBER_EDITABLE_FIELDS = [
   "first_name",
@@ -64,6 +70,7 @@ export default function MemberSection({ onSaved }: { onSaved: () => void }) {
 
   const { mutate, isPending } = useCommissioningMyMemberDataPartialUpdate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         notify.success(t("profile.saved"));
         setEditingIban(false);
@@ -94,17 +101,17 @@ export default function MemberSection({ onSaved }: { onSaved: () => void }) {
     ? dayjs(data.birth_date)
     : null;
 
-  const onFinish = (values: Record<string, unknown>) => {
+  const onFinish = (values: MemberDataFormValues) => {
     // Strip empty IBAN/account_owner unless the user explicitly opened
     // the edit — prevents "save" from clearing a previously-set value
     // the user can't currently see.
-    const payload: Record<string, unknown> = { ...values };
+    const payload: PatchedMyMemberDataUpdate = {
+      ...values,
+      birth_date: formatDateForAPI(values.birth_date ?? null),
+    };
     if (!editingIban) delete payload.iban;
     if (!editingAccountOwner) delete payload.account_owner;
-    payload.birth_date = formatDateForAPI(
-      values.birth_date as dayjs.Dayjs | null,
-    );
-    mutate({ data: payload as never });
+    mutate({ data: payload });
   };
 
   return (

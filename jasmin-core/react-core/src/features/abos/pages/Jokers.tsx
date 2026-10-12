@@ -71,7 +71,6 @@ export default function Jokers() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
 
   const [showTours, setShowTours] = useState(false);
@@ -80,7 +79,7 @@ export default function Jokers() {
   // Only needed to decide whether the "show tours" switch is meaningful.
   const { toursExist } = usePlanningAxes({
     year: selectedYear,
-    week: selectedWeek ?? currentWeek,
+    week: selectedWeek,
     requireStations: true,
     needTours: true,
   });

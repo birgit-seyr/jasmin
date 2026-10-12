@@ -64,7 +64,9 @@ export default function SepaMandates() {
   // Two-way active toggle for a SEPA_DD profile. ``is_active`` is step-up
   // gated on the backend; the api.ts interceptor drives the password prompt +
   // retry, so nothing special is needed here.
-  const patchMutation = usePaymentsBillingProfilesPartialUpdate();
+  const patchMutation = usePaymentsBillingProfilesPartialUpdate({
+    mutation: { meta: { silent: true } },
+  });
   const toggleActive = useCallback(
     async (row: SepaMandateRow, nextActive: boolean) => {
       if (!row.id) return;

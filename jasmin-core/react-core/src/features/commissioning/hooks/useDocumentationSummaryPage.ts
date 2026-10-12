@@ -95,7 +95,7 @@ export function useDocumentationSummaryPage({
       () =>
         ({
           year: selectedYear,
-          delivery_week: selectedWeek!,
+          delivery_week: selectedWeek,
           is_past: isPast,
           ...(withDay ? { day_number: selectedDay! } : {}),
           model,

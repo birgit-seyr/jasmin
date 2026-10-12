@@ -3,6 +3,7 @@ import { Button, Flex, Input, Spin, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import type { SubscriptionMemberEmailsResponse } from "@shared/api/generated/models";
 import { notify } from "@shared/utils";
+import "./CopyableEmailList.css";
 
 const { Text } = Typography;
 
@@ -27,7 +28,7 @@ export default function CopyableEmailList({
 
   if (!enabled) {
     return (
-      <Text type="secondary" style={{ display: "block" }}>
+      <Text type="secondary" className="copyable-email-list__hint">
         {t("abos.emails_select_filter_hint")}
       </Text>
     );
@@ -41,7 +42,7 @@ export default function CopyableEmailList({
 
   if (emails.length === 0) {
     return (
-      <Text type="secondary" style={{ display: "block" }}>
+      <Text type="secondary" className="copyable-email-list__hint">
         {t("abos.emails_no_recipients")}
       </Text>
     );
@@ -57,7 +58,7 @@ export default function CopyableEmailList({
 
   return (
     <div className="w-full">
-      <Flex align="center" gap="small" style={{ marginBottom: 8 }}>
+      <Flex align="center" gap="small" className="copyable-email-list__header">
         <Text strong>
           {t("abos.emails_recipients", { count: emails.length })}
         </Text>

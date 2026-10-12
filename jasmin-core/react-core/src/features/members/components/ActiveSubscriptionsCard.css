@@ -1,0 +1,52 @@
+/* A member's subscriptions, grouped under small dividers, one row each. */
+.member-card.active-subscriptions-card > .ant-card-body {
+  padding: 12px 16px;
+}
+
+.active-subscriptions-card__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-bg-subtle);
+  cursor: pointer;
+}
+
+.active-subscriptions-card__tag.ant-tag {
+  margin: 0;
+}
+
+.active-subscriptions-card__tag--quantity.ant-tag {
+  font-weight: 600;
+}
+
+.active-subscriptions-card__waiting.ant-space {
+  align-items: center;
+}
+
+.active-subscriptions-card__jokers.ant-typography {
+  color: var(--color-joker);
+  font-size: 12px;
+}
+
+.active-subscriptions-card__group-label.ant-typography {
+  font-size: 12px;
+}
+
+/* AntD's own divider and button rules are injected after this stylesheet,
+   so these carry one class more than theirs. */
+.active-subscriptions-card .ant-divider.active-subscriptions-card__divider {
+  margin: 12px 0 4px;
+}
+
+.active-subscriptions-card .ant-divider.active-subscriptions-card__divider--first {
+  margin-top: 0;
+}
+
+.active-subscriptions-card__past {
+  margin-top: 12px;
+}
+
+.active-subscriptions-card .ant-btn.active-subscriptions-card__past-button {
+  padding-left: 0;
+}

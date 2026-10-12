@@ -16,9 +16,15 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { commissioningResellersPartialUpdate } from "@shared/api/generated/commissioning/commissioning";
-import type { Reseller } from "@shared/api/generated/models";
+import type { PatchedReseller, Reseller } from "@shared/api/generated/models";
 
 const { Title, Paragraph } = Typography;
+
+/** The form's values: the discount field's NumberInput yields a number. */
+type InvoiceSettingsValues = Omit<
+  PatchedReseller,
+  "early_payment_discount_percent"
+> & { early_payment_discount_percent?: number | string | null };
 
 interface ResellerInvoiceSettingsModalProps {
   open: boolean;
@@ -88,19 +94,19 @@ export const ResellerInvoiceSettingsModal: FC<
 
   if (!reseller) return null;
 
-  const handleSubmit = (values: Record<string, unknown>) =>
+  const handleSubmit = (values: InvoiceSettingsValues) =>
     run(
       async () => {
         // ``early_payment_discount_percent`` is a Decimal-as-string on the
         // wire; the NumberInput yields a number — coerce to string before
         // sending so the server-side ``DecimalField`` parser doesn't lose
         // trailing zeros.
-        const payload: Record<string, unknown> = { ...values };
-        if (typeof payload.early_payment_discount_percent === "number") {
-          payload.early_payment_discount_percent = String(
-            payload.early_payment_discount_percent,
-          );
-        }
+        const { early_payment_discount_percent: discount, ...rest } = values;
+        const payload: PatchedReseller = {
+          ...rest,
+          early_payment_discount_percent:
+            typeof discount === "number" ? String(discount) : discount,
+        };
         // IBAN is write-on-change only: the field starts empty (the stored
         // value is masked, never returned). An empty value means "unchanged" —
         // drop it so we don't wipe the stored IBAN; only send a freshly typed
@@ -110,7 +116,7 @@ export const ResellerInvoiceSettingsModal: FC<
         }
         return commissioningResellersPartialUpdate(
           String(reseller.id ?? ""),
-          payload as unknown as Reseller,
+          payload,
         );
       },
       {

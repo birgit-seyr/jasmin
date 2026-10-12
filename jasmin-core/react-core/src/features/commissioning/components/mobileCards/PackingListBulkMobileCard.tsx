@@ -12,7 +12,7 @@ import {
   MobileCardTitle,
 } from "./primitives";
 import { recordText } from "./recordText";
-import { getSizeLabelOrEmpty } from "./sizeLabel";
+import { getSizeLabelOrEmpty } from "@features/commissioning/utils/sizeLabel";
 
 interface PackingListBulkMobileCardProps {
   record: TableRecord;

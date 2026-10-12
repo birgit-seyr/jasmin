@@ -16,6 +16,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from apps.payments.constants import ChargeStatus, PaymentMethodOptions
+from apps.payments.errors import SepaFirstUseBeforeSigned, SepaMandateIncomplete
 from apps.payments.models import BillingProfile, ChargeSchedule
 
 
@@ -25,7 +26,7 @@ from apps.payments.models import BillingProfile, ChargeSchedule
 @pytest.mark.django_db
 class TestBillingProfileValidation:
     def test_active_sepa_requires_iban(self, tenant, member):
-        with pytest.raises(ValidationError) as exc:
+        with pytest.raises(SepaMandateIncomplete) as exc:
             BillingProfile.objects.create(
                 member=member,
                 payment_method=PaymentMethodOptions.SEPA_DIRECT_DEBIT,
@@ -35,10 +36,11 @@ class TestBillingProfileValidation:
                 is_active=True,
                 # iban omitted
             )
-        assert "iban" in exc.value.message_dict
+        assert exc.value.details == {"fields": ["iban"]}
+        assert exc.value.field == "iban"
 
     def test_active_sepa_requires_account_holder(self, tenant, member):
-        with pytest.raises(ValidationError) as exc:
+        with pytest.raises(SepaMandateIncomplete) as exc:
             BillingProfile.objects.create(
                 member=member,
                 payment_method=PaymentMethodOptions.SEPA_DIRECT_DEBIT,
@@ -47,14 +49,14 @@ class TestBillingProfileValidation:
                 sepa_mandate_signed_at=datetime.date(2026, 1, 1),
                 is_active=True,
             )
-        assert "account_holder" in exc.value.message_dict
+        assert exc.value.details == {"fields": ["account_holder"]}
 
     def test_active_sepa_auto_assigns_reference_but_requires_signed_at(
         self, tenant, member
     ):
         # The Mandatsreferenz is auto-generated on save, so it's never a
         # missing-field error; the office still must record the signed date.
-        with pytest.raises(ValidationError) as exc:
+        with pytest.raises(SepaMandateIncomplete) as exc:
             BillingProfile.objects.create(
                 member=member,
                 payment_method=PaymentMethodOptions.SEPA_DIRECT_DEBIT,
@@ -62,8 +64,34 @@ class TestBillingProfileValidation:
                 account_holder="Foo",
                 is_active=True,
             )
-        assert "sepa_mandate_signed_at" in exc.value.message_dict
-        assert "sepa_mandate_reference" not in exc.value.message_dict
+        assert exc.value.details == {"fields": ["sepa_mandate_signed_at"]}
+
+    def test_names_every_missing_detail_under_one_code(self, tenant, member):
+        with pytest.raises(SepaMandateIncomplete) as exc:
+            BillingProfile.objects.create(
+                member=member,
+                payment_method=PaymentMethodOptions.SEPA_DIRECT_DEBIT,
+                is_active=True,
+            )
+        assert exc.value.code == "billing_profile.sepa_details_missing"
+        assert exc.value.field is None
+        assert exc.value.details == {
+            "fields": [
+                "iban",
+                "account_holder",
+                "sepa_mandate_reference",
+                "sepa_mandate_signed_at",
+            ]
+        }
+
+    def test_first_use_before_signing_is_refused(self, tenant, billing_profile):
+        billing_profile.sepa_mandate_first_use_at = (
+            billing_profile.sepa_mandate_signed_at - datetime.timedelta(days=1)
+        )
+        with pytest.raises(SepaFirstUseBeforeSigned) as exc:
+            billing_profile.save()
+        assert exc.value.code == "billing_profile.first_use_before_signed"
+        assert exc.value.field == "sepa_mandate_first_use_at"
 
     def test_sepa_mandate_reference_auto_generated(self, tenant, member):
         bp = BillingProfile.objects.create(

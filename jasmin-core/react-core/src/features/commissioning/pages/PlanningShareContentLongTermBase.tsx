@@ -31,7 +31,11 @@ import type {
 import { ShareTypeEnum } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { YearSelector } from "@shared/selectors";
-import { EditableTable, gatedByPermission } from "@shared/tables";
+import {
+  EditableTable,
+  gatedByPermission,
+  wrapApiFunctions,
+} from "@shared/tables";
 import type {
   ApiFunctions,
   EditableColumnConfig,
@@ -686,19 +690,14 @@ export default function PlanningShareContentLongTermBase({
     ],
   );
 
-  const apiFunctions: ApiFunctions = useMemo(
-    () => ({
-      create: (data) =>
-        commissioningDefaultShareContentsBulkCreateCreate(
-          data as unknown as DefaultShareContentRequest,
-        ).then((res) => ({ data: res as unknown as TableRecord })),
-      update: (id, data) =>
-        commissioningDefaultShareContentsBulkUpdatePartialUpdate(
-          id,
-          data as unknown as DefaultShareContentRequest,
-        ).then((res) => ({ data: res as unknown as TableRecord })),
-      delete: (id) => commissioningDefaultShareContentsBulkDeleteDestroy(id),
-    }),
+  const apiFunctions = useMemo<ApiFunctions>(
+    () =>
+      wrapApiFunctions<DefaultShareContentRequest & TableRecord>({
+        create: (data) => commissioningDefaultShareContentsBulkCreateCreate(data),
+        update: (id, data) =>
+          commissioningDefaultShareContentsBulkUpdatePartialUpdate(id, data),
+        delete: (id) => commissioningDefaultShareContentsBulkDeleteDestroy(id),
+      }),
     [],
   );
 

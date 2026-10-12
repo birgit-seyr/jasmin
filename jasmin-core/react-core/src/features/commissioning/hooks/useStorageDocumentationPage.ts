@@ -50,7 +50,7 @@ export function useStorageDocumentationPage({
     queryEnabled: !!selectedStorage,
   });
 
-  const { rawData, selectedYear, selectedWeek, currentWeek, selectedDay } =
+  const { rawData, selectedYear, selectedWeek, selectedDay } =
     summary;
 
   const data = useMemo<DocumentationSummaryRecord[]>(() => {
@@ -75,7 +75,7 @@ export function useStorageDocumentationPage({
       ...transformedData,
       storage: selectedStorage,
       year: selectedYear,
-      delivery_week: selectedWeek ?? currentWeek,
+      delivery_week: selectedWeek,
       ...(withDay ? { day_number: selectedDay ?? 0 } : {}),
       amount:
         transformedData.amount === null ||
@@ -88,7 +88,6 @@ export function useStorageDocumentationPage({
       selectedStorage,
       selectedYear,
       selectedWeek,
-      currentWeek,
       selectedDay,
       withDay,
     ],

@@ -3,7 +3,7 @@ import { Alert, Button, Modal, Upload } from "antd";
 import type { RcFile } from "antd/es/upload";
 import { isValidElement, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import axiosService from "@shared/services/api";
+import { commissioningDataImportCreate } from "@shared/api/generated/commissioning/commissioning";
 import { getErrorMessage, messageForErrorCode } from "@shared/utils/apiError";
 import { downloadBlob, notify } from "@shared/utils";
 import type {
@@ -16,17 +16,17 @@ import ToolTipIcon from "./ToolTipIcon";
 /**
  * Tiny shape we accept — kept loose so the button works with the various
  * column types around the app (EditableColumnConfig and friends) without
- * forcing a generic / import cycle. The `disabled` function arg is typed
- * as `any` because TS treats function parameters contravariantly: a
- * stricter `unknown` here would reject callers whose function takes a
- * tighter record shape (TableRecord etc.).
+ * forcing a generic / import cycle. The per-row `disabled` / `options`
+ * functions are never called here, so their record argument is `never`:
+ * function parameters are contravariant, and a function taking any record
+ * shape (TableRecord etc.) is assignable to one taking `never`.
  */
 interface ColumnLike {
   dataIndex?: string | number;
   title?: ReactNode;
   hidden?: boolean;
   hideInModal?: boolean;
-  disabled?: boolean | ((record: any) => boolean);
+  disabled?: boolean | ((record: never) => boolean);
   // Read-only grid columns are display-only (masked aliases like
   // ``iban_masked``) or server-managed, so by default they must NOT become
   // import-template columns. Excluded from the template below unless the
@@ -54,7 +54,7 @@ interface ColumnLike {
    * EditableColumnConfig, but fall back to "string" in the template. */
   options?:
     | Array<{ value: string | number; label?: unknown }>
-    | ((record: any) => Array<{ value: string | number; label?: unknown }>);
+    | ((record: never) => Array<{ value: string | number; label?: unknown }>);
 }
 
 interface DownloadCsvTemplateButtonProps {
@@ -214,19 +214,15 @@ export default function DownloadCsvTemplateButton({
     if (!modelName) return;
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append("model_name", modelName);
-      form.append("file", file);
-      if (dryRun) form.append("dry_run", "true");
-      if (fixedValues) form.append("fixed_values", JSON.stringify(fixedValues));
-      const response = await axiosService.post<DataImportResponse>(
-        "/api/commissioning/data_import/",
-        form,
-        { headers: { "Content-Type": "multipart/form-data" } },
-      );
-      setResult(response.data);
+      const imported = await commissioningDataImportCreate({
+        model_name: modelName,
+        file,
+        ...(dryRun ? { dry_run: true } : {}),
+        ...(fixedValues ? { fixed_values: JSON.stringify(fixedValues) } : {}),
+      });
+      setResult(imported);
       setWasDryRun(dryRun);
-      const { successful, failed } = response.data;
+      const { successful, failed } = imported;
       // A dry run persists nothing, so never trigger a data refetch for it.
       if (!dryRun && successful > 0) {
         onUploadSuccess?.();

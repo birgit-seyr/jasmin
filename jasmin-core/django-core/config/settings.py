@@ -1258,7 +1258,7 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     # THE KEY SETTING - Don't split request/response into separate schemas
     "COMPONENT_SPLIT_REQUEST": False,
-    "COMPONENT_SPLIT_PATCH": False,
+    "COMPONENT_SPLIT_PATCH": True,  # all-optional ``Patched…`` PATCH bodies
     # Map your enum classes to prevent duplicates
     "ENUM_NAME_OVERRIDES": {
         "MovementTypeEnum": "apps.commissioning.models.choices.MovementTypeOptions",

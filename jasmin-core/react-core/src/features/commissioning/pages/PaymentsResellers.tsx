@@ -14,7 +14,7 @@ import {
 import type {
   CombinedOrderOverview,
   CommissioningOrdersOverviewListParams,
-  SetInvoiceNoteRequest,
+  PatchedSetInvoiceNoteRequest,
 } from "@shared/api/generated/models";
 import { JobProgressDrawer } from "@shared/ui/JobProgressDrawer";
 import { ResellerSelector, WeekSelector } from "@shared/selectors";
@@ -47,7 +47,7 @@ type CombinedOrderOverviewRow = CombinedOrderOverview & TableRecord;
 
 export default function PaymentsResellers() {
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+    useYearWeekState({ allWeeks: true });
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -109,7 +109,7 @@ export default function PaymentsResellers() {
           align: "left",
           disabled: true,
           sortable: true,
-          render: (value: unknown) => formatDate(value as string),
+          render: (_: unknown, record) => formatDate(record.invoice_date),
         },
         {
           title: t("commissioning.invoice_number"),
@@ -119,7 +119,7 @@ export default function PaymentsResellers() {
           inputType: "text",
           sortable: true,
           disabled: true,
-          render: (value: unknown, record: CombinedOrderOverviewRow) => (
+          render: (_: unknown, record) => (
             <>
               {record.has_finalized_invoice ? (
                 <>
@@ -133,7 +133,7 @@ export default function PaymentsResellers() {
                   {t("commissioning.not_finalized")}
                 </span>
               )}
-              {value as string}
+              {record.invoice_number}
             </>
           ),
         },
@@ -147,8 +147,8 @@ export default function PaymentsResellers() {
           inputType: "decimal2",
           sortable: true,
 
-          render: (value: unknown) =>
-            formatCurrency(parseFloat((value as string) || "0")),
+          render: (_: unknown, record) =>
+            formatCurrency(parseFloat(record.sum_netto || "0")),
         },
         {
           title: (
@@ -188,7 +188,7 @@ export default function PaymentsResellers() {
           readOnly: true,
           disabled: true,
           width: "15em",
-          render: (_: unknown, record: CombinedOrderOverviewRow) => (
+          render: (_: unknown, record) => (
             <div className="button-row">
               <>
                 {record.invoice_cancelled_by ? (
@@ -222,13 +222,13 @@ export default function PaymentsResellers() {
           inputType: "optional",
           width: "25em",
         },
-      ] as EditableColumnConfig<CombinedOrderOverviewRow>[],
+      ],
     [t, formatCurrency, formatDate, invalidateData, noteColumn],
   );
 
   const apiFunctions = useMemo<ApiFunctions>(
     () =>
-      wrapApiFunctions<SetInvoiceNoteRequest & TableRecord>({
+      wrapApiFunctions<PatchedSetInvoiceNoteRequest & TableRecord>({
         update: (id, updateData) =>
           commissioningSetInvoiceNotePartialUpdate(id, updateData),
       }),

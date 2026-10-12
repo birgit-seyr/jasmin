@@ -110,7 +110,9 @@ export default function Invoices() {
     string | null
   >(null);
   const [stornoTargetLabel, setStornoTargetLabel] = useState("");
-  const createStornoMutation = useCommissioningInvoicesCreateStornoCreate();
+  const createStornoMutation = useCommissioningInvoicesCreateStornoCreate({
+    mutation: { meta: { silent: true } },
+  });
 
   const { formatDate } = useDateFormat();
 
@@ -161,21 +163,13 @@ export default function Invoices() {
         .filter((r) => r.success && r.invoice_id)
         .map((r) => r.invoice_id!);
 
-      if (invoiceIds.length === 0) {
-        console.warn(
-          "[FINALIZE] No invoice IDs found - skipping PDF generation",
-        );
-        invalidateData();
-        return;
-      }
-
       await uploadPdfsWarningOnFailure(
         invoiceIds.map(
           (id) => () =>
             generateAndUploadInvoicePDF(
               id,
               t,
-              tenant as Record<string, unknown>,
+              tenant,
               getSetting,
               logoUrl,
               bioLogoUrl,
@@ -197,14 +191,13 @@ export default function Invoices() {
   // only ones that can have an e-PDF to bundle into the bulk ZIP.
   const selectedFinalizedInvoiceIds = useMemo(
     () =>
-      data
-        .filter(
-          (item) =>
-            selectedRowKeys.includes(item.id) &&
-            item.has_finalized_invoice &&
-            item.invoice_id,
-        )
-        .map((item) => item.invoice_id as string),
+      data.flatMap((item) =>
+        selectedRowKeys.includes(item.id) &&
+        item.has_finalized_invoice &&
+        item.invoice_id
+          ? [item.invoice_id]
+          : [],
+      ),
     [data, selectedRowKeys],
   );
 
@@ -329,7 +322,7 @@ export default function Invoices() {
             await generateAndUploadInvoicePDF(
               stornoId,
               t,
-              tenant as Record<string, unknown>,
+              tenant,
               getSetting,
               logoUrl,
               bioLogoUrl,
@@ -372,7 +365,7 @@ export default function Invoices() {
 
         sortable: true,
 
-        render: (value: unknown) => formatDate(value as string),
+        render: (_: unknown, record) => formatDate(record.delivery_note_date),
       },
       {
         title: t("resellers.delivery_note_number"),
@@ -383,7 +376,7 @@ export default function Invoices() {
 
         sortable: true,
 
-        render: (value: unknown, record) => (
+        render: (_: unknown, record) => (
           <span className="dn-number-cell">
             {record.delivery_note_is_finalized ? (
               <>
@@ -395,7 +388,7 @@ export default function Invoices() {
                 {t("commissioning.not_finalized")}
               </span>
             )}
-            {value as string}
+            {record.delivery_note_number}
             {record.delivery_note_id && (
               <DeliveryNotePDFButtons
                 deliveryNoteId={record.delivery_note_id}
@@ -424,7 +417,7 @@ export default function Invoices() {
         disabled: true,
         sortable: true,
 
-        render: (value: unknown) => formatDate(value as string),
+        render: (_: unknown, record) => formatDate(record.order_date),
       },
       {
         title: <>{t("resellers.order_number")}</>,
@@ -438,7 +431,7 @@ export default function Invoices() {
         disabled: true,
         sortable: true,
 
-        render: (value: unknown, record) => (
+        render: (_: unknown, record) => (
           <>
             {record.order_is_finalized ? (
               <>
@@ -450,7 +443,7 @@ export default function Invoices() {
                 {t("commissioning.not_finalized")}
               </span>
             )}
-            {value as string}
+            {record.order_number}
           </>
         ),
       },
@@ -465,7 +458,7 @@ export default function Invoices() {
 
         disabled: true,
         sortable: true,
-        render: (value: unknown) => formatDate(value as string),
+        render: (_: unknown, record) => formatDate(record.invoice_date),
       },
       {
         title: t("commissioning.invoice_number"),
@@ -484,8 +477,8 @@ export default function Invoices() {
         width: "8em",
         align: "right",
         sortable: true,
-        render: (value: unknown) =>
-          formatCurrency(parseFloat((value as string) || "0")),
+        render: (_: unknown, record) =>
+          formatCurrency(parseFloat(record.sum_netto || "0")),
       },
       {
         title: "",
@@ -513,9 +506,12 @@ export default function Invoices() {
                     })
                   }
                   buttonText={t("commissioning.finalize_invoice")}
-                  buttonProps={{ type: "primary", danger: false }}
+                  buttonProps={{
+                    type: "primary",
+                    danger: false,
+                    className: "bulk-action-button--flush",
+                  }}
                   onSuccess={handleFinalizeInvoicesSuccess}
-                  style={{ marginTop: "0em" }}
                 />
               )}
               {!record.has_finalized_invoice && record.has_invoice && (
@@ -528,9 +524,12 @@ export default function Invoices() {
                     })
                   }
                   buttonText={t("commissioning.delete_invoice")}
-                  buttonProps={{ type: "primary", danger: true }}
+                  buttonProps={{
+                    type: "primary",
+                    danger: true,
+                    className: "bulk-action-button--flush",
+                  }}
                   onSuccess={invalidateData}
-                  style={{ marginTop: "0em" }}
                 />
               )}
               {record.has_finalized_invoice && (
@@ -566,9 +565,11 @@ export default function Invoices() {
                     })
                   }
                   buttonText={t("commissioning.create_invoice")}
-                  buttonProps={{ type: "primary" }}
+                  buttonProps={{
+                    type: "primary",
+                    className: "bulk-action-button--flush",
+                  }}
                   onSuccess={invalidateData}
-                  style={{ marginTop: "0em" }}
                 />
               )}
             </>
@@ -645,11 +646,10 @@ export default function Invoices() {
       {Object.entries(groupedData).map(([groupKey, group]) => (
         <Card
           key={groupKey}
-          className="invoice-group-card"
-          style={{ marginBottom: 16 }}
+          className="invoice-group-card mb-16"
           classNames={{ header: "invoice-group-card-header" }}
           title={
-            <div className="flex-center-y" style={{ gap: "4em" }}>
+            <div className="flex-center-y invoice-group-card__title">
               <span>{group.name}</span>
               <Flex align="center" gap={16}>
                 <Text>{t("commissioning.sum")}</Text>
@@ -683,7 +683,7 @@ export default function Invoices() {
         setSelectedYear={setSelectedYear}
       />
 
-      <div style={{ marginBottom: "1em", marginTop: "1em" }}>
+      <div className="mt-1em mb-1em">
         {/* Every active reseller stays selectable: this page is also where an
             already-invoiced reseller's invoice gets cancelled (storno),
             re-downloaded or re-sent, and the orders table below only loads
@@ -735,7 +735,7 @@ export default function Invoices() {
           <ToolTipIcon title={t("tooltip.grouping_mode_date")} />
         </div>
       </div>
-      <div style={{ marginTop: "2em", marginBottom: "-2em" }}>
+      <div className="invoices__selection-label">
         <strong>{t("commissioning.for_selected")}</strong>
       </div>
       <div className="button-row">
@@ -780,14 +780,7 @@ export default function Invoices() {
         />
         <ToolTipIcon title={t("tooltip.create_invoice_for_selected")} />
       </div>
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          flexWrap: "wrap",
-          marginTop: "-20px",
-        }}
-      >
+      <div className="invoices__button-row">
         <BulkActionButton
           selectedIds={selectedRowKeys}
           apiFunction={(payload) =>
@@ -835,18 +828,10 @@ export default function Invoices() {
         />
         <ToolTipIcon title={t("tooltip.finalize_invoices")} />
       </div>
-      <div style={{ marginTop: "2em", marginBottom: "-2em" }}>
+      <div className="invoices__selection-label">
         <strong>{t("resellers.for_selected_finalized")}</strong>
       </div>
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          flexWrap: "wrap",
-          marginBottom: "16px",
-          marginTop: "-20px",
-        }}
-      >
+      <div className="invoices__button-row mb-16">
         <BulkSendDocumentsButton
           model="invoice"
           rows={data}

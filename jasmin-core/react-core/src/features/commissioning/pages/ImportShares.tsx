@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import dayjs from "dayjs";
 import {
   Alert,
   Button,
@@ -17,6 +16,7 @@ import { InboxOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd/es/upload/interface";
 
 import { WeekSelector } from "@shared/selectors";
+import { useYearWeekState } from "@hooks/useYearWeekState";
 import { ExplainerText } from "@shared/ui";
 import { ExternalCodeMappingsModal } from "@features/commissioning/modals";
 import {
@@ -100,11 +100,8 @@ function failedBatchFromError(err: unknown): ShareImportBatch | null {
 export default function ImportShares() {
   const { t } = useTranslation();
 
-  const now = dayjs();
-  const [selectedYear, setSelectedYear] = useState<number>(now.isoWeekYear());
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(
-    now.isoWeek(),
-  );
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
 
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [activeBatch, setActiveBatch] = useState<ShareImportBatch | null>(null);

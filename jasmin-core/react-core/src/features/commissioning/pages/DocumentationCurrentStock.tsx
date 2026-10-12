@@ -63,7 +63,6 @@ export default function DocumentationCurrentStock() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
   const [selectedDay, setSelectedDay] = useState<number | null>(
     () => dayjs().isoWeekday() - 1,
@@ -115,7 +114,7 @@ export default function DocumentationCurrentStock() {
   const listParams = useMemo<CommissioningCurrentStockComparisonListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek!,
+      delivery_week: selectedWeek,
       day_number: selectedDay!,
       ...(selectedStorage ? { storage: selectedStorage } : {}),
     }),
@@ -141,10 +140,10 @@ export default function DocumentationCurrentStock() {
   const currentDate = useMemo(() => {
     return dateForWeekDayNumber(
       selectedYear,
-      selectedWeek ?? currentWeek,
+      selectedWeek,
       selectedDay ?? 0,
     );
-  }, [selectedYear, selectedWeek, currentWeek, selectedDay]);
+  }, [selectedYear, selectedWeek, selectedDay]);
 
   const customSave = useCallback(
     (transformedData: Record<string, unknown>) => {
@@ -168,12 +167,12 @@ export default function DocumentationCurrentStock() {
         cleaned: bool(transformedData.cleaned),
         date: toApiDate(currentDate)!,
         year: selectedYear,
-        delivery_week: selectedWeek ?? currentWeek,
+        delivery_week: selectedWeek,
         day_number: selectedDay ?? 0,
         storage: selectedStorage ?? undefined,
       };
     },
-    [currentDate, selectedYear, selectedWeek, currentWeek, selectedDay, selectedStorage],
+    [currentDate, selectedYear, selectedWeek, selectedDay, selectedStorage],
   );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
@@ -206,9 +205,9 @@ export default function DocumentationCurrentStock() {
       const unit = row.unit ?? "None";
       const size = row.size ?? "None";
       const storageId = row.storage ?? selectedStorage ?? "None";
-      return `${shareArticleId}_${unit}_${size}_${storageId}_${selectedYear}_${selectedWeek ?? currentWeek}_${selectedDay ?? 0}`;
+      return `${shareArticleId}_${unit}_${size}_${storageId}_${selectedYear}_${selectedWeek}_${selectedDay ?? 0}`;
     },
-    [selectedYear, selectedWeek, currentWeek, selectedDay, selectedStorage],
+    [selectedYear, selectedWeek, selectedDay, selectedStorage],
   );
 
   const customUpdate = useCallback(
@@ -348,7 +347,7 @@ export default function DocumentationCurrentStock() {
         <DaySelector
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={[0, 1, 2, 3, 4, 5, 6]}
         />

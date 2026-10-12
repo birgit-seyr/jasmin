@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { notify } from "@shared/utils";
+import { getServerErrorMessage } from "@shared/utils/apiError";
 import { useAutoSave } from "./useAutoSave";
 
 interface AutoSavedSettingsConfig {
@@ -38,6 +41,9 @@ export const useAutoSavedSettings = ({
   autoSaveDelay = 500,
   onSaved,
 }: AutoSavedSettingsConfig) => {
+  const { t } = useTranslation();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [settings, setSettings] = useState<Record<string, unknown>>(
     initialSettings,
   );
@@ -89,7 +95,9 @@ export const useAutoSavedSettings = ({
       await onSavedRef.current?.();
       onSuccess?.();
     } catch (error) {
-      console.error("Failed to save settings:", error);
+      // ``useAutoSave`` keeps the change unsaved and leaves telling the user
+      // to this handler.
+      notify.error(getServerErrorMessage(error) ?? tRef.current("settings.save_failed"));
       throw error;
     }
   }, []);
@@ -124,7 +132,7 @@ export const useAutoSavedSettings = ({
 
       setSettings(fetchedSettings);
     } catch (error) {
-      console.error("Failed to fetch settings:", error);
+      notify.error(getServerErrorMessage(error) ?? tRef.current("settings.load_failed"));
       setSettings(initialSettingsRef.current);
     } finally {
       setLoading(false);

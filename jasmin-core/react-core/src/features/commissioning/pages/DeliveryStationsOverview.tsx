@@ -223,7 +223,7 @@ export default function DeliveryStationsOverview() {
     useMemo<CommissioningDeliveryStationToursOverviewRetrieveParams>(
       () => ({
         year: selectedYear,
-        delivery_week: selectedWeek ?? 0,
+        delivery_week: selectedWeek,
         day_number: selectedDeliveryDay ?? 0,
       }),
       [selectedYear, selectedWeek, selectedDeliveryDay],
@@ -292,7 +292,7 @@ export default function DeliveryStationsOverview() {
       <DaySelector
         selectedDay={selectedDeliveryDay}
         setSelectedDay={setSelectedDeliveryDay}
-        selectedWeek={selectedWeek!}
+        selectedWeek={selectedWeek}
         selectedYear={selectedYear}
         days={dayNumbers}
         suffix={t("commissioning.delivery_day")}
@@ -308,7 +308,7 @@ export default function DeliveryStationsOverview() {
               columns: tour.columns,
               stations: tour.stations,
             }))}
-            week={selectedWeek!}
+            week={selectedWeek}
             dayName={
               selectedDeliveryDay !== null
                 ? getDayName(selectedDeliveryDay, t)

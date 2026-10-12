@@ -4,23 +4,40 @@ import DiffCell from "@shared/ui/DiffCell";
 import type {
   EditableColumnConfig,
   SelectOption,
+  TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { itemLineNetto, type LineNettoInput } from "@shared/utils/lineNetto";
+import { itemLineNetto } from "@shared/utils/lineNetto";
 import { editableOnlyOnCreate } from "@shared/utils";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import type { CrateOption } from "../useCrates";
 import { useCrates } from "../useCrates";
-import type { CrateOrderContentRow } from "../useOrdersData";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import { useNoteColumn } from "@hooks/columns/useNoteColumn";
 
- 
-type Rec = Record<string, any>;
+/**
+ * The fields the crate columns read. An order's crate lines and a delivery
+ * note's or an invoice's both carry them; the diff fields only a document's.
+ */
+export interface CrateColumnRow extends TableRecord {
+  crate_type?: string;
+  crate_type_name?: string | null;
+  amount?: number | string | null;
+  price_per_unit?: number | string | null;
+  rabatt?: number | null;
+  tax_rate?: number | string | null;
+  line_netto?: number | string | null;
+  note?: string | null;
+  amount_differs?: boolean;
+  original_amount?: string;
+  price_per_unit_differs?: boolean;
+  original_price_per_unit?: string;
+  rabatt_differs?: boolean;
+  original_rabatt?: string;
+}
 
 interface CratesColumnOptions {
   disableCrateType?: (record: Record<string, unknown>) => boolean;
   columnsPrices?: unknown[];
-  showNote?: boolean;
   without_price?: boolean;
   [key: string]: unknown;
 }
@@ -34,7 +51,6 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
 
   const {
     disableCrateType = editableOnlyOnCreate,
-    showNote = true,
     without_price = false,
     ...columnOverrides
   } = options;
@@ -61,8 +77,8 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
     [crates],
   );
 
-  const cratesColumns = useMemo<EditableColumnConfig<CrateOrderContentRow>[]>(() => {
-    const baseColumns: EditableColumnConfig<CrateOrderContentRow>[] = [
+  const cratesColumns = useMemo<EditableColumnConfig<CrateColumnRow>[]>(() => {
+    const baseColumns: EditableColumnConfig<CrateColumnRow>[] = [
       {
         title: t("commissioning.crate_type_name"),
         dataIndex: "crate_type_name",
@@ -81,9 +97,9 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
           valueField: "crate_type",
           displayField: "crate_type_name",
         },
-        render: (value: unknown, _record: Rec) => (
+        render: (_: unknown, record) => (
           <div>
-            <span>{value as string}</span>
+            <span>{record.crate_type_name}</span>
           </div>
         ),
       },
@@ -95,10 +111,10 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
         required: true,
         align: "center",
         width: "8em",
-        render: (value: unknown, record: Rec) => (
+        render: (_: unknown, record) => (
           <DiffCell
-            value={value as string}
-            differs={record.amount_differs as boolean | undefined}
+            value={record.amount}
+            differs={record.amount_differs}
             original={record.original_amount}
           />
         ),
@@ -116,14 +132,14 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
           suffix: currencySymbol,
           align: "center",
           width: "8em",
-          render: (_: unknown, record: Rec) => (
+          render: (_: unknown, record) => (
             <DiffCell
               value={
                 record.price_per_unit
                   ? formatCurrency(Number(record.price_per_unit))
                   : ""
               }
-              differs={record.price_per_unit_differs as boolean | undefined}
+              differs={record.price_per_unit_differs}
               original={record.original_price_per_unit}
               formatOriginal={(o) => formatCurrency(Number(o))}
             />
@@ -138,10 +154,10 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
           suffix: "%",
           align: "center",
           width: "7em",
-          render: (_: unknown, record: Rec) => (
+          render: (_: unknown, record) => (
             <DiffCell
               value={record.rabatt ? `${record.rabatt} %` : ""}
-              differs={record.rabatt_differs as boolean | undefined}
+              differs={record.rabatt_differs}
               original={record.original_rabatt}
               originalSuffix=" %"
             />
@@ -157,14 +173,12 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
           disabled: true,
           align: "right",
           width: "8em",
-          render: (_: unknown, record: Rec) => {
+          render: (_: unknown, record) => {
             // Prefer the backend's canonical line_netto (parsed by
             // withLineTotals for fetched rows / the recomputed preview for
             // live edits); fall back to the shared inline computation only
             // when it's absent.
-            const finalPrice = itemLineNetto(
-              record as unknown as LineNettoInput,
-            );
+            const finalPrice = itemLineNetto(record);
             return <span>{formatCurrency(finalPrice)}</span>;
           },
         },
@@ -181,7 +195,7 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
           disabled: true,
           align: "center",
           width: "5em",
-          render: (_: unknown, record: Rec) => (
+          render: (_: unknown, record) => (
             <div>
  <span className="text-xs">
                 {record.tax_rate ? `${format(Number(record.tax_rate), 2)} %` : ""}
@@ -192,26 +206,18 @@ export const useCratesColumns = (options: CratesColumnOptions = { without_price:
       );
     }
 
-    if (showNote) {
-      // noteColumn is typed against TableRecord (required ``key``), while
-      // CrateOrderContentRow's ``key`` is optional until EditableTable adds
-      // it — safe to widen, the note cell never reads ``key``.
-      baseColumns.push(
-        noteColumn as unknown as EditableColumnConfig<CrateOrderContentRow>,
-      );
-    }
+    baseColumns.push(noteColumn);
 
     return baseColumns.map((col) => ({
       ...col,
       ...(columnOverrides[col.key ?? ""] as
-        | Partial<EditableColumnConfig<CrateOrderContentRow>>
+        | Partial<EditableColumnConfig<CrateColumnRow>>
         | undefined),
     }));
   }, [
     crates,
     t,
     disableCrateType,
-    showNote,
     noteColumn,
     columnOverrides,
     currencySymbol,

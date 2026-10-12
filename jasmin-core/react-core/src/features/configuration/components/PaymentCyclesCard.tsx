@@ -39,7 +39,7 @@ export default function PaymentCyclesCard() {
       try {
         await commissioningPaymentCyclesPartialUpdate(String(cycle.id), {
           is_active: newActive,
-        } as unknown as PaymentCycleType);
+        });
         queryClient.invalidateQueries({
           queryKey: getCommissioningPaymentCyclesListQueryKey(),
         });

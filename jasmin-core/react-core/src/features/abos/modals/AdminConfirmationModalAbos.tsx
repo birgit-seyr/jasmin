@@ -78,7 +78,7 @@ export const AdminConfirmationModalAbos: FC<
     patch: (id, value) =>
       patchProfile.mutateAsync({
         id,
-        data: { sepa_mandate_paper_received_at: value } as BillingProfile,
+        data: { sepa_mandate_paper_received_at: value },
       }),
     onPatched: () =>
       void queryClient.invalidateQueries({
@@ -97,42 +97,37 @@ export const AdminConfirmationModalAbos: FC<
         return null;
       }
 
-      try {
-        const startDate = parseDateLoose(record.valid_from, dateFormat);
-        const endDate = parseDateLoose(record.valid_until, dateFormat);
+      const startDate = parseDateLoose(record.valid_from, dateFormat);
+      const endDate = parseDateLoose(record.valid_until, dateFormat);
 
-        if (!startDate || !endDate) {
-          return null;
-        }
-
-        if (endDate.isBefore(startDate)) {
-          return 0;
-        }
-
-        const deliveryDayNumber = Number(record.delivery_day_number);
-        const targetWeekday =
-          deliveryDayNumber === 6 ? 0 : deliveryDayNumber + 1;
-
-        let deliveryCount = 0;
-        let currentDate = startDate.clone();
-
-        while (
-          currentDate.day() !== targetWeekday &&
-          (currentDate.isBefore(endDate) || currentDate.isSame(endDate))
-        ) {
-          currentDate = currentDate.add(1, "day");
-        }
-
-        while (currentDate.isBefore(endDate)) {
-          deliveryCount++;
-          currentDate = currentDate.add(7, "days");
-        }
-
-        return deliveryCount;
-      } catch (error) {
-        console.error("Error calculating delivery days:", error);
+      if (!startDate || !endDate) {
         return null;
       }
+
+      if (endDate.isBefore(startDate)) {
+        return 0;
+      }
+
+      const deliveryDayNumber = Number(record.delivery_day_number);
+      const targetWeekday =
+        deliveryDayNumber === 6 ? 0 : deliveryDayNumber + 1;
+
+      let deliveryCount = 0;
+      let currentDate = startDate.clone();
+
+      while (
+        currentDate.day() !== targetWeekday &&
+        (currentDate.isBefore(endDate) || currentDate.isSame(endDate))
+      ) {
+        currentDate = currentDate.add(1, "day");
+      }
+
+      while (currentDate.isBefore(endDate)) {
+        deliveryCount++;
+        currentDate = currentDate.add(7, "days");
+      }
+
+      return deliveryCount;
     },
     [dateFormat],
   );

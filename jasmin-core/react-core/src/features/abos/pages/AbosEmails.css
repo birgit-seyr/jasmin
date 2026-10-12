@@ -1,0 +1,8 @@
+/* Email distribution lists: one card per filter, stacked. */
+.abos-emails {
+  margin-bottom: 2em;
+}
+
+.abos-emails__card {
+  margin-top: 1.5em;
+}

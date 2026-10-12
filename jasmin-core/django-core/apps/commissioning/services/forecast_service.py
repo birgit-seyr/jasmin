@@ -61,10 +61,11 @@ _FORECAST_FIELDS = frozenset(field.name for field in Forecast._meta.concrete_fie
 #
 # Variation flag fields (``variation_<id>``) and offer-group flag
 # fields (``offer_group_<id>``) come in via the same validated_data
-# dict but live OUTSIDE ``_FORECAST_FIELDS``. They always trigger
-# the full path because the ForecastShareTypeVariation /
-# ForecastOfferGroup rewrites and the downstream ShareContent
-# recompute depend on them.
+# dict but live OUTSIDE ``_FORECAST_FIELDS``. A flag that changes the
+# forecast's selection takes the full path, because the
+# ForecastShareTypeVariation / ForecastOfferGroup rewrites and the
+# downstream ShareContent recompute depend on it; a flag that repeats
+# the stored selection leaves the light path open (``_is_light_update``).
 _LIGHT_UPDATE_FIELDS = frozenset(
     {
         "note",
@@ -73,6 +74,17 @@ _LIGHT_UPDATE_FIELDS = frozenset(
         "plot",
     }
 )
+
+
+def _drop_prefetched_links(forecast: Forecast, accessor: str) -> None:
+    """Forget the link rows prefetched onto *forecast* under *accessor*.
+
+    The detail routes load a forecast with its variation and offer-group
+    links prefetched, and the update response is rendered from that same
+    instance; once the links are rewritten, the prefetch would answer with
+    the old ones.
+    """
+    getattr(forecast, "_prefetched_objects_cache", {}).pop(accessor, None)
 
 
 class ForecastService:
@@ -90,8 +102,7 @@ class ForecastService:
             manager.filter(year=year, delivery_week=delivery_week)
             .select_related("share_article", "plot")
             .prefetch_related(
-                "forecastsharetypevariation_set__share_type_variation",
-                "forecastoffergroup_set__offer_group",
+                "forecastsharetypevariation_set", "forecastoffergroup_set"
             )
         )
 
@@ -920,6 +931,7 @@ class ForecastService:
         self, forecast: Forecast, validated_data: dict[str, Any]
     ) -> list[ForecastShareTypeVariation]:
         ForecastShareTypeVariation.objects.filter(forecast=forecast).delete()
+        _drop_prefetched_links(forecast, "forecastsharetypevariation_set")
         return self._create_share_type_variations(forecast, validated_data)
 
     def _delete_orphaned_share_contents(
@@ -954,4 +966,5 @@ class ForecastService:
         self, forecast: Forecast, validated_data: dict[str, Any]
     ) -> list[ForecastOfferGroup]:
         ForecastOfferGroup.objects.filter(forecast=forecast).delete()
+        _drop_prefetched_links(forecast, "forecastoffergroup_set")
         return self._create_offer_groups(forecast, validated_data)

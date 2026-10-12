@@ -119,7 +119,6 @@ export default function PackingListBulk() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
   // Backend day numbers run 0 = Monday … 6 = Sunday.
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
@@ -191,7 +190,7 @@ export default function PackingListBulk() {
       if (packingDayNum === null) return "";
       let date = dateForWeekDayNumber(
         selectedYear,
-        selectedWeek ?? currentWeek,
+        selectedWeek,
         packingDayNum,
       );
       if (selectedDeliveryDay !== null && packingDayNum > selectedDeliveryDay) {
@@ -204,7 +203,6 @@ export default function PackingListBulk() {
     [
       selectedYear,
       selectedWeek,
-      currentWeek,
       selectedDeliveryDay,
       isMobile,
       dateFormat,
@@ -214,8 +212,8 @@ export default function PackingListBulk() {
 
   const calculateDeliveryDate = useCallback(
     (deliveryDayNum: number | null) =>
-      deliveryDayLabel(selectedYear, selectedWeek ?? currentWeek, deliveryDayNum),
-    [deliveryDayLabel, selectedYear, selectedWeek, currentWeek],
+      deliveryDayLabel(selectedYear, selectedWeek, deliveryDayNum),
+    [deliveryDayLabel, selectedYear, selectedWeek],
   );
 
   const [selectedDeliveryStation, setSelectedDeliveryStation] =
@@ -449,7 +447,7 @@ export default function PackingListBulk() {
         <DaySelector
           selectedDay={selectedDeliveryDay}
           setSelectedDay={setSelectedDeliveryDay}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={deliveryDayOptions}
           suffix={t("commissioning.delivery_day")}
@@ -462,7 +460,7 @@ export default function PackingListBulk() {
           <RelatedDayInfo
             label={t("commissioning.packing_day")}
             relatedDayNumbers={packingDaysForDelivery}
-            selectedWeek={selectedWeek ?? currentWeek}
+            selectedWeek={selectedWeek}
             selectedYear={selectedYear}
             formatDate={calculatePackingDate}
           />

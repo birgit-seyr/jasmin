@@ -58,7 +58,6 @@ export default function CustomerOrderPage() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
   const currentDay = dayjs().isoWeekday();
   const [selectedDay, setSelectedDay] = useState(
@@ -83,10 +82,10 @@ export default function CustomerOrderPage() {
   const offersParams = useMemo<CommissioningOffersListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek ?? currentWeek,
+      delivery_week: selectedWeek,
       reseller: resellerId!,
     }),
-    [selectedYear, selectedWeek, currentWeek, resellerId],
+    [selectedYear, selectedWeek, resellerId],
   );
 
   const { data: offers = [] } = useCommissioningOffersList(offersParams, {
@@ -96,11 +95,11 @@ export default function CustomerOrderPage() {
   const orderParams = useMemo<CommissioningOrderContentsListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek ?? currentWeek,
+      delivery_week: selectedWeek,
       day_number: selectedDay,
       reseller: resellerId!,
     }),
-    [selectedYear, selectedWeek, currentWeek, selectedDay, resellerId],
+    [selectedYear, selectedWeek, selectedDay, resellerId],
   );
 
   const { data: rawOrderContents } = useCommissioningOrderContentsList(
@@ -121,7 +120,7 @@ export default function CustomerOrderPage() {
   const { orderingDeadline, isOrderingClosed } = useOrderingDeadline(
     oddDefaults,
     selectedYear,
-    selectedWeek ?? currentWeek,
+    selectedWeek,
   );
 
   const invalidateOrders = useCallback(() => {
@@ -233,7 +232,7 @@ export default function CustomerOrderPage() {
   } = useCustomerOrderMutations({
     resellerId,
     selectedYear,
-    selectedWeek: selectedWeek ?? currentWeek,
+    selectedWeek: selectedWeek,
     selectedDay,
     finalTiers,
     invalidateOrders,
@@ -286,7 +285,7 @@ export default function CustomerOrderPage() {
         />
         <DaySelector
           selectedYear={selectedYear}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedDay={selectedDay}
           setSelectedDay={(v) => v !== null && setSelectedDay(v)}
           days={

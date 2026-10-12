@@ -188,7 +188,6 @@ export default function PackingListBoxes() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
   const [selectedDeliveryDay, setSelectedDeliveryDay] = useState<number | null>(
     () => dayjs().isoWeekday() - 1,
@@ -263,7 +262,7 @@ export default function PackingListBoxes() {
     useMemo<CommissioningPackingListBoxesMatrixRetrieveParams>(
       () => ({
         year: selectedYear,
-        delivery_week: selectedWeek ?? currentWeek,
+        delivery_week: selectedWeek,
         day_number: selectedDeliveryDay ?? 0,
         delivery_station: needsStation
           ? (selectedDeliveryStation ?? undefined)
@@ -276,7 +275,6 @@ export default function PackingListBoxes() {
       [
         selectedYear,
         selectedWeek,
-        currentWeek,
         selectedDeliveryDay,
         needsStation,
         selectedDeliveryStation,
@@ -381,7 +379,7 @@ export default function PackingListBoxes() {
         <DaySelector
           selectedDay={selectedDeliveryDay}
           setSelectedDay={setSelectedDeliveryDay}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={deliveryDayOptions}
           suffix={t("commissioning.delivery_day")}

@@ -40,7 +40,7 @@ export default function DeliveryNotePDFGenerator({
   const { dateFormat } = useDateFormat();
   const { tenantSettings, footerSettings, currencySymbol, lineSettings } =
     useResellerPdfContext({
-      tenant: tenant as Record<string, unknown>,
+      tenant,
       getSetting,
       logoUrl,
       bioLogoUrl,

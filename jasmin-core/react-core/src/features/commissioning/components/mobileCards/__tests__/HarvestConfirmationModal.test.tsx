@@ -52,7 +52,6 @@ function HarvestConfirmation({ row }: { row: TableRecord }) {
     selectedYear: 2026,
     selectedWeek: 41,
     selectedDay: TUESDAY,
-    fallbackWeek: 41,
     onSaved: () => {},
   });
   return (

@@ -31,6 +31,7 @@ from .constants import (
     ChargeStatus,
     PaymentMethodOptions,
 )
+from .errors import SepaFirstUseBeforeSigned, SepaMandateIncomplete
 
 
 def generate_jasmin_id() -> str:
@@ -191,20 +192,23 @@ class BillingProfile(JasminModel):
                 if not value
             ]
             if missing:
-                raise ValidationError(
-                    {f: "Required for active SEPA Direct Debit." for f in missing}
+                # Coded rather than a field ValidationError, so the API and the
+                # mandate import show it translated.
+                raise SepaMandateIncomplete(
+                    "An active SEPA Direct Debit profile needs the IBAN, the "
+                    "account holder, the mandate reference and the date the "
+                    f"mandate was signed; missing: {', '.join(missing)}.",
+                    field=missing[0] if len(missing) == 1 else None,
+                    details={"fields": missing},
                 )
         if (
             self.sepa_mandate_first_use_at is not None
             and self.sepa_mandate_signed_at is not None
             and self.sepa_mandate_first_use_at < self.sepa_mandate_signed_at
         ):
-            raise ValidationError(
-                {
-                    "sepa_mandate_first_use_at": (
-                        "First SEPA use cannot be before the mandate was signed."
-                    )
-                }
+            raise SepaFirstUseBeforeSigned(
+                "First SEPA use cannot be before the mandate was signed.",
+                field="sepa_mandate_first_use_at",
             )
 
     @staticmethod

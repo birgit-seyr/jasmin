@@ -39,7 +39,6 @@ import { uploadPdfsWarningOnFailure } from "@features/commissioning/pdfs/forRese
 import {
   computeTaxBreakdown,
   totalsFromBreakdown,
-  type LineItemBase,
 } from "@features/commissioning/pdfs/forResellers/pdfBase";
 import { computeLineNetto, type LineNettoInput } from "@shared/utils/lineNetto";
 // Direct module path (not the ``components/tables`` barrel): the barrel
@@ -84,11 +83,11 @@ export type OrderContentRow = OrderContentListItem & {
 /** Same idea for crate rows — see ``OrderContentRow`` for the rationale.
  * ``line_netto`` is re-typed to the locally-computed number; the server
  * sends it as a 2dp string, which ``withLineTotals`` parses for display. */
-export type CrateOrderContentRow = Omit<CrateOrderSummary, "line_netto"> & {
-  line_netto?: number;
-  line_brutto?: number;
-  key?: number;
-};
+export type CrateOrderContentRow = Omit<CrateOrderSummary, "line_netto"> &
+  TableRecord & {
+    line_netto?: number;
+    line_brutto?: number;
+  };
 
 export interface OrderState {
   orderId: string | number | null;
@@ -375,23 +374,20 @@ export function useOrdersData() {
 
   const apiFunctionsCrates = useMemo<ApiFunctions>(
     () =>
-      wrapApiFunctions<CrateOrderContentCreateRequest & TableRecord>({
-      create: async (payload) => {
-        const res = await commissioningCrateContentsCreate(payload);
-        invalidateDaysWithOrders();
-        return res;
-      },
-      update: (id, payload) =>
-        commissioningCrateContentsPartialUpdate(id, payload),
-      delete: (id, data) =>
-        // Deliberate directional bridge: the table hands the loose row
-        // values, the destroy endpoint wants the typed query params
-        // (year/week/day/reseller/order_id) — a genuinely different shape.
-        commissioningCrateContentsDestroy(
-          id,
-          data as unknown as CommissioningCrateContentsDestroyParams,
-        ),
-    }),
+      wrapApiFunctions<
+        CrateOrderContentCreateRequest & TableRecord,
+        Record<string, string>,
+        CommissioningCrateContentsDestroyParams
+      >({
+        create: async (payload) => {
+          const res = await commissioningCrateContentsCreate(payload);
+          invalidateDaysWithOrders();
+          return res;
+        },
+        update: (id, payload) =>
+          commissioningCrateContentsPartialUpdate(id, payload),
+        delete: (id, data) => commissioningCrateContentsDestroy(id, data),
+      }),
     [invalidateDaysWithOrders],
   );
 
@@ -514,16 +510,12 @@ export function useOrdersData() {
       return;
     }
     if (!rawCratesData) return;
-    // Directional re-type at the fetch boundary: the server sends
-    // ``line_netto`` as a 2dp Decimal string, while ``CrateOrderContentRow``
-    // carries the locally-computed number (see the type's docstring).
-    // ``withLineTotals`` below parses the string into that number field.
-    const crateRows = rawCratesData as unknown as CrateOrderContentRow[];
     // Fetched rows carry a backend-computed Decimal ``line_netto`` string —
-    // display it as-is instead of recomputing in JS float.
+    // display it as-is instead of recomputing in JS float. ``withLineTotals``
+    // parses it into the row's number field.
     setDataCrates(
-      crateRows.map((item) =>
-        withLineTotals(item, defaultTaxRateCrates, true),
+      rawCratesData.map((item) =>
+        withLineTotals({ ...item, key: item.id }, defaultTaxRateCrates, true),
       ),
     );
   }, [rawCratesData, hasOrder, withLineTotals, defaultTaxRateCrates]);
@@ -627,12 +619,9 @@ export function useOrdersData() {
   );
 
   const handleCratesDataChange = useCallback(
-    (newData: Record<string, unknown>[]) => {
+    (newData: CrateOrderContentRow[]) => {
       const dataWithTotals = newData.map((item) =>
-        withLineTotals(
-          item as unknown as CrateOrderContentRow,
-          defaultTaxRateCrates,
-        ),
+        withLineTotals(item, defaultTaxRateCrates),
       );
       setDataCrates(dataWithTotals);
 
@@ -662,8 +651,8 @@ export function useOrdersData() {
       const deliveryNoteIds = successResults.flatMap((r) => (r.delivery_note_id ? [r.delivery_note_id] : []));
       const invoiceIds = successResults.flatMap((r) => (r.invoice_id ? [r.invoice_id] : []));
       await uploadPdfsWarningOnFailure([
-        ...deliveryNoteIds.map((id) => () => generateAndUploadDeliveryNotePDF(id, t, tenant as Record<string, unknown>, getSetting, logoUrl, bioLogoUrl)),
-        ...invoiceIds.map((id) => () => generateAndUploadInvoicePDF(id, t, tenant as Record<string, unknown>, getSetting, logoUrl, bioLogoUrl)),
+        ...deliveryNoteIds.map((id) => () => generateAndUploadDeliveryNotePDF(id, t, tenant, getSetting, logoUrl, bioLogoUrl)),
+        ...invoiceIds.map((id) => () => generateAndUploadInvoicePDF(id, t, tenant, getSetting, logoUrl, bioLogoUrl)),
       ], t);
 
       // Invalidate all detail queries so PDF buttons pick up uploaded files
@@ -695,7 +684,7 @@ export function useOrdersData() {
         .filter((r) => r.success && r.delivery_note_id)
         .map((r) => r.delivery_note_id);
       await uploadPdfsWarningOnFailure(
-        deliveryNoteIds.map((id) => () => generateAndUploadDeliveryNotePDF(id, t, tenant as Record<string, unknown>, getSetting, logoUrl, bioLogoUrl)),
+        deliveryNoteIds.map((id) => () => generateAndUploadDeliveryNotePDF(id, t, tenant, getSetting, logoUrl, bioLogoUrl)),
         t,
       );
       // Invalidate detail queries so PDF buttons pick up uploaded files
@@ -718,7 +707,7 @@ export function useOrdersData() {
         .filter((r) => r.success && r.delivery_note_id)
         .map((r) => r.delivery_note_id);
       await uploadPdfsWarningOnFailure(
-        deliveryNoteIds.map((id) => () => generateAndUploadDeliveryNotePDF(id, t, tenant as Record<string, unknown>, getSetting, logoUrl, bioLogoUrl)),
+        deliveryNoteIds.map((id) => () => generateAndUploadDeliveryNotePDF(id, t, tenant, getSetting, logoUrl, bioLogoUrl)),
         t,
       );
       await Promise.all(
@@ -787,9 +776,9 @@ export function useOrdersData() {
 
   const totalSum = useMemo(() => {
     const breakdown = computeTaxBreakdown(
-      filteredDataOffers as unknown as LineItemBase[],
-      filteredDataArticles as unknown as LineItemBase[],
-      dataCrates as unknown as LineItemBase[],
+      filteredDataOffers,
+      filteredDataArticles,
+      dataCrates,
     );
     const { brutto } = totalsFromBreakdown(breakdown);
     return brutto > 0 ? formatCurrency(brutto) : "---";
@@ -887,6 +876,9 @@ export function useOrdersData() {
   // so ``pendingNote`` still holds the outgoing order's edit here. Fire-and-
   // forget: cleanup is synchronous, so we can't await the PATCH (a hard tab
   // close can still race it — the in-app switch/unmount case is what's covered).
+  // A failure is toasted through the static ``notify``, which still shows once
+  // this page is gone; the toast names the note, since the office may already
+  // be looking at another order.
   useEffect(() => {
     return () => {
       const pending = pendingNote.current;
@@ -894,11 +886,11 @@ export function useOrdersData() {
       pendingNote.current = null;
       commissioningSetOrderNotePartialUpdate(pending.orderId, {
         note: pending.note,
-      }).catch((error) => {
-        console.error("Error saving order note:", error);
+      }).catch(() => {
+        notify.error(t("commissioning.order_note_save_failed"));
       });
     };
-  }, [orderState.orderId]);
+  }, [orderState.orderId, t]);
 
   return {
     // Selection state

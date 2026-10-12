@@ -40,6 +40,7 @@ export default function GdprDeletionRequests() {
   const { mutate: rejectMutate, isPending: isRejecting } =
     useGdprAdminRejectDeletionCreate({
       mutation: {
+        meta: { silent: true },
         onSuccess: () => {
           notify.success(t("gdpr.rejected"));
           // Pending list shrinks; decided list gains a new row.

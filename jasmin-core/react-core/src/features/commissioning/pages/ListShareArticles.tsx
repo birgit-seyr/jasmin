@@ -11,6 +11,7 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningShareArticlesListParams,
+  PatchedShareArticle,
   ShareArticle,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
@@ -66,7 +67,7 @@ const shareArticlesResource: CrudResource<TableRecord> = {
   update: (id, payload) =>
     commissioningShareArticlesPartialUpdate(
       id,
-      payload as unknown as ShareArticle,
+      payload as PatchedShareArticle,
     ),
   delete: commissioningShareArticlesDestroy,
   getListQueryKey: getCommissioningShareArticlesListQueryKey,

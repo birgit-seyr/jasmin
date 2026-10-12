@@ -28,6 +28,7 @@ import { DeliveryNotePDFButtons } from "@features/commissioning/pdfs";
 // bundle does NOT carry the ~450 kB gzip PDF chunk. See
 // generateDeliveryNotePDF.tsx's docstring for the architecture.
 import { generateAndUploadDeliveryNotePDF } from "@features/commissioning/pdfs/forResellers/generateDeliveryNotePDF";
+import { uploadPdfsWarningOnFailure } from "@features/commissioning/pdfs/forResellers/uploadPdfsWarningOnFailure";
 import { ResellerSelector, WeekSelector } from "@shared/selectors";
 import {
   EditableTable,
@@ -52,7 +53,7 @@ type DeliveryNoteOverviewRow = CombinedOrderOverview & TableRecord;
 
 export default function DeliveryNotes() {
   const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
-    useYearWeekState();
+    useYearWeekState({ allWeeks: true });
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const { getSetting, tenant, logoUrl, bioLogoUrl } = useTenant();
 
@@ -62,9 +63,7 @@ export default function DeliveryNotes() {
     string | null
   >(null);
 
-  const { formatDate } = useDateFormat() as {
-    formatDate: (value: string | null | undefined) => string;
-  };
+  const { formatDate } = useDateFormat();
 
   const { t } = useTranslation();
 
@@ -126,24 +125,24 @@ export default function DeliveryNotes() {
 
   const handleFinalizeDeliveryNotesSuccess = useCallback(
     async (responseData: BulkOperationResponse) => {
-      const deliveryNoteIds = responseData.results.map(
-        (r) => r.delivery_note_id,
-      );
+      const deliveryNoteIds = responseData.results
+        .filter((r) => r.success && r.delivery_note_id)
+        .map((r) => r.delivery_note_id!);
 
-      for (const id of deliveryNoteIds) {
-        try {
-          await generateAndUploadDeliveryNotePDF(
-            id,
-            t,
-            tenant as Record<string, unknown>,
-            getSetting,
-            logoUrl,
-            bioLogoUrl,
-          );
-        } catch (err) {
-          console.error(`PDF generation failed for delivery note ${id}:`, err);
-        }
-      }
+      await uploadPdfsWarningOnFailure(
+        deliveryNoteIds.map(
+          (id) => () =>
+            generateAndUploadDeliveryNotePDF(
+              id,
+              t,
+              tenant,
+              getSetting,
+              logoUrl,
+              bioLogoUrl,
+            ),
+        ),
+        t,
+      );
 
       refetchOrders();
     },
@@ -154,14 +153,13 @@ export default function DeliveryNotes() {
   // note — the only ones with a stored PDF to bundle into the bulk ZIP.
   const selectedFinalizedDeliveryNoteIds = useMemo(
     () =>
-      data
-        .filter(
-          (item) =>
-            selectedRowKeys.includes(item.id) &&
-            item.delivery_note_is_finalized &&
-            item.delivery_note_id,
-        )
-        .map((item) => item.delivery_note_id as string),
+      data.flatMap((item) =>
+        selectedRowKeys.includes(item.id) &&
+        item.delivery_note_is_finalized &&
+        item.delivery_note_id
+          ? [item.delivery_note_id]
+          : [],
+      ),
     [data, selectedRowKeys],
   );
 
@@ -214,7 +212,7 @@ export default function DeliveryNotes() {
         disabled: true,
         sortable: true,
 
-        render: (value: unknown) => formatDate(value as string),
+        render: (_: unknown, record) => formatDate(record.order_date),
       },
       {
         title: <>{t("resellers.order_number")}</>,
@@ -226,7 +224,7 @@ export default function DeliveryNotes() {
         align: "left",
         disabled: true,
         sortable: true,
-        render: (value: unknown, record) => {
+        render: (_: unknown, record) => {
           return (
             <>
               {record.order_is_finalized ? (
@@ -241,7 +239,7 @@ export default function DeliveryNotes() {
                   {t("commissioning.not_finalized")}
                 </span>
               )}
-              {value as string}
+              {record.order_number}
             </>
           );
         },
@@ -269,7 +267,7 @@ export default function DeliveryNotes() {
         disabled: true,
         sortable: true,
 
-        render: (value: unknown) => formatDate(value as string),
+        render: (_: unknown, record) => formatDate(record.delivery_note_date),
       },
       {
         title: <>{t("resellers.delivery_note_number")}</>,
@@ -281,7 +279,7 @@ export default function DeliveryNotes() {
         inputType: "text",
         disabled: true,
         sortable: true,
-        render: (value: unknown, record) => {
+        render: (_: unknown, record) => {
           return (
             <>
               {record.delivery_note_is_finalized ? (
@@ -296,7 +294,7 @@ export default function DeliveryNotes() {
                   {t("commissioning.not_finalized")}
                 </span>
               )}
-              {value as string}
+              {record.delivery_note_number}
             </>
           );
         },
@@ -418,7 +416,7 @@ export default function DeliveryNotes() {
               disabled: true,
               sortable: true,
             },
-          ] as EditableColumnConfig<DeliveryNoteOverviewRow>[])
+          ] satisfies EditableColumnConfig<DeliveryNoteOverviewRow>[])
         : []),
     ],
     [

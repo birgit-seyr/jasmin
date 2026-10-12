@@ -105,6 +105,7 @@ export default function ConfigurationEmail() {
   // ``useAutoSave``, so it isn't cleared here.
   const { mutateAsync: saveConfig } = useTenantsEmailConfigSavePartialUpdate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: getTenantsEmailConfigListQueryKey(),
@@ -228,6 +229,7 @@ export default function ConfigurationEmail() {
   const { mutateAsync: sendTestEmail, isPending: sendingTest } =
     useTenantsEmailConfigTestCreate({
       mutation: {
+        meta: { silent: true },
         onSuccess: () => {
           notify.success(t("email_config.test_sent"));
           setTestModalOpen(false);

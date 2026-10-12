@@ -32,6 +32,8 @@ import {
   useAuthTwoFactorStatusRetrieve,
 } from "@shared/api/generated/auth-—-two-factor/auth-—-two-factor";
 import { notify } from "@shared/utils";
+import { getServerErrorMessage } from "@shared/utils/apiError";
+import "./TwoFactorPanel.css";
 
 const { Paragraph, Text } = Typography;
 
@@ -82,8 +84,10 @@ export default function TwoFactorPanel() {
       setEnrolStep(0);
       setConfirmCode("");
       setRecoveryCodes(null);
-    } catch {
-      notify.error(t("profile.two_factor.error_enroll_start"));
+    } catch (error) {
+      notify.error(
+        getServerErrorMessage(error) ?? t("profile.two_factor.error_enroll_start"),
+      );
     }
   };
 
@@ -96,8 +100,10 @@ export default function TwoFactorPanel() {
       setRecoveryCodes(data.recovery_codes);
       setEnrolStep(2);
       await refetchStatus();
-    } catch {
-      notify.error(t("profile.two_factor.error_enroll_confirm"));
+    } catch (error) {
+      notify.error(
+        getServerErrorMessage(error) ?? t("profile.two_factor.error_enroll_confirm"),
+      );
     }
   };
 
@@ -120,8 +126,10 @@ export default function TwoFactorPanel() {
       setRecoveryCodes(null);
       await refetchStatus();
       notify.success(t("profile.two_factor.disabled"));
-    } catch {
-      notify.error(t("profile.two_factor.error_disable"));
+    } catch (error) {
+      notify.error(
+        getServerErrorMessage(error) ?? t("profile.two_factor.error_disable"),
+      );
     }
   };
 
@@ -134,21 +142,29 @@ export default function TwoFactorPanel() {
       setRecoveryCodes(data.recovery_codes);
       setActionCode("");
       await refetchStatus();
-    } catch {
-      notify.error(t("profile.two_factor.error_regenerate"));
+    } catch (error) {
+      notify.error(
+        getServerErrorMessage(error) ?? t("profile.two_factor.error_regenerate"),
+      );
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    void navigator.clipboard.writeText(text);
-    notify.success(t("common.copied"));
+  // The clipboard can refuse the write (no permission, an insecure context),
+  // so "copied" is said only once it has succeeded.
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      notify.success(t("common.copied"));
+    } catch {
+      notify.error(t("common.copy_failed"));
+    }
   };
 
   // ----- Render ---------------------------------------------------------
 
   if (statusLoading && !status) {
     return (
-      <div style={{ padding: 32, textAlign: "center" }}>
+      <div className="two-factor-panel__loading">
         <Spin />
       </div>
     );
@@ -162,11 +178,11 @@ export default function TwoFactorPanel() {
       <Card>
         <Space direction="vertical" size="middle" className="w-full">
           <Space>
-            <SafetyOutlined style={{ fontSize: 22 }} />
+            <SafetyOutlined className="two-factor-panel__status-icon" />
             <Text strong>{t("profile.two_factor.status_off")}</Text>
           </Space>
           <Paragraph>{t("profile.two_factor.intro")}</Paragraph>
-          <Paragraph type="secondary" style={{ fontSize: 13 }}>
+          <Paragraph type="secondary" className="two-factor-panel__hint">
             {t("profile.two_factor.recommended_apps")}
           </Paragraph>
           <Button type="primary" icon={<LockOutlined />} onClick={startEnrolment}>
@@ -189,31 +205,30 @@ export default function TwoFactorPanel() {
             { title: t("profile.two_factor.step_confirm") },
             { title: t("profile.two_factor.step_recovery_codes") },
           ]}
-          style={{ marginBottom: 24 }}
+          className="two-factor-panel__steps"
         />
 
         {enrolStep === 0 && (
           <Space direction="vertical" size="middle" className="w-full">
             <Paragraph>{t("profile.two_factor.scan_instructions")}</Paragraph>
             {qrDataUrl && (
-              <div style={{ textAlign: "center" }}>
-                <img
-                  src={qrDataUrl}
-                  alt={t("profile.two_factor.qr_alt")}
-                  style={{ maxWidth: 256, width: "100%" }}
-                />
+              <div className="two-factor-panel__qr">
+                <img src={qrDataUrl} alt={t("profile.two_factor.qr_alt")} />
               </div>
             )}
-            <Paragraph type="secondary" style={{ fontSize: 13 }}>
+            <Paragraph type="secondary" className="two-factor-panel__hint">
               {t("profile.two_factor.cant_scan")}
             </Paragraph>
             <Input
               readOnly
               value={secret}
               addonAfter={
-                <CopyOutlined
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CopyOutlined />}
+                  aria-label={t("common.copy")}
                   onClick={() => copyToClipboard(secret)}
-                  style={{ cursor: "pointer" }}
                 />
               }
             />
@@ -271,15 +286,8 @@ export default function TwoFactorPanel() {
               {t("profile.two_factor.recovery_codes_title")}
             </Paragraph>
             <Paragraph>{t("profile.two_factor.recovery_codes_intro")}</Paragraph>
-            <Card size="small" style={{ background: "var(--color-bg-elevated)" }}>
-              <pre
-                style={{
-                  margin: 0,
-                  fontFamily: "monospace",
-                  fontSize: 14,
-                  lineHeight: 1.8,
-                }}
-              >
+            <Card size="small" className="two-factor-panel__codes-card">
+              <pre className="two-factor-panel__codes">
                 {recoveryCodes.join("\n")}
               </pre>
             </Card>
@@ -324,22 +332,15 @@ export default function TwoFactorPanel() {
       )}
 
       {recoveryCodes && (
-        <Card size="small" style={{ background: "var(--color-bg-elevated)" }}>
+        <Card size="small" className="two-factor-panel__codes-card">
           <Paragraph strong>
             {t("profile.two_factor.new_recovery_codes")}
           </Paragraph>
-          <pre
-            style={{
-              margin: 0,
-              fontFamily: "monospace",
-              fontSize: 14,
-              lineHeight: 1.8,
-            }}
-          >
+          <pre className="two-factor-panel__codes">
             {recoveryCodes.join("\n")}
           </pre>
           <Button
-            style={{ marginTop: 12 }}
+            className="two-factor-panel__copy-codes"
             icon={<CopyOutlined />}
             onClick={() => copyToClipboard(recoveryCodes.join("\n"))}
           >

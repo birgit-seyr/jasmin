@@ -103,7 +103,7 @@ const LoginPage = () => {
       }
       // Navigation is handled by the auth context on the normal path.
     } catch (err: unknown) {
-      setLocalError(getErrorMessage(err, "Login failed"));
+      setLocalError(getErrorMessage(err, t("auth.login_card.login_failed")));
     } finally {
       // The captcha token is spent either way; a retry needs a fresh one.
       captchaRef.current?.reset();

@@ -4,7 +4,9 @@ import { useCallback, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useEnterToSubmit } from "./useEnterToSubmit";
 
-export interface EditFormModalProps {
+export interface EditFormModalProps<
+  TValues extends object = Record<string, unknown>,
+> {
   open: boolean;
   title: ReactNode;
   /** Object with the values to populate the form when opening. */
@@ -15,7 +17,7 @@ export interface EditFormModalProps {
    * ``useModalMutation``'s ``saving`` flag). The handler owns its own error
    * toast; validation failures never reach here. Any resolved value is ignored.
    */
-  onSubmit: (values: Record<string, unknown>) => void | Promise<unknown>;
+  onSubmit: (values: TValues) => void | Promise<unknown>;
   onCancel: () => void;
   /** The Form.Item children. */
   children: ReactNode;
@@ -43,7 +45,9 @@ export interface EditFormModalProps {
  * Pass a memoized `initialValues` object — the populate effect keys off its
  * identity, so a fresh object every render would clobber in-progress edits.
  */
-export default function EditFormModal({
+export default function EditFormModal<
+  TValues extends object = Record<string, unknown>,
+>({
   open,
   title,
   initialValues,
@@ -57,7 +61,7 @@ export default function EditFormModal({
   width,
   loading,
   requiredMark,
-}: EditFormModalProps) {
+}: EditFormModalProps<TValues>) {
   const { t } = useTranslation();
   const [internalForm] = Form.useForm();
   const form = externalForm ?? internalForm;
@@ -69,17 +73,20 @@ export default function EditFormModal({
   }, [open, initialValues, form]);
 
   const handleOk = useCallback(async () => {
-    let values: Record<string, unknown>;
+    let values: TValues;
     try {
-      values = (await form.validateFields()) as Record<string, unknown>;
+      // The form's fields are the modal's children, so the caller's
+      // ``TValues`` names the values they produce.
+      values = (await form.validateFields()) as TValues;
     } catch {
       // validation failed — antd shows the errors inline, no toast.
       return;
     }
     try {
       await onSubmit(values);
-    } catch (error) {
-      console.error("Submit failed:", error);
+    } catch {
+      // The handler has already told the user (see ``onSubmit``); this only
+      // keeps its rejection from going unhandled.
     }
   }, [form, onSubmit]);
 

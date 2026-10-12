@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useTenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
-import type { Tenant } from "@shared/api/generated/models";
 import RichTextEditorModal from "@shared/modals/RichTextEditorModal";
 import { useTenant } from "@hooks/index";
 import { notify } from "@shared/utils";
@@ -48,6 +47,7 @@ export default function PrivacyPolicyEditorCard() {
 
   const { mutate, mutateAsync, isPending } = useTenantsTenantsPartialUpdate({
     mutation: {
+      meta: { silent: true },
       onSuccess: async () => {
         notify.success(
           t("gdpr.privacy_policy_saved"),
@@ -76,7 +76,7 @@ export default function PrivacyPolicyEditorCard() {
     // (``onError`` above reports it).
     await mutateAsync({
       id: tenantId,
-      data: { privacy_policy_html: normalised } as unknown as Tenant,
+      data: { privacy_policy_html: normalised },
     });
   };
 
@@ -84,7 +84,7 @@ export default function PrivacyPolicyEditorCard() {
     if (!tenantId) return;
     mutate({
       id: tenantId,
-      data: { privacy_policy_html: "" } as unknown as Tenant,
+      data: { privacy_policy_html: "" },
     });
   };
 

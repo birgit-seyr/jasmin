@@ -80,7 +80,6 @@ export default function DocumentationPurchase() {
     selectedYear,
     setSelectedYear,
     selectedWeek,
-    currentWeek,
     setSelectedWeek,
     isPast,
     isFetching,
@@ -344,7 +343,7 @@ export default function DocumentationPurchase() {
                   theoretical_purchase_unit: rowData?.unit as string,
                   theoretical_purchase_size: rowData?.size as string,
                   year: selectedYear,
-                  delivery_week: selectedWeek ?? currentWeek,
+                  delivery_week: selectedWeek,
                   storage: selectedStorage,
                 };
               });

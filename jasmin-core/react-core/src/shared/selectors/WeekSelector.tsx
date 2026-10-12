@@ -12,21 +12,34 @@ const getWeeksInYear = (year: number) => {
   return lastWeek === 1 ? 52 : lastWeek;
 };
 
-interface WeekSelectorProps {
+/**
+ * Only with ``include_null_option`` ("all weeks") can the week be ``null``;
+ * without it the selector always holds a week and only ever sets one.
+ */
+type WeekSelectorProps = {
   selectedYear: number;
   setSelectedYear: (value: number) => void;
-  selectedWeek: number | null;
-  setSelectedWeek: (value: number | null) => void;
-  include_null_option?: boolean;
-}
+} & (
+  | {
+      include_null_option: true;
+      selectedWeek: number | null;
+      setSelectedWeek: (value: number | null) => void;
+    }
+  | {
+      include_null_option?: false;
+      selectedWeek: number;
+      setSelectedWeek: (value: number) => void;
+    }
+);
 
-const WeekSelector = ({
-  selectedYear,
-  setSelectedYear,
-  selectedWeek,
-  setSelectedWeek,
-  include_null_option = false,
-}: WeekSelectorProps) => {
+const WeekSelector = (props: WeekSelectorProps) => {
+  const {
+    selectedYear,
+    setSelectedYear,
+    selectedWeek,
+    setSelectedWeek,
+    include_null_option = false,
+  } = props;
   const { t } = useTranslation();
   const { tenantCreationYear, yearOptions } = useTenantYearOptions();
 
@@ -44,11 +57,14 @@ const WeekSelector = ({
     [selectedWeek, setSelectedYear, setSelectedWeek],
   );
 
+  // The "all weeks" option, the one that selects ``null``, exists only with
+  // ``include_null_option``.
   const handleWeekChange = useCallback(
     (value: number | null) => {
-      setSelectedWeek(value);
+      if (value !== null) setSelectedWeek(value);
+      else if (props.include_null_option) props.setSelectedWeek(null);
     },
-    [setSelectedWeek],
+    [props, setSelectedWeek],
   );
 
   const nextWeek = useCallback(() => {

@@ -10,6 +10,7 @@ import { useDateFormat } from "@hooks/index";
 import PastSubscriptionsModal from "../modals/PastSubscriptionsModal";
 import SubscriptionDetailModal from "../modals/SubscriptionDetailModal";
 import { useShareTypeVariationSizeOptions } from "@hooks/useShareTypeVariationSizeOptions";
+import "./ActiveSubscriptionsCard.css";
 
 const { Text } = Typography;
 
@@ -83,14 +84,7 @@ const ActiveSubscriptionsCard = ({
             setSelected(sub);
           }
         }}
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 8,
-          padding: "6px 0",
-          borderBottom: "1px solid var(--color-bg-subtle)",
-          cursor: "pointer",
-        }}
+        className="active-subscriptions-card__row"
       >
         <StatusSquare variant={variant} title={rowTitle(variant)} />
         <Space size={6} wrap>
@@ -99,7 +93,10 @@ const ActiveSubscriptionsCard = ({
             {sub.valid_until ? ` – ${formatDate(sub.valid_until)}` : ""}
           </Text>
           {sub.quantity > 1 && (
-            <Tag color="green" style={{ margin: 0, fontWeight: 600 }}>
+            <Tag
+              color="green"
+              className="active-subscriptions-card__tag active-subscriptions-card__tag--quantity"
+            >
               {sub.quantity}×
             </Tag>
           )}
@@ -108,15 +105,15 @@ const ActiveSubscriptionsCard = ({
             {getShareTypeVariationSizeLabel(sub.share_type_variation_size ?? "")}
           </Text>
           {sub.on_waiting_list && (
-            <Space size={2} style={{ alignItems: "center" }}>
-              <Tag color="orange" style={{ margin: 0 }}>
+            <Space size={2} className="active-subscriptions-card__waiting">
+              <Tag color="orange" className="active-subscriptions-card__tag">
                 {t("members.on_waiting_list")}
               </Tag>
               <ToolTipIcon title={t("members.waiting_list_tooltip")} />
             </Space>
           )}
           {total > 0 && (
-            <Text style={{ color: "var(--color-joker)", fontSize: 12 }}>
+            <Text className="active-subscriptions-card__jokers">
               (
               {t("members.jokers_taken", {
                 taken: sub.jokers_taken ?? 0,
@@ -126,7 +123,7 @@ const ActiveSubscriptionsCard = ({
             </Text>
           )}
           {donationTotal > 0 && (
-            <Text style={{ color: "var(--color-joker)", fontSize: 12 }}>
+            <Text className="active-subscriptions-card__jokers">
               (
               {t("members.donation_jokers_taken", {
                 taken: sub.donation_jokers_taken ?? 0,
@@ -143,8 +140,7 @@ const ActiveSubscriptionsCard = ({
   return (
     <Card
       title={<Space size={6}>{t("members.my_subscriptions")}</Space>}
-      className="member-card blue-border member-card--blue-title"
-      styles={{ body: { padding: "12px 16px" } }}
+      className="member-card blue-border member-card--blue-title active-subscriptions-card"
       extra={
         canAdd && onNewSubscription ? (
           <Button
@@ -160,8 +156,15 @@ const ActiveSubscriptionsCard = ({
     >
       {active.length > 0 && (
         <>
-          <Divider style={{ margin: "0 0 4px" }} orientation="left" plain>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+          <Divider
+            className="active-subscriptions-card__divider active-subscriptions-card__divider--first"
+            orientation="left"
+            plain
+          >
+            <Text
+              type="secondary"
+              className="active-subscriptions-card__group-label"
+            >
               {t("members.active_subscriptions")}
             </Text>
           </Divider>
@@ -171,8 +174,15 @@ const ActiveSubscriptionsCard = ({
 
       {coming.length > 0 && (
         <>
-          <Divider style={{ margin: "12px 0 4px" }} orientation="left" plain>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+          <Divider
+            className="active-subscriptions-card__divider"
+            orientation="left"
+            plain
+          >
+            <Text
+              type="secondary"
+              className="active-subscriptions-card__group-label"
+            >
               {t("members.coming_subscriptions")}
             </Text>
           </Divider>
@@ -182,8 +192,15 @@ const ActiveSubscriptionsCard = ({
 
       {pending.length > 0 && (
         <>
-          <Divider style={{ margin: "12px 0 4px" }} orientation="left" plain>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+          <Divider
+            className="active-subscriptions-card__divider"
+            orientation="left"
+            plain
+          >
+            <Text
+              type="secondary"
+              className="active-subscriptions-card__group-label"
+            >
               {t("members.pending_subscriptions")}
             </Text>
           </Divider>
@@ -192,13 +209,13 @@ const ActiveSubscriptionsCard = ({
       )}
 
       {past.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div className="active-subscriptions-card__past">
           <Button
             size="small"
             type="link"
             icon={<HistoryOutlined />}
             onClick={() => setPastOpen(true)}
-            style={{ paddingLeft: 0 }}
+            className="active-subscriptions-card__past-button"
           >
             {t("members.show_past_subscriptions", { count: past.length })}
           </Button>

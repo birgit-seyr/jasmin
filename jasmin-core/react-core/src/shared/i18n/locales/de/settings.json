@@ -2,6 +2,7 @@
   "title": "App Einstellungen",
   "save": "Einstellungen speichern",
   "save_failed": "Einstellung konnte nicht gespeichert werden.",
+  "load_failed": "Die Einstellungen konnten nicht geladen werden.",
   "reset": "Änderungen zurücksetzen",
   "unsaved_changes": "Ungespeicherte Änderungen",
   "save_success": "Einstellungen erfolgreich gespeichert",

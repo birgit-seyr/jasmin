@@ -467,7 +467,7 @@ def alert_on_stale_backups() -> dict[str, int]:
             "Check that it is up and its cron is installed:\n"
             "  docker compose ps backup\n"
             "  docker compose exec backup crontab -l\n"
-            "  docker compose logs backup | tail -50\n"
+            "  docker compose exec backup tail -50 /var/log/backup.log\n"
             "A one-shot run: docker compose exec backup "
             "/usr/local/bin/backup.sh now"
         ),

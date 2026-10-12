@@ -52,6 +52,7 @@ export default function PendingDeletionsTable({
   const { mutate: approveMutate, isPending: approving } =
     useGdprAdminApproveDeletionCreate({
       mutation: {
+        meta: { silent: true },
         onSuccess: () => {
           notify.success(t("gdpr.approved"));
           setApproveTarget(null);

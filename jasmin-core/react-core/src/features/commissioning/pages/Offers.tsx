@@ -9,7 +9,6 @@
 import { SendOutlined } from "@ant-design/icons";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import { Button, Checkbox, Flex } from "antd";
-import dayjs from "dayjs";
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -46,7 +45,11 @@ import type {
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, PastWarningMessage, ToolTipIcon } from "@shared/ui";
 import { AddShareArticleEntry } from "@features/commissioning/components";
-import { useTableRowSelection, useTenantSettingToggle } from "@hooks/index";
+import {
+  useTableRowSelection,
+  useTenantSettingToggle,
+  useYearWeekState,
+} from "@hooks/index";
 import { useOffersColumns, useOffersData } from "@features/commissioning/hooks";
 import { isWeekInPast, notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
@@ -55,8 +58,8 @@ import OffersBulkActions from "@features/commissioning/components/OffersBulkActi
 
 export default function Offers() {
   const { isOffice } = useRoles();
-  const [selectedYear, setSelectedYear] = useState(() => dayjs().isoWeekYear());
-  const [selectedWeek, setSelectedWeek] = useState(() => dayjs().isoWeek());
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
+    useYearWeekState();
   const [selectedOfferGroup, setSelectedOfferGroup] = useState<string | null>(
     null,
   );
@@ -264,7 +267,7 @@ export default function Offers() {
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
         selectedWeek={selectedWeek}
-        setSelectedWeek={(v) => v !== null && setSelectedWeek(v)}
+        setSelectedWeek={setSelectedWeek}
       />
       <div className="section-divider">
         <Button

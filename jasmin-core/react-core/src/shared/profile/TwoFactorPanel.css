@@ -1,0 +1,41 @@
+/* Two-factor panel in the profile modal: setup wizard and recovery codes. */
+.two-factor-panel__loading {
+  padding: 32px;
+  text-align: center;
+}
+
+.two-factor-panel__status-icon {
+  font-size: 22px;
+}
+
+.two-factor-panel__hint {
+  font-size: 13px;
+}
+
+.two-factor-panel__steps {
+  margin-bottom: 24px;
+}
+
+.two-factor-panel__qr {
+  text-align: center;
+}
+
+.two-factor-panel__qr img {
+  max-width: 256px;
+  width: 100%;
+}
+
+.two-factor-panel__codes-card {
+  background: var(--color-bg-elevated);
+}
+
+.two-factor-panel__codes {
+  margin: 0;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.two-factor-panel__copy-codes {
+  margin-top: 12px;
+}

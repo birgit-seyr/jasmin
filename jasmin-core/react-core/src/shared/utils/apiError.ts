@@ -72,29 +72,34 @@ function asAxiosError(
 }
 
 /**
- * Return the most relevant message for a caught error, falling back through
- * every known response shape and finally the JS error message.
+ * Return the most relevant message for a caught error: the server's reason
+ * (`getServerErrorMessage`), else the caller's `fallback`, else the error's
+ * own text.
+ *
+ * A failed request whose server gave no reason shows the `fallback` rather
+ * than axios' own English ("Request failed with status code 503", "Network
+ * Error"). A non-request error keeps its message ahead of the fallback, since
+ * code throws `new Error(t("…"))` to carry a translated reason.
  *
  * Usage:
  *
  *   try { await api.doThing(); }
- *   catch (err) { notify.error(getErrorMessage(err, "Something failed")); }
+ *   catch (err) { notify.error(getErrorMessage(err, t("common.action_failed"))); }
  */
-export function getErrorMessage(err: unknown, fallback = "Request failed"): string {
+export function getErrorMessage(err: unknown, fallback?: string): string {
   const serverMessage = getServerErrorMessage(err);
   if (serverMessage) return serverMessage;
   const axiosErr = asAxiosError(err);
-  if (axiosErr?.message) return axiosErr.message;
+  if (axiosErr) return fallback || axiosErr.message || "Request failed";
   if (err instanceof Error && err.message) return err.message;
-  return fallback;
+  return fallback || "Request failed";
 }
 
 /**
  * The message the server gave for a failed request, or `undefined` when it
  * gave none — an empty body, a network failure, a non-axios throw. Unlike
- * `getErrorMessage` it never falls back to axios' or JS' own text ("Request
- * failed with status code 503"), so a caller can show its own translated
- * message instead:
+ * `getErrorMessage` it never falls back to a JS error's own text, so a caller
+ * can show its own translated message instead:
  *
  *   notify.error(getServerErrorMessage(err) ?? t("users.resend_failed"));
  */

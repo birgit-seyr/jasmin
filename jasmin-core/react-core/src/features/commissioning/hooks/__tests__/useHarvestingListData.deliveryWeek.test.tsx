@@ -104,7 +104,6 @@ function renderSaturdayHarvest(selectedYear: number, selectedWeek: number) {
         selectedYear,
         selectedWeek,
         selectedDay: SATURDAY,
-        fallbackWeek: selectedWeek,
         isPast: false,
         isGardenerView: false,
         roundUpToFullPU: false,

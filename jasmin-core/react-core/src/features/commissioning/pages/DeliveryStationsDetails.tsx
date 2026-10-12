@@ -180,7 +180,7 @@ export default function DeliveryStationsDetails() {
     useMemo<CommissioningShareDeliveryDetailsMatrixRetrieveParams>(
       () => ({
         year: selectedYear,
-        delivery_week: selectedWeek ?? 0,
+        delivery_week: selectedWeek,
         day_number: selectedDeliveryDay ?? 0,
         delivery_station: selectedDeliveryStation ?? "",
       }),
@@ -214,7 +214,7 @@ export default function DeliveryStationsDetails() {
     useMemo<CommissioningPackingListMemberAmountsRetrieveParams>(
       () => ({
         year: selectedYear,
-        delivery_week: selectedWeek ?? 0,
+        delivery_week: selectedWeek,
         day_number: selectedDeliveryDay ?? 0,
         delivery_station: selectedDeliveryStation ?? "",
         is_packed_bulk: true,
@@ -252,7 +252,7 @@ export default function DeliveryStationsDetails() {
         ? deliveryStations.map((station) =>
             getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions({
               year: selectedYear,
-              delivery_week: selectedWeek!,
+              delivery_week: selectedWeek,
               day_number: selectedDeliveryDay,
               delivery_station: station.value,
             }),
@@ -268,7 +268,7 @@ export default function DeliveryStationsDetails() {
         ? deliveryStations.map((station) =>
             getCommissioningPackingListMemberAmountsRetrieveQueryOptions({
               year: selectedYear,
-              delivery_week: selectedWeek!,
+              delivery_week: selectedWeek,
               day_number: selectedDeliveryDay,
               delivery_station: station.value,
               is_packed_bulk: true,
@@ -285,7 +285,7 @@ export default function DeliveryStationsDetails() {
     queries: weekSlots.map(({ dayNum, station }) =>
       getCommissioningShareDeliveryDetailsMatrixRetrieveQueryOptions({
         year: selectedYear,
-        delivery_week: selectedWeek!,
+        delivery_week: selectedWeek,
         day_number: dayNum,
         delivery_station: station.value,
       }),
@@ -297,7 +297,7 @@ export default function DeliveryStationsDetails() {
     queries: weekSlots.map(({ dayNum, station }) =>
       getCommissioningPackingListMemberAmountsRetrieveQueryOptions({
         year: selectedYear,
-        delivery_week: selectedWeek!,
+        delivery_week: selectedWeek,
         day_number: dayNum,
         delivery_station: station.value,
         is_packed_bulk: true,
@@ -444,7 +444,7 @@ export default function DeliveryStationsDetails() {
         <DaySelector
           selectedDay={selectedDeliveryDay}
           setSelectedDay={setSelectedDeliveryDay}
-          selectedWeek={selectedWeek!}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={dayNumbers}
           suffix={t("commissioning.delivery_day")}
@@ -462,7 +462,7 @@ export default function DeliveryStationsDetails() {
       <div className="delivery-stations-details__pdf-buttons">
         <DeliveryStationDetailsPDFGenerator
           pages={currentStationPages}
-          week={selectedWeek!}
+          week={selectedWeek}
           dayName={selectedDayName}
           tenant={tenantInfo}
           filename={generatePdfFilename([
@@ -485,7 +485,7 @@ export default function DeliveryStationsDetails() {
 
         <DeliveryStationDetailsPDFGenerator
           pages={allStationsDayPages}
-          week={selectedWeek!}
+          week={selectedWeek}
           dayName={selectedDayName}
           tenant={tenantInfo}
           filename={generatePdfFilename([
@@ -505,7 +505,7 @@ export default function DeliveryStationsDetails() {
 
         <DeliveryStationDetailsPDFGenerator
           pages={allStationsWeekPages}
-          week={selectedWeek!}
+          week={selectedWeek}
           dayName={t("commissioning.whole_week")}
           tenant={tenantInfo}
           filename={generatePdfFilename([

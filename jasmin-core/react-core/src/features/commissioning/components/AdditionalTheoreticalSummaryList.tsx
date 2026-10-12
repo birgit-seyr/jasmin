@@ -23,7 +23,6 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDocumentationSummaryAddAdditionalTheoreticalAmountCreateBody,
-  CommissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdateBody,
 } from "@shared/api/generated/models";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { EditableTable, wrapApiFunctions } from "@shared/tables";
@@ -143,7 +142,6 @@ export default function AdditionalTheoreticalSummaryList(
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
     selectedDay,
     setSelectedDay,
     isPast,
@@ -424,7 +422,7 @@ export default function AdditionalTheoreticalSummaryList(
         update: (id, payload) =>
           commissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdate(
             id,
-            payload as unknown as CommissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdateBody,
+            payload,
           ),
       }),
     [],
@@ -455,7 +453,7 @@ export default function AdditionalTheoreticalSummaryList(
         <DaySelector
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={[0, 1, 2, 3, 4, 5, 6]}
           suffix={t(daySuffixKey)}
@@ -484,7 +482,7 @@ export default function AdditionalTheoreticalSummaryList(
       {!isMobile &&
         renderPdf(processedData.length > 0 ? processedData : null, {
           year: selectedYear,
-          week: selectedWeek ?? currentWeek,
+          week: selectedWeek,
           dayName: getDayName(selectedDay, t),
           filename: generateFilename,
           t,

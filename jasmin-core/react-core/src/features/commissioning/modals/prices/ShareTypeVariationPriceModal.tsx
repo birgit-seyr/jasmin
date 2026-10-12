@@ -85,7 +85,9 @@ export default function ShareTypeVariationPriceModal({
     }
   }, [visible, getSetting]);
 
-  const updateSettings = useTenantsSettingsUpdateCurrentSettingsUpdate();
+  const updateSettings = useTenantsSettingsUpdateCurrentSettingsUpdate({
+    mutation: { meta: { silent: true } },
+  });
 
   const handleToggleSolidarity = (checked: boolean) => {
     setAllowsSolidarity(checked); // instant: reveal/hide the solidarity column

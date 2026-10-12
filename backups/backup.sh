@@ -224,8 +224,24 @@ do_media_backup() {
 }
 
 # ── Entrypoint ─────────────────────────────────────────────────
+# The directory is shared with the huey container, whose non-root user prunes
+# the old backups and checks the newest ones for the stale-backup alert. It
+# reaches them through BACKUP_GID, which docker-compose.yml adds to that user as
+# a supplementary group: 2770 gives the group the listing and the deletes (both
+# need only the directory's write and search bits), keeps the bind-mounted
+# directory's host owner in for scripts/restore_drill.sh, and closes it to
+# everyone else, so the 644 files inside are readable only by those two. The
+# setgid bit hands the group on to every file and directory created inside.
+BACKUP_GID="${BACKUP_GID:-61000}"
+case "$BACKUP_GID" in
+    '' | *[!0-9]*)
+        echo "[$(date)] ERROR: BACKUP_GID must be a numeric group id, got '${BACKUP_GID}'" >&2
+        exit 2
+        ;;
+esac
 mkdir -p "$BACKUP_DIR"
-chmod 700 "$BACKUP_DIR"
+chgrp "$BACKUP_GID" "$BACKUP_DIR"
+chmod 2770 "$BACKUP_DIR"
 
 case "${1:-scheduled}" in
     now)

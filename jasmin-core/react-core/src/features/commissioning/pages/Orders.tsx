@@ -14,7 +14,6 @@ import {
   SUMMARY_ROW_STYLE,
 } from "@shared/tables";
 import type {
-  EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, LabeledSwitch, ToolTipIcon } from "@shared/ui";
@@ -34,6 +33,7 @@ import {
   orderDayConfigs,
 } from "@features/commissioning/utils/orderDays";
 import { OrderInfoPanel } from "@features/commissioning/components/OrderInfoPanel";
+import "./Orders.css";
 
 export default function Orders() {
   const { t } = useTranslation();
@@ -102,10 +102,7 @@ export default function Orders() {
     createCustomSaveOffers,
   } = useOrderColumns({
     params: listParams,
-    // useOrderColumns is internally typed against Record<string, unknown>[]
-    // (pre-dating the CrateOrderContentRow tightening in useOrdersData).
-    // Cast bridges the row-shape gap without forcing the hook to update.
-    dataCrates: dataCrates as unknown as Record<string, unknown>[],
+    dataCrates,
   });
 
   // Modal state
@@ -126,7 +123,8 @@ export default function Orders() {
         selectedDay,
         selectedReseller,
         orderDays,
-        // See note on `dataCrates` above re: hook row-shape gap.
+        // ``OrderContentRow`` builds on a generated interface, which has no
+        // index signature to make it a ``Record``.
         data as unknown as Record<string, unknown>[],
         calculatePricePerUnit,
       ),
@@ -176,10 +174,10 @@ export default function Orders() {
   );
 
   const customEdit = useCallback(
-    (
-      record: TableRecord,
+    <TRow extends TableRecord>(
+      record: TRow,
       form: { setFieldsValue: (values: Record<string, unknown>) => void },
-    ) => {
+    ): TRow => {
       if (record.key === -1) {
         const defaultValues = { size: "M", tax_rate: defaultTaxRateArticles };
         form.setFieldsValue(defaultValues);
@@ -267,12 +265,12 @@ export default function Orders() {
             <Alert
               type="info"
               showIcon
-              style={{ marginTop: "1em" }}
+              className="mt-1em"
               message={t("commissioning.no_offers_for_week")}
             />
           ) : (
             <div>
-              <div style={{ marginTop: "1em", marginBottom: "1em" }}>
+              <div className="mt-1em mb-1em">
                 <LabeledSwitch
                   value={showOnlyOrderedOffers}
                   onChange={setShowOnlyOrderedOffers}
@@ -353,13 +351,7 @@ export default function Orders() {
       {
         key: "crates",
         label: (
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.5em",
-            }}
-          >
+          <span className="orders__tab-label">
             <h3>
               {t("commissioning.crates_in_orders")} ({dataCratesCount})
               <ToolTipIcon title={t("tooltip.crates_in_orders")} />
@@ -367,17 +359,15 @@ export default function Orders() {
           </span>
         ),
         children: (
-          <div style={{ width: "70%" }}>
+          <div className="orders__crates">
             <EditableTable
               key={`${selectedYear}-${selectedWeek}-${selectedDay}-${selectedReseller}-crates`}
-              columns={filteredColumnsCrates as EditableColumnConfig[]}
+              columns={filteredColumnsCrates}
               apiFunctions={apiFunctionsCrates}
               focusIndex="crate_type_name"
-              initialData={dataCrates as unknown as TableRecord[]}
+              initialData={dataCrates}
               loading={cratesLoading}
-              onDataChange={
-                handleCratesDataChange as (data: TableRecord[]) => void
-              }
+              onDataChange={handleCratesDataChange}
               onSaveSuccess={handleSaveSuccess}
               customSave={customSaveCrates}
               customEdit={customEdit}
@@ -467,7 +457,7 @@ export default function Orders() {
           daysWithOrders={daysWithOrders}
         />
       </div>
-      <div style={{ marginTop: "1em" }}>
+      <div className="mt-1em">
         <ResellerSelector
           selectedReseller={selectedReseller}
           setSelectedReseller={setSelectedReseller}

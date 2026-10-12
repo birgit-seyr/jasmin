@@ -1,4 +1,4 @@
-// The CSV template button's upload: the import endpoint is mocked at the axios
+// The CSV template button's upload: the generated import client is the mocking
 // boundary, and the toasts are read off the shared `notify`.
 
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -24,10 +24,10 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-const { notifyMock, postMock, messageForErrorCodeMock, downloadBlobMock } =
+const { notifyMock, importMock, messageForErrorCodeMock, downloadBlobMock } =
   vi.hoisted(() => ({
     notifyMock: { success: vi.fn(), error: vi.fn() },
-    postMock: vi.fn(),
+    importMock: vi.fn(),
     messageForErrorCodeMock: vi.fn(),
     downloadBlobMock: vi.fn(),
   }));
@@ -37,8 +37,8 @@ vi.mock("@shared/utils", () => ({
   downloadBlob: downloadBlobMock,
 }));
 
-vi.mock("@shared/services/api", () => ({
-  default: { post: postMock },
+vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
+  commissioningDataImportCreate: (body: unknown) => importMock(body),
 }));
 
 vi.mock("@shared/utils/apiError", async (importOriginal) => ({
@@ -68,7 +68,7 @@ function renderButton(onImported = vi.fn()) {
 beforeEach(() => {
   notifyMock.success.mockReset();
   notifyMock.error.mockReset();
-  postMock.mockReset();
+  importMock.mockReset();
   messageForErrorCodeMock.mockReset();
   downloadBlobMock.mockReset();
 });
@@ -146,12 +146,11 @@ describe("DownloadCsvTemplateButton template", () => {
 
 describe("DownloadCsvTemplateButton upload", () => {
   it("confirms a fully successful import with a toast", async () => {
-    postMock.mockResolvedValue({
-      data: { successful: 3, failed: 0, errors: [] },
-    });
+    importMock.mockResolvedValue({ successful: 3, failed: 0, errors: [] });
     const { input, onImported } = renderButton();
+    const file = csvFile();
 
-    await userEvent.upload(input, csvFile());
+    await userEvent.upload(input, file);
 
     await waitFor(() =>
       expect(notifyMock.success).toHaveBeenCalledWith(
@@ -160,10 +159,14 @@ describe("DownloadCsvTemplateButton upload", () => {
     );
     expect(onImported).toHaveBeenCalledTimes(1);
     expect(notifyMock.error).not.toHaveBeenCalled();
+    expect(importMock).toHaveBeenCalledWith({
+      model_name: "ShareArticle",
+      file: expect.objectContaining({ name: file.name }),
+    });
   });
 
   it("reports a refused upload with the server's message", async () => {
-    postMock.mockRejectedValue({
+    importMock.mockRejectedValue({
       isAxiosError: true,
       response: { status: 400, data: { message: "The file is empty." } },
     });
@@ -212,7 +215,7 @@ describe("DownloadCsvTemplateButton row errors", () => {
           ? `Kein Mitglied hat die Mitgliedsnummer ${String(details?.member_number)}.`
           : undefined,
     );
-    postMock.mockResolvedValue({ data: failedImport });
+    importMock.mockResolvedValue(failedImport);
     const { input } = renderButton();
 
     await userEvent.upload(input, csvFile());
@@ -236,7 +239,7 @@ describe("DownloadCsvTemplateButton row errors", () => {
     messageForErrorCodeMock.mockImplementation((code: string) =>
       code === "member.number_unknown" ? "Unknown member number." : undefined,
     );
-    postMock.mockResolvedValue({ data: failedImport });
+    importMock.mockResolvedValue(failedImport);
     const { input } = renderButton();
 
     await userEvent.upload(input, csvFile());
@@ -269,12 +272,10 @@ describe("DownloadCsvTemplateButton row errors", () => {
   });
 
   it("shows the server's text for a row error without a code", async () => {
-    postMock.mockResolvedValue({
-      data: {
-        ...failedImport,
-        failed: 1,
-        errors: [{ row: 4, error: "Something broke.", data: {} }],
-      },
+    importMock.mockResolvedValue({
+      ...failedImport,
+      failed: 1,
+      errors: [{ row: 4, error: "Something broke.", data: {} }],
     });
     const { input } = renderButton();
 

@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useCommissioningSubscriptionMemberEmailsRetrieve } from "@shared/api/generated/commissioning/commissioning";
 import { useDateFormat, useDateRangePresets } from "@hooks/index";
 import CopyableEmailList from "@features/abos/components/CopyableEmailList";
+import "./AbosEmails.css";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -52,11 +53,10 @@ export default function AbosEmails() {
   return (
     <div>
       <h1>{t("abos.emails")}</h1>
-      <div style={{ marginBottom: "2em" }}>
+      <div className="abos-emails">
         <Card
-          className="dark-green-border"
+          className="dark-green-border abos-emails__card"
           title={t("abos.delivery_station_days_emails")}
-          style={{ marginTop: "1.5em" }}
         >
           <Flex vertical gap="middle" align="start">
             <Text type="secondary">{t("abos.emails_by_station_hint")}</Text>
@@ -73,9 +73,8 @@ export default function AbosEmails() {
         </Card>
 
         <Card
-          className="dark-green-border"
+          className="dark-green-border abos-emails__card"
           title={t("abos.share_type_emails")}
-          style={{ marginTop: "1.5em" }}
         >
           <Flex vertical gap="middle" align="start">
             <Text type="secondary">{t("abos.emails_by_share_type_hint")}</Text>
@@ -93,9 +92,8 @@ export default function AbosEmails() {
         </Card>
 
         <Card
-          className="dark-green-border"
+          className="dark-green-border abos-emails__card"
           title={t("abos.active_subscriptions_date_range_emails")}
-          style={{ marginTop: "1.5em" }}
         >
           <Flex vertical gap="middle" align="start">
             <Text type="secondary">{t("abos.emails_by_date_range_hint")}</Text>

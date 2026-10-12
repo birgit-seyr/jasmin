@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.db import transaction
-from django.db.models import F, QuerySet
+from django.db.models import F, QuerySet, prefetch_related_objects
 from django.http import HttpResponse
 from drf_spectacular.utils import (
     OpenApiResponse,
@@ -325,6 +325,17 @@ class PlotViewSet(
         return queryset
 
 
+def _with_links(forecast: Forecast) -> Forecast:
+    """*forecast* with its variation and offer-group links loaded, for the
+    response: the serializer renders them and checks them for deletability,
+    which would otherwise query each relation twice. A prefetch the update
+    kept (its links unchanged) is reused."""
+    prefetch_related_objects(
+        [forecast], "forecastsharetypevariation_set", "forecastoffergroup_set"
+    )
+    return forecast
+
+
 class ForecastViewSet(BaseArchivableViewSet):
     serializer_class = ForecastSerializer
 
@@ -373,8 +384,7 @@ class ForecastViewSet(BaseArchivableViewSet):
         # narrow a DETAIL route — turning a row that exists into a 404 and a
         # valid PATCH into a 400 over the page's own week parameters.
         return queryset.select_related("share_article", "plot").prefetch_related(
-            "forecastsharetypevariation_set__share_type_variation",
-            "forecastoffergroup_set__offer_group",
+            "forecastsharetypevariation_set", "forecastoffergroup_set"
         )
 
     @extend_schema(
@@ -417,7 +427,7 @@ class ForecastViewSet(BaseArchivableViewSet):
             validated_data=serializer.validated_data
         )
 
-        response_serializer = self.get_serializer(forecast)
+        response_serializer = self.get_serializer(_with_links(forecast))
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
@@ -434,7 +444,7 @@ class ForecastViewSet(BaseArchivableViewSet):
             instance=instance, validated_data=serializer.validated_data
         )
 
-        response_serializer = self.get_serializer(forecast)
+        response_serializer = self.get_serializer(_with_links(forecast))
         return Response(response_serializer.data)
 
     @extend_schema(

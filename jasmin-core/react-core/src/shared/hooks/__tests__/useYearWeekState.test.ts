@@ -26,9 +26,12 @@ import {
   type UseYearWeekStateOptions,
 } from "../useYearWeekState";
 
-function mountOn(instant: string | Date, options?: UseYearWeekStateOptions) {
+// ``allWeeks`` only lets the week's type be ``null``; the seeded values are
+// the same with or without it.
+function mountOn(instant: string | Date, options: UseYearWeekStateOptions = {}) {
   vi.setSystemTime(new Date(instant));
-  return renderHook(() => useYearWeekState(options)).result;
+  return renderHook(() => useYearWeekState({ ...options, allWeeks: true }))
+    .result;
 }
 
 beforeEach(() => {
@@ -94,6 +97,27 @@ describe("useYearWeekState — the seeded year/week pair", () => {
     expect(result.current.selectedWeek).toBe(43);
     expect(result.current.currentWeek).toBe(42);
   });
+
+  it.each([
+    // ISO 2026 has 53 weeks: its week 52 is followed by week 53 …
+    ["2026-12-21T12:00:00Z", 1, 2026, 53],
+    // … and its week 53 by week 1 of 2027.
+    ["2026-12-28T12:00:00Z", 1, 2027, 1],
+    // ISO 2027 has 52, so its week 52 is followed by week 1 of 2028.
+    ["2027-12-27T12:00:00Z", 1, 2028, 1],
+    // Backwards across New Year, into the 53-week year.
+    ["2027-01-04T12:00:00Z", -1, 2026, 53],
+  ])(
+    "mounted on %s with an offset of %i seeds ISO %i-W%i",
+    (instant, weekOffset, year, week) => {
+      const result = mountOn(instant, { weekOffset });
+
+      expect(result.current).toMatchObject({
+        selectedYear: year,
+        selectedWeek: week,
+      });
+    },
+  );
 
   it("takes an explicit year and week over today", () => {
     const result = mountOn(new Date(2026, 9, 13, 12, 0), {

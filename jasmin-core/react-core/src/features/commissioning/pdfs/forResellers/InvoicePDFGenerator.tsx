@@ -52,7 +52,7 @@ export default function InvoicePDFGenerator({
   const { dateFormat } = useDateFormat();
   const { tenantSettings, footerSettings, currencySymbol, lineSettings } =
     useResellerPdfContext({
-      tenant: tenant as Record<string, unknown>,
+      tenant,
       getSetting,
       logoUrl,
       bioLogoUrl,
@@ -60,7 +60,7 @@ export default function InvoicePDFGenerator({
     });
 
   const bankDetails = useMemo(
-    () => buildBankDetails(tenant as Record<string, unknown>),
+    () => buildBankDetails(tenant),
     [tenant],
   );
 

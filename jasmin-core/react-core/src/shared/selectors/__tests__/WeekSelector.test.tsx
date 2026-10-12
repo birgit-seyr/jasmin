@@ -53,6 +53,7 @@ const renderSelector = (selectedWeek: number | null) => {
       setSelectedYear={setSelectedYear}
       selectedWeek={selectedWeek}
       setSelectedWeek={setSelectedWeek}
+      include_null_option
     />,
   );
   return { setSelectedYear, setSelectedWeek };

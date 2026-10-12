@@ -5,7 +5,7 @@ import { CUSTOMER_COMPATIBLE_ROLES, ROLES, type Role } from "@shared/auth/roles"
 import { useRoleOptions } from "@shared/auth/useRoleOptions";
 import ResellerSelector from "@shared/selectors/ResellerSelector";
 import { authAdminUsersPartialUpdate } from "@shared/api/generated/auth/auth";
-import type { AdminUserUpdateRequest } from "@shared/api/generated/models";
+import type { PatchedAdminUserUpdateRequest } from "@shared/api/generated/models";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { notify } from "@shared/utils";
 
@@ -77,7 +77,7 @@ export default function EditUserRolesModal({
     reseller_id?: string | null;
   }) => {
     if (!user) return;
-    const payload: Record<string, unknown> = { roles: values.roles };
+    const payload: PatchedAdminUserUpdateRequest = { roles: values.roles };
     // Only send reseller_id when customer role is in the new role set;
     // otherwise the backend will clear any existing link automatically.
     if (values.roles.includes(ROLES.CUSTOMER)) {
@@ -85,10 +85,7 @@ export default function EditUserRolesModal({
     }
     setSaving(true);
     try {
-      await authAdminUsersPartialUpdate(
-        user.id,
-        payload as AdminUserUpdateRequest,
-      );
+      await authAdminUsersPartialUpdate(user.id, payload);
       notify.success(t("users.roles_updated"));
       onSaved?.();
       onClose();

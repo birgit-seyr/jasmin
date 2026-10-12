@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
-  week: 42 as number | null,
+  week: 42,
   rows: undefined as unknown[] | undefined,
   summaryRetrieve: vi.fn(),
 }));
@@ -194,8 +194,7 @@ describe("useStorageDocumentationPage", () => {
     expect(result.current.customSave({ amount: 4 }).amount).toBe(4);
   });
 
-  it("falls back to the current week and leaves the day out of a week-scoped page", () => {
-    state.week = null;
+  it("leaves the day out of a week-scoped page", () => {
     const { result } = renderHook(
       () =>
         useStorageDocumentationPage({ model: "purchase", withDay: false, rowHasData: hasAmount }),

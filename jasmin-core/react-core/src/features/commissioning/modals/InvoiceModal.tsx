@@ -13,7 +13,6 @@ import {
   useCommissioningInvoicesRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { CommissioningCrateContentsInvoiceDestroyParams } from "@shared/api/generated/models/commissioningCrateContentsInvoiceDestroyParams";
-import type { CrateContentInvoiceReseller } from "@shared/api/generated/models/crateContentInvoiceReseller";
 import type { CrateInvoiceContentWriteRequest } from "@shared/api/generated/models/crateInvoiceContentWriteRequest";
 import type { InvoiceResellerContent } from "@shared/api/generated/models/invoiceResellerContent";
 import {
@@ -42,7 +41,6 @@ import {
   computeTaxBreakdown,
   taxBreakdownFromBackend,
   totalsFromBreakdown,
-  type LineItemBase,
   type TaxBreakdownItem,
 } from "../pdfs/forResellers/pdfBase";
 import { EditableTable, gatedByPermission, wrapApiFunctions } from "@shared/tables";
@@ -248,18 +246,16 @@ export default function InvoiceModal({
 
   const apiFunctionsCrates = useMemo<ApiFunctions>(
     () =>
-      wrapApiFunctions<CrateInvoiceContentWriteRequest & TableRecord>({
+      wrapApiFunctions<
+        CrateInvoiceContentWriteRequest & TableRecord,
+        Record<string, string>,
+        CommissioningCrateContentsInvoiceDestroyParams
+      >({
         create: (data) => commissioningCrateContentsInvoiceCreate(data),
         update: (id, data) =>
-          commissioningCrateContentsInvoicePartialUpdate(
-            id,
-            data as unknown as CrateContentInvoiceReseller,
-          ),
+          commissioningCrateContentsInvoicePartialUpdate(id, data),
         delete: (id, data) =>
-          commissioningCrateContentsInvoiceDestroy(
-            id,
-            data as unknown as CommissioningCrateContentsInvoiceDestroyParams,
-          ),
+          commissioningCrateContentsInvoiceDestroy(id, data),
       }),
     [],
   );
@@ -343,8 +339,8 @@ export default function InvoiceModal({
         line_netto: computeLineNetto(row as LineNettoInput),
       }));
     return computeTaxBreakdown(
-      withFreshNetto(liveLineItems) as unknown as LineItemBase[],
-      withFreshNetto(liveCrateItems) as unknown as LineItemBase[],
+      withFreshNetto(liveLineItems),
+      withFreshNetto(liveCrateItems),
     );
   }, [isFinalized, invoiceData?.tax_breakdown, liveLineItems, liveCrateItems]);
   const liveTotals = useMemo(

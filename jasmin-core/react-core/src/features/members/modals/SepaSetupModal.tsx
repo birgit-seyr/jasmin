@@ -258,7 +258,7 @@ export default function SepaSetupModal({
           sepa_mandate_signed_at: signedAt,
           ...paperFields,
           ...referenceField,
-        } as BillingProfile,
+        },
       });
     } else {
       await createMutation.mutateAsync({

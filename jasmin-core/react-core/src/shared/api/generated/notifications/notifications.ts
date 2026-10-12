@@ -31,7 +31,6 @@ import type {
   EmailTemplateDetail,
   EmailTemplateListItem,
   EmailTemplateTestSendResponse,
-  EmailTemplateUpdate,
   ErrorResponse,
   NotificationsEmailLogsListParams,
   NotificationsEmailTemplatesPartialUpdateParams,
@@ -39,6 +38,7 @@ import type {
   NotificationsEmailTemplatesRetrieveParams,
   NotificationsEmailTemplatesTestSendParams,
   PaginatedEmailLogList,
+  PatchedEmailTemplateUpdate,
   TestSend
 } from '.././models';
 
@@ -522,7 +522,7 @@ export function useNotificationsEmailTemplatesRetrieve<TData = Awaited<ReturnTyp
  */
 export const notificationsEmailTemplatesPartialUpdate = (
     slug: string,
-    emailTemplateUpdate: EmailTemplateUpdate,
+    patchedEmailTemplateUpdate: PatchedEmailTemplateUpdate,
     params?: NotificationsEmailTemplatesPartialUpdateParams,
  ) => {
       
@@ -530,7 +530,7 @@ export const notificationsEmailTemplatesPartialUpdate = (
       return axiosService<EmailTemplateDetail>(
       {url: `/api/notifications/email-templates/${slug}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: emailTemplateUpdate,
+      data: patchedEmailTemplateUpdate,
         params
     },
       );
@@ -539,8 +539,8 @@ export const notificationsEmailTemplatesPartialUpdate = (
 
 
 export const getNotificationsEmailTemplatesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, TError,{slug: string;data: EmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, TError,{slug: string;data: EmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, TError,{slug: string;data: PatchedEmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, TError,{slug: string;data: PatchedEmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}, TContext> => {
 
 const mutationKey = ['notificationsEmailTemplatesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -552,7 +552,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, {slug: string;data: EmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, {slug: string;data: PatchedEmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}> = (props) => {
           const {slug,data,params} = props ?? {};
 
           return  notificationsEmailTemplatesPartialUpdate(slug,data,params,)
@@ -564,15 +564,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type NotificationsEmailTemplatesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>>
-    export type NotificationsEmailTemplatesPartialUpdateMutationBody = EmailTemplateUpdate
+    export type NotificationsEmailTemplatesPartialUpdateMutationBody = PatchedEmailTemplateUpdate
     export type NotificationsEmailTemplatesPartialUpdateMutationError = ErrorResponse
 
     export const useNotificationsEmailTemplatesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, TError,{slug: string;data: EmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>, TError,{slug: string;data: PatchedEmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof notificationsEmailTemplatesPartialUpdate>>,
         TError,
-        {slug: string;data: EmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams},
+        {slug: string;data: PatchedEmailTemplateUpdate;params?: NotificationsEmailTemplatesPartialUpdateParams},
         TContext
       > => {
 

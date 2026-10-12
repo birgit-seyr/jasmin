@@ -28,6 +28,8 @@ import type {
   CurrentTenant,
   ErrorResponse,
   LockedSettingsResponse,
+  PatchedTenant,
+  PatchedTenantEmailConfig,
   Tenant,
   TenantEmailConfig,
   TenantRead,
@@ -316,14 +318,14 @@ const {mutation: mutationOptions} = options ?
  * PUT/PATCH the singleton email config without requiring a pk in the URL.
  */
 export const tenantsEmailConfigSavePartialUpdate = (
-    tenantEmailConfig: NonReadonly<TenantEmailConfig>,
+    patchedTenantEmailConfig: NonReadonly<PatchedTenantEmailConfig>,
  ) => {
       
       
       return axiosService<TenantEmailConfig>(
       {url: `/api/tenants/email_config/save/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: tenantEmailConfig
+      data: patchedTenantEmailConfig
     },
       );
     }
@@ -331,8 +333,8 @@ export const tenantsEmailConfigSavePartialUpdate = (
 
 
 export const getTenantsEmailConfigSavePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, TError,{data: NonReadonly<TenantEmailConfig>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, TError,{data: NonReadonly<TenantEmailConfig>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, TError,{data: NonReadonly<PatchedTenantEmailConfig>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, TError,{data: NonReadonly<PatchedTenantEmailConfig>}, TContext> => {
 
 const mutationKey = ['tenantsEmailConfigSavePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -344,7 +346,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, {data: NonReadonly<TenantEmailConfig>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, {data: NonReadonly<PatchedTenantEmailConfig>}> = (props) => {
           const {data} = props ?? {};
 
           return  tenantsEmailConfigSavePartialUpdate(data,)
@@ -356,15 +358,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type TenantsEmailConfigSavePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>>
-    export type TenantsEmailConfigSavePartialUpdateMutationBody = NonReadonly<TenantEmailConfig>
+    export type TenantsEmailConfigSavePartialUpdateMutationBody = NonReadonly<PatchedTenantEmailConfig>
     export type TenantsEmailConfigSavePartialUpdateMutationError = ErrorResponse
 
     export const useTenantsEmailConfigSavePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, TError,{data: NonReadonly<TenantEmailConfig>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>, TError,{data: NonReadonly<PatchedTenantEmailConfig>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof tenantsEmailConfigSavePartialUpdate>>,
         TError,
-        {data: NonReadonly<TenantEmailConfig>},
+        {data: NonReadonly<PatchedTenantEmailConfig>},
         TContext
       > => {
 
@@ -1094,14 +1096,14 @@ over the API. This viewset is intentionally narrow:
  */
 export const tenantsTenantsPartialUpdate = (
     id: string,
-    tenant: NonReadonly<Tenant>,
+    patchedTenant: NonReadonly<PatchedTenant>,
  ) => {
       
       
       return axiosService<Tenant>(
       {url: `/api/tenants/tenants/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: tenant
+      data: patchedTenant
     },
       );
     }
@@ -1109,8 +1111,8 @@ export const tenantsTenantsPartialUpdate = (
 
 
 export const getTenantsTenantsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, TError,{id: string;data: NonReadonly<Tenant>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, TError,{id: string;data: NonReadonly<Tenant>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTenant>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTenant>}, TContext> => {
 
 const mutationKey = ['tenantsTenantsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -1122,7 +1124,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, {id: string;data: NonReadonly<Tenant>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, {id: string;data: NonReadonly<PatchedTenant>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  tenantsTenantsPartialUpdate(id,data,)
@@ -1134,15 +1136,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type TenantsTenantsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>>
-    export type TenantsTenantsPartialUpdateMutationBody = NonReadonly<Tenant>
+    export type TenantsTenantsPartialUpdateMutationBody = NonReadonly<PatchedTenant>
     export type TenantsTenantsPartialUpdateMutationError = ErrorResponse
 
     export const useTenantsTenantsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, TError,{id: string;data: NonReadonly<Tenant>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTenant>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof tenantsTenantsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Tenant>},
+        {id: string;data: NonReadonly<PatchedTenant>},
         TContext
       > => {
 

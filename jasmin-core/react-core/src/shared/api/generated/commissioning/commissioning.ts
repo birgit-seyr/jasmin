@@ -176,7 +176,6 @@ import type {
   CrateNetPrice,
   CrateOrderContentCreateRequest,
   CrateOrderContentPartialUpdateResponse,
-  CrateOrderContentUpdateRequest,
   CrateOrderSummary,
   CreateOffersRequest,
   CreateOffersResponse,
@@ -229,10 +228,8 @@ import type {
   MemberLoan,
   MyCoopShareSubscribe,
   MyCustomerDataRead,
-  MyCustomerDataUpdate,
   MyDataCoopShare,
   MyMemberDataRead,
-  MyMemberDataUpdate,
   MySubscriptionSubscribe,
   Offer,
   OfferGroup,
@@ -265,6 +262,60 @@ import type {
   PaginatedTheoreticalPurchaseList,
   PaginatedTheoreticalWashAmountList,
   PaginatedWasteList,
+  PatchedConsentDocument,
+  PatchedConsentRecord,
+  PatchedCoopShare,
+  PatchedCrate,
+  PatchedCrateDeliveryNoteContentWriteRequest,
+  PatchedCrateInvoiceContentWriteRequest,
+  PatchedCrateNetPrice,
+  PatchedCrateOrderContentUpdateRequest,
+  PatchedDefaultShareArticleInShare,
+  PatchedDefaultShareContentRequest,
+  PatchedDeliveryExceptionPeriod,
+  PatchedDeliveryNoteReseller,
+  PatchedDeliveryNoteResellerContent,
+  PatchedDeliveryStation,
+  PatchedDeliveryStationDay,
+  PatchedExternalCodeMapping,
+  PatchedForecast,
+  PatchedHarvest,
+  PatchedHarvestSharePlanningUpdateRequest,
+  PatchedInvoiceReseller,
+  PatchedInvoiceResellerContent,
+  PatchedMember,
+  PatchedMemberLoan,
+  PatchedMyCustomerDataUpdate,
+  PatchedMyMemberDataUpdate,
+  PatchedOffer,
+  PatchedOfferGroup,
+  PatchedOrderContent,
+  PatchedOrdersDeliveryDay,
+  PatchedOrganicCertificate,
+  PatchedPaymentCycle,
+  PatchedPlot,
+  PatchedPurchase,
+  PatchedReseller,
+  PatchedSeason,
+  PatchedSetInvoiceNoteRequest,
+  PatchedSetOrderNoteRequest,
+  PatchedShare,
+  PatchedShareArticle,
+  PatchedShareArticleNetPrice,
+  PatchedShareContent,
+  PatchedShareDelivery,
+  PatchedShareDeliveryOverview,
+  PatchedShareType,
+  PatchedShareTypeVariation,
+  PatchedShareTypeVariationGrossPrice,
+  PatchedSharesDeliveryDay,
+  PatchedStorage,
+  PatchedSubscription,
+  PatchedTheoreticalCleanAmount,
+  PatchedTheoreticalHarvest,
+  PatchedTheoreticalPurchase,
+  PatchedTheoreticalWashAmount,
+  PatchedWaste,
   PaymentCycle,
   Plot,
   Purchase,
@@ -272,9 +323,7 @@ import type {
   PurchaseCostByWeek,
   Reseller,
   Season,
-  SetInvoiceNoteRequest,
   SetInvoiceNoteResponse,
-  SetOrderNoteRequest,
   SetOrderNoteResponse,
   Share,
   ShareArticle,
@@ -647,14 +696,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningAbosPartialUpdate = (
     id: string,
-    subscription: NonReadonly<Subscription>,
+    patchedSubscription: NonReadonly<PatchedSubscription>,
  ) => {
       
       
       return axiosService<Subscription>(
       {url: `/api/commissioning/abos/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: subscription
+      data: patchedSubscription
     },
       );
     }
@@ -662,8 +711,8 @@ export const commissioningAbosPartialUpdate = (
 
 
 export const getCommissioningAbosPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, TError,{id: string;data: NonReadonly<Subscription>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, TError,{id: string;data: NonReadonly<Subscription>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSubscription>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSubscription>}, TContext> => {
 
 const mutationKey = ['commissioningAbosPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -675,7 +724,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, {id: string;data: NonReadonly<Subscription>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, {id: string;data: NonReadonly<PatchedSubscription>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningAbosPartialUpdate(id,data,)
@@ -687,15 +736,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningAbosPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>>
-    export type CommissioningAbosPartialUpdateMutationBody = NonReadonly<Subscription>
+    export type CommissioningAbosPartialUpdateMutationBody = NonReadonly<PatchedSubscription>
     export type CommissioningAbosPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningAbosPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, TError,{id: string;data: NonReadonly<Subscription>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSubscription>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningAbosPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Subscription>},
+        {id: string;data: NonReadonly<PatchedSubscription>},
         TContext
       > => {
 
@@ -2462,14 +2511,14 @@ the document fetch.
  */
 export const commissioningConsentDocumentsPartialUpdate = (
     id: string,
-    consentDocument: NonReadonly<ConsentDocument>,
+    patchedConsentDocument: NonReadonly<PatchedConsentDocument>,
  ) => {
       
       
       return axiosService<ConsentDocument>(
       {url: `/api/commissioning/consent_documents/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: consentDocument
+      data: patchedConsentDocument
     },
       );
     }
@@ -2477,8 +2526,8 @@ export const commissioningConsentDocumentsPartialUpdate = (
 
 
 export const getCommissioningConsentDocumentsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ConsentDocument>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ConsentDocument>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedConsentDocument>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedConsentDocument>}, TContext> => {
 
 const mutationKey = ['commissioningConsentDocumentsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -2490,7 +2539,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, {id: string;data: NonReadonly<ConsentDocument>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, {id: string;data: NonReadonly<PatchedConsentDocument>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningConsentDocumentsPartialUpdate(id,data,)
@@ -2502,15 +2551,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningConsentDocumentsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>>
-    export type CommissioningConsentDocumentsPartialUpdateMutationBody = NonReadonly<ConsentDocument>
+    export type CommissioningConsentDocumentsPartialUpdateMutationBody = NonReadonly<PatchedConsentDocument>
     export type CommissioningConsentDocumentsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningConsentDocumentsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ConsentDocument>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedConsentDocument>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningConsentDocumentsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ConsentDocument>},
+        {id: string;data: NonReadonly<PatchedConsentDocument>},
         TContext
       > => {
 
@@ -3114,14 +3163,14 @@ Member (no spoofing); office staff can pass an explicit
  */
 export const commissioningConsentsPartialUpdate = (
     id: string,
-    consentRecord: NonReadonly<ConsentRecord>,
+    patchedConsentRecord: NonReadonly<PatchedConsentRecord>,
  ) => {
       
       
       return axiosService<ConsentRecord>(
       {url: `/api/commissioning/consents/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: consentRecord
+      data: patchedConsentRecord
     },
       );
     }
@@ -3129,8 +3178,8 @@ export const commissioningConsentsPartialUpdate = (
 
 
 export const getCommissioningConsentsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ConsentRecord>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ConsentRecord>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedConsentRecord>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedConsentRecord>}, TContext> => {
 
 const mutationKey = ['commissioningConsentsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -3142,7 +3191,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, {id: string;data: NonReadonly<ConsentRecord>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, {id: string;data: NonReadonly<PatchedConsentRecord>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningConsentsPartialUpdate(id,data,)
@@ -3154,15 +3203,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningConsentsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>>
-    export type CommissioningConsentsPartialUpdateMutationBody = NonReadonly<ConsentRecord>
+    export type CommissioningConsentsPartialUpdateMutationBody = NonReadonly<PatchedConsentRecord>
     export type CommissioningConsentsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningConsentsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ConsentRecord>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedConsentRecord>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningConsentsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ConsentRecord>},
+        {id: string;data: NonReadonly<PatchedConsentRecord>},
         TContext
       > => {
 
@@ -3581,14 +3630,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningCoopSharesPartialUpdate = (
     id: string,
-    coopShare: NonReadonly<CoopShare>,
+    patchedCoopShare: NonReadonly<PatchedCoopShare>,
  ) => {
       
       
       return axiosService<CoopShare>(
       {url: `/api/commissioning/coop_shares/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: coopShare
+      data: patchedCoopShare
     },
       );
     }
@@ -3596,8 +3645,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningCoopSharesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<CoopShare>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<CoopShare>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCoopShare>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCoopShare>}, TContext> => {
 
 const mutationKey = ['commissioningCoopSharesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -3609,7 +3658,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, {id: string;data: NonReadonly<CoopShare>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, {id: string;data: NonReadonly<PatchedCoopShare>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningCoopSharesPartialUpdate(id,data,)
@@ -3621,15 +3670,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCoopSharesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>>
-    export type CommissioningCoopSharesPartialUpdateMutationBody = NonReadonly<CoopShare>
+    export type CommissioningCoopSharesPartialUpdateMutationBody = NonReadonly<PatchedCoopShare>
     export type CommissioningCoopSharesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningCoopSharesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<CoopShare>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCoopShare>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCoopSharesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<CoopShare>},
+        {id: string;data: NonReadonly<PatchedCoopShare>},
         TContext
       > => {
 
@@ -4047,14 +4096,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningCrateContentsPartialUpdate = (
     id: string,
-    crateOrderContentUpdateRequest: CrateOrderContentUpdateRequest,
+    patchedCrateOrderContentUpdateRequest: PatchedCrateOrderContentUpdateRequest,
  ) => {
       
       
       return axiosService<CrateOrderContentPartialUpdateResponse>(
       {url: `/api/commissioning/crate_contents/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: crateOrderContentUpdateRequest
+      data: patchedCrateOrderContentUpdateRequest
     },
       );
     }
@@ -4062,8 +4111,8 @@ export const commissioningCrateContentsPartialUpdate = (
 
 
 export const getCommissioningCrateContentsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, TError,{id: string;data: CrateOrderContentUpdateRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, TError,{id: string;data: CrateOrderContentUpdateRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, TError,{id: string;data: PatchedCrateOrderContentUpdateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, TError,{id: string;data: PatchedCrateOrderContentUpdateRequest}, TContext> => {
 
 const mutationKey = ['commissioningCrateContentsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -4075,7 +4124,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, {id: string;data: CrateOrderContentUpdateRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, {id: string;data: PatchedCrateOrderContentUpdateRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningCrateContentsPartialUpdate(id,data,)
@@ -4087,15 +4136,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCrateContentsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>>
-    export type CommissioningCrateContentsPartialUpdateMutationBody = CrateOrderContentUpdateRequest
+    export type CommissioningCrateContentsPartialUpdateMutationBody = PatchedCrateOrderContentUpdateRequest
     export type CommissioningCrateContentsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningCrateContentsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, TError,{id: string;data: CrateOrderContentUpdateRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>, TError,{id: string;data: PatchedCrateOrderContentUpdateRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCrateContentsPartialUpdate>>,
         TError,
-        {id: string;data: CrateOrderContentUpdateRequest},
+        {id: string;data: PatchedCrateOrderContentUpdateRequest},
         TContext
       > => {
 
@@ -4463,14 +4512,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningCrateContentsDeliveryNotePartialUpdate = (
     id: string,
-    crateDeliveryNoteContent: NonReadonly<CrateDeliveryNoteContent>,
+    patchedCrateDeliveryNoteContentWriteRequest: PatchedCrateDeliveryNoteContentWriteRequest,
  ) => {
       
       
-      return axiosService<CrateDeliveryNoteContent>(
+      return axiosService<CrateItemSummary>(
       {url: `/api/commissioning/crate_contents_delivery_note/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: crateDeliveryNoteContent
+      data: patchedCrateDeliveryNoteContentWriteRequest
     },
       );
     }
@@ -4478,8 +4527,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningCrateContentsDeliveryNotePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, TError,{id: string;data: NonReadonly<CrateDeliveryNoteContent>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, TError,{id: string;data: NonReadonly<CrateDeliveryNoteContent>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, TError,{id: string;data: PatchedCrateDeliveryNoteContentWriteRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, TError,{id: string;data: PatchedCrateDeliveryNoteContentWriteRequest}, TContext> => {
 
 const mutationKey = ['commissioningCrateContentsDeliveryNotePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -4491,7 +4540,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, {id: string;data: NonReadonly<CrateDeliveryNoteContent>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, {id: string;data: PatchedCrateDeliveryNoteContentWriteRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningCrateContentsDeliveryNotePartialUpdate(id,data,)
@@ -4503,15 +4552,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCrateContentsDeliveryNotePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>>
-    export type CommissioningCrateContentsDeliveryNotePartialUpdateMutationBody = NonReadonly<CrateDeliveryNoteContent>
+    export type CommissioningCrateContentsDeliveryNotePartialUpdateMutationBody = PatchedCrateDeliveryNoteContentWriteRequest
     export type CommissioningCrateContentsDeliveryNotePartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningCrateContentsDeliveryNotePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, TError,{id: string;data: NonReadonly<CrateDeliveryNoteContent>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>, TError,{id: string;data: PatchedCrateDeliveryNoteContentWriteRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCrateContentsDeliveryNotePartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<CrateDeliveryNoteContent>},
+        {id: string;data: PatchedCrateDeliveryNoteContentWriteRequest},
         TContext
       > => {
 
@@ -4879,14 +4928,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningCrateContentsInvoicePartialUpdate = (
     id: string,
-    crateContentInvoiceReseller: NonReadonly<CrateContentInvoiceReseller>,
+    patchedCrateInvoiceContentWriteRequest: PatchedCrateInvoiceContentWriteRequest,
  ) => {
       
       
-      return axiosService<CrateContentInvoiceReseller>(
+      return axiosService<CrateItemSummary>(
       {url: `/api/commissioning/crate_contents_invoice/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: crateContentInvoiceReseller
+      data: patchedCrateInvoiceContentWriteRequest
     },
       );
     }
@@ -4894,8 +4943,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningCrateContentsInvoicePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, TError,{id: string;data: NonReadonly<CrateContentInvoiceReseller>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, TError,{id: string;data: NonReadonly<CrateContentInvoiceReseller>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, TError,{id: string;data: PatchedCrateInvoiceContentWriteRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, TError,{id: string;data: PatchedCrateInvoiceContentWriteRequest}, TContext> => {
 
 const mutationKey = ['commissioningCrateContentsInvoicePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -4907,7 +4956,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, {id: string;data: NonReadonly<CrateContentInvoiceReseller>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, {id: string;data: PatchedCrateInvoiceContentWriteRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningCrateContentsInvoicePartialUpdate(id,data,)
@@ -4919,15 +4968,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCrateContentsInvoicePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>>
-    export type CommissioningCrateContentsInvoicePartialUpdateMutationBody = NonReadonly<CrateContentInvoiceReseller>
+    export type CommissioningCrateContentsInvoicePartialUpdateMutationBody = PatchedCrateInvoiceContentWriteRequest
     export type CommissioningCrateContentsInvoicePartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningCrateContentsInvoicePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, TError,{id: string;data: NonReadonly<CrateContentInvoiceReseller>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>, TError,{id: string;data: PatchedCrateInvoiceContentWriteRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCrateContentsInvoicePartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<CrateContentInvoiceReseller>},
+        {id: string;data: PatchedCrateInvoiceContentWriteRequest},
         TContext
       > => {
 
@@ -5316,14 +5365,14 @@ Prices are time-bound with valid_from / valid_until dates. Pass
  */
 export const commissioningCrateNetPricesPartialUpdate = (
     id: string,
-    crateNetPrice: NonReadonly<CrateNetPrice>,
+    patchedCrateNetPrice: NonReadonly<PatchedCrateNetPrice>,
  ) => {
       
       
       return axiosService<CrateNetPrice>(
       {url: `/api/commissioning/crate_net_prices/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: crateNetPrice
+      data: patchedCrateNetPrice
     },
       );
     }
@@ -5331,8 +5380,8 @@ export const commissioningCrateNetPricesPartialUpdate = (
 
 
 export const getCommissioningCrateNetPricesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<CrateNetPrice>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<CrateNetPrice>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCrateNetPrice>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCrateNetPrice>}, TContext> => {
 
 const mutationKey = ['commissioningCrateNetPricesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -5344,7 +5393,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, {id: string;data: NonReadonly<CrateNetPrice>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, {id: string;data: NonReadonly<PatchedCrateNetPrice>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningCrateNetPricesPartialUpdate(id,data,)
@@ -5356,15 +5405,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCrateNetPricesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>>
-    export type CommissioningCrateNetPricesPartialUpdateMutationBody = NonReadonly<CrateNetPrice>
+    export type CommissioningCrateNetPricesPartialUpdateMutationBody = NonReadonly<PatchedCrateNetPrice>
     export type CommissioningCrateNetPricesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningCrateNetPricesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<CrateNetPrice>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCrateNetPrice>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCrateNetPricesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<CrateNetPrice>},
+        {id: string;data: NonReadonly<PatchedCrateNetPrice>},
         TContext
       > => {
 
@@ -5739,14 +5788,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningCratesPartialUpdate = (
     id: string,
-    crate: NonReadonly<Crate>,
+    patchedCrate: NonReadonly<PatchedCrate>,
  ) => {
       
       
       return axiosService<Crate>(
       {url: `/api/commissioning/crates/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: crate
+      data: patchedCrate
     },
       );
     }
@@ -5754,8 +5803,8 @@ export const commissioningCratesPartialUpdate = (
 
 
 export const getCommissioningCratesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, TError,{id: string;data: NonReadonly<Crate>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, TError,{id: string;data: NonReadonly<Crate>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCrate>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCrate>}, TContext> => {
 
 const mutationKey = ['commissioningCratesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -5767,7 +5816,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, {id: string;data: NonReadonly<Crate>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, {id: string;data: NonReadonly<PatchedCrate>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningCratesPartialUpdate(id,data,)
@@ -5779,15 +5828,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningCratesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>>
-    export type CommissioningCratesPartialUpdateMutationBody = NonReadonly<Crate>
+    export type CommissioningCratesPartialUpdateMutationBody = NonReadonly<PatchedCrate>
     export type CommissioningCratesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningCratesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, TError,{id: string;data: NonReadonly<Crate>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedCrate>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningCratesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Crate>},
+        {id: string;data: NonReadonly<PatchedCrate>},
         TContext
       > => {
 
@@ -6870,14 +6919,14 @@ underlying ``DefaultShareArticleInShare`` row.
  */
 export const commissioningDefaultShareArticlesInSharePartialUpdate = (
     id: string,
-    defaultShareArticleInShare: NonReadonly<DefaultShareArticleInShare>,
+    patchedDefaultShareArticleInShare: NonReadonly<PatchedDefaultShareArticleInShare>,
  ) => {
       
       
       return axiosService<DefaultShareArticleInShare>(
       {url: `/api/commissioning/default_share_articles_in_share/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: defaultShareArticleInShare
+      data: patchedDefaultShareArticleInShare
     },
       );
     }
@@ -6885,8 +6934,8 @@ export const commissioningDefaultShareArticlesInSharePartialUpdate = (
 
 
 export const getCommissioningDefaultShareArticlesInSharePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, TError,{id: string;data: NonReadonly<DefaultShareArticleInShare>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, TError,{id: string;data: NonReadonly<DefaultShareArticleInShare>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDefaultShareArticleInShare>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDefaultShareArticleInShare>}, TContext> => {
 
 const mutationKey = ['commissioningDefaultShareArticlesInSharePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -6898,7 +6947,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, {id: string;data: NonReadonly<DefaultShareArticleInShare>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, {id: string;data: NonReadonly<PatchedDefaultShareArticleInShare>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningDefaultShareArticlesInSharePartialUpdate(id,data,)
@@ -6910,15 +6959,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningDefaultShareArticlesInSharePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>>
-    export type CommissioningDefaultShareArticlesInSharePartialUpdateMutationBody = NonReadonly<DefaultShareArticleInShare>
+    export type CommissioningDefaultShareArticlesInSharePartialUpdateMutationBody = NonReadonly<PatchedDefaultShareArticleInShare>
     export type CommissioningDefaultShareArticlesInSharePartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningDefaultShareArticlesInSharePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, TError,{id: string;data: NonReadonly<DefaultShareArticleInShare>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDefaultShareArticleInShare>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningDefaultShareArticlesInSharePartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<DefaultShareArticleInShare>},
+        {id: string;data: NonReadonly<PatchedDefaultShareArticleInShare>},
         TContext
       > => {
 
@@ -7334,14 +7383,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningDefaultShareContentsBulkUpdatePartialUpdate = (
     compositeId: string,
-    defaultShareContentRequest: DefaultShareContentRequest,
+    patchedDefaultShareContentRequest: PatchedDefaultShareContentRequest,
  ) => {
       
       
       return axiosService<DefaultShareContentResponse>(
       {url: `/api/commissioning/default_share_contents/bulk_update/${compositeId}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: defaultShareContentRequest
+      data: patchedDefaultShareContentRequest
     },
       );
     }
@@ -7349,8 +7398,8 @@ export const commissioningDefaultShareContentsBulkUpdatePartialUpdate = (
 
 
 export const getCommissioningDefaultShareContentsBulkUpdatePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, TError,{compositeId: string;data: DefaultShareContentRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, TError,{compositeId: string;data: DefaultShareContentRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, TError,{compositeId: string;data: PatchedDefaultShareContentRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, TError,{compositeId: string;data: PatchedDefaultShareContentRequest}, TContext> => {
 
 const mutationKey = ['commissioningDefaultShareContentsBulkUpdatePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -7362,7 +7411,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, {compositeId: string;data: DefaultShareContentRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, {compositeId: string;data: PatchedDefaultShareContentRequest}> = (props) => {
           const {compositeId,data} = props ?? {};
 
           return  commissioningDefaultShareContentsBulkUpdatePartialUpdate(compositeId,data,)
@@ -7374,15 +7423,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningDefaultShareContentsBulkUpdatePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>>
-    export type CommissioningDefaultShareContentsBulkUpdatePartialUpdateMutationBody = DefaultShareContentRequest
+    export type CommissioningDefaultShareContentsBulkUpdatePartialUpdateMutationBody = PatchedDefaultShareContentRequest
     export type CommissioningDefaultShareContentsBulkUpdatePartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningDefaultShareContentsBulkUpdatePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, TError,{compositeId: string;data: DefaultShareContentRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>, TError,{compositeId: string;data: PatchedDefaultShareContentRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningDefaultShareContentsBulkUpdatePartialUpdate>>,
         TError,
-        {compositeId: string;data: DefaultShareContentRequest},
+        {compositeId: string;data: PatchedDefaultShareContentRequest},
         TContext
       > => {
 
@@ -7821,14 +7870,14 @@ weeks only — an issued/paid week is never retro-edited).
  */
 export const commissioningDeliveryExceptionPeriodsPartialUpdate = (
     id: string,
-    deliveryExceptionPeriod: NonReadonly<DeliveryExceptionPeriod>,
+    patchedDeliveryExceptionPeriod: NonReadonly<PatchedDeliveryExceptionPeriod>,
  ) => {
       
       
       return axiosService<DeliveryExceptionPeriod>(
       {url: `/api/commissioning/delivery_exception_periods/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: deliveryExceptionPeriod
+      data: patchedDeliveryExceptionPeriod
     },
       );
     }
@@ -7836,8 +7885,8 @@ export const commissioningDeliveryExceptionPeriodsPartialUpdate = (
 
 
 export const getCommissioningDeliveryExceptionPeriodsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryExceptionPeriod>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryExceptionPeriod>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryExceptionPeriod>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryExceptionPeriod>}, TContext> => {
 
 const mutationKey = ['commissioningDeliveryExceptionPeriodsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -7849,7 +7898,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, {id: string;data: NonReadonly<DeliveryExceptionPeriod>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, {id: string;data: NonReadonly<PatchedDeliveryExceptionPeriod>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningDeliveryExceptionPeriodsPartialUpdate(id,data,)
@@ -7861,15 +7910,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningDeliveryExceptionPeriodsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>>
-    export type CommissioningDeliveryExceptionPeriodsPartialUpdateMutationBody = NonReadonly<DeliveryExceptionPeriod>
+    export type CommissioningDeliveryExceptionPeriodsPartialUpdateMutationBody = NonReadonly<PatchedDeliveryExceptionPeriod>
     export type CommissioningDeliveryExceptionPeriodsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningDeliveryExceptionPeriodsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryExceptionPeriod>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryExceptionPeriod>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningDeliveryExceptionPeriodsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<DeliveryExceptionPeriod>},
+        {id: string;data: NonReadonly<PatchedDeliveryExceptionPeriod>},
         TContext
       > => {
 
@@ -8233,14 +8282,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningDeliveryNoteContentsPartialUpdate = (
     id: string,
-    deliveryNoteResellerContent: NonReadonly<DeliveryNoteResellerContent>,
+    patchedDeliveryNoteResellerContent: NonReadonly<PatchedDeliveryNoteResellerContent>,
  ) => {
       
       
       return axiosService<DeliveryNoteResellerContent>(
       {url: `/api/commissioning/delivery_note_contents/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: deliveryNoteResellerContent
+      data: patchedDeliveryNoteResellerContent
     },
       );
     }
@@ -8248,8 +8297,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningDeliveryNoteContentsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryNoteResellerContent>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryNoteResellerContent>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryNoteResellerContent>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryNoteResellerContent>}, TContext> => {
 
 const mutationKey = ['commissioningDeliveryNoteContentsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -8261,7 +8310,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, {id: string;data: NonReadonly<DeliveryNoteResellerContent>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, {id: string;data: NonReadonly<PatchedDeliveryNoteResellerContent>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningDeliveryNoteContentsPartialUpdate(id,data,)
@@ -8273,15 +8322,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningDeliveryNoteContentsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>>
-    export type CommissioningDeliveryNoteContentsPartialUpdateMutationBody = NonReadonly<DeliveryNoteResellerContent>
+    export type CommissioningDeliveryNoteContentsPartialUpdateMutationBody = NonReadonly<PatchedDeliveryNoteResellerContent>
     export type CommissioningDeliveryNoteContentsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningDeliveryNoteContentsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryNoteResellerContent>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryNoteResellerContent>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningDeliveryNoteContentsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<DeliveryNoteResellerContent>},
+        {id: string;data: NonReadonly<PatchedDeliveryNoteResellerContent>},
         TContext
       > => {
 
@@ -8634,14 +8683,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningDeliveryNotesPartialUpdate = (
     id: string,
-    deliveryNoteReseller: NonReadonly<DeliveryNoteReseller>,
+    patchedDeliveryNoteReseller: NonReadonly<PatchedDeliveryNoteReseller>,
  ) => {
       
       
       return axiosService<DeliveryNoteReseller>(
       {url: `/api/commissioning/delivery_notes/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: deliveryNoteReseller
+      data: patchedDeliveryNoteReseller
     },
       );
     }
@@ -8649,8 +8698,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningDeliveryNotesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryNoteReseller>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryNoteReseller>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryNoteReseller>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryNoteReseller>}, TContext> => {
 
 const mutationKey = ['commissioningDeliveryNotesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -8662,7 +8711,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, {id: string;data: NonReadonly<DeliveryNoteReseller>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, {id: string;data: NonReadonly<PatchedDeliveryNoteReseller>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningDeliveryNotesPartialUpdate(id,data,)
@@ -8674,15 +8723,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningDeliveryNotesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>>
-    export type CommissioningDeliveryNotesPartialUpdateMutationBody = NonReadonly<DeliveryNoteReseller>
+    export type CommissioningDeliveryNotesPartialUpdateMutationBody = NonReadonly<PatchedDeliveryNoteReseller>
     export type CommissioningDeliveryNotesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningDeliveryNotesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryNoteReseller>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryNoteReseller>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningDeliveryNotesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<DeliveryNoteReseller>},
+        {id: string;data: NonReadonly<PatchedDeliveryNoteReseller>},
         TContext
       > => {
 
@@ -9369,14 +9418,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningDeliveryStationsPartialUpdate = (
     id: string,
-    deliveryStation: NonReadonly<DeliveryStation>,
+    patchedDeliveryStation: NonReadonly<PatchedDeliveryStation>,
  ) => {
       
       
       return axiosService<DeliveryStation>(
       {url: `/api/commissioning/delivery_stations/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: deliveryStation
+      data: patchedDeliveryStation
     },
       );
     }
@@ -9384,8 +9433,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningDeliveryStationsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryStation>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryStation>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryStation>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryStation>}, TContext> => {
 
 const mutationKey = ['commissioningDeliveryStationsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -9397,7 +9446,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, {id: string;data: NonReadonly<DeliveryStation>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, {id: string;data: NonReadonly<PatchedDeliveryStation>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningDeliveryStationsPartialUpdate(id,data,)
@@ -9409,15 +9458,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningDeliveryStationsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>>
-    export type CommissioningDeliveryStationsPartialUpdateMutationBody = NonReadonly<DeliveryStation>
+    export type CommissioningDeliveryStationsPartialUpdateMutationBody = NonReadonly<PatchedDeliveryStation>
     export type CommissioningDeliveryStationsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningDeliveryStationsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryStation>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryStation>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningDeliveryStationsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<DeliveryStation>},
+        {id: string;data: NonReadonly<PatchedDeliveryStation>},
         TContext
       > => {
 
@@ -9774,14 +9823,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningDeliveryStationsDaysPartialUpdate = (
     id: string,
-    deliveryStationDay: NonReadonly<DeliveryStationDay>,
+    patchedDeliveryStationDay: NonReadonly<PatchedDeliveryStationDay>,
  ) => {
       
       
       return axiosService<DeliveryStationDay>(
       {url: `/api/commissioning/delivery_stations_days/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: deliveryStationDay
+      data: patchedDeliveryStationDay
     },
       );
     }
@@ -9789,8 +9838,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningDeliveryStationsDaysPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryStationDay>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryStationDay>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryStationDay>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryStationDay>}, TContext> => {
 
 const mutationKey = ['commissioningDeliveryStationsDaysPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -9802,7 +9851,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, {id: string;data: NonReadonly<DeliveryStationDay>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, {id: string;data: NonReadonly<PatchedDeliveryStationDay>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningDeliveryStationsDaysPartialUpdate(id,data,)
@@ -9814,15 +9863,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningDeliveryStationsDaysPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>>
-    export type CommissioningDeliveryStationsDaysPartialUpdateMutationBody = NonReadonly<DeliveryStationDay>
+    export type CommissioningDeliveryStationsDaysPartialUpdateMutationBody = NonReadonly<PatchedDeliveryStationDay>
     export type CommissioningDeliveryStationsDaysPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningDeliveryStationsDaysPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<DeliveryStationDay>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedDeliveryStationDay>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningDeliveryStationsDaysPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<DeliveryStationDay>},
+        {id: string;data: NonReadonly<PatchedDeliveryStationDay>},
         TContext
       > => {
 
@@ -10741,14 +10790,14 @@ references upstream codes.
  */
 export const commissioningExternalCodeMappingsPartialUpdate = (
     id: string,
-    externalCodeMapping: NonReadonly<ExternalCodeMapping>,
+    patchedExternalCodeMapping: NonReadonly<PatchedExternalCodeMapping>,
  ) => {
       
       
       return axiosService<ExternalCodeMapping>(
       {url: `/api/commissioning/external_code_mappings/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: externalCodeMapping
+      data: patchedExternalCodeMapping
     },
       );
     }
@@ -10756,8 +10805,8 @@ export const commissioningExternalCodeMappingsPartialUpdate = (
 
 
 export const getCommissioningExternalCodeMappingsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, TError,{id: string;data: NonReadonly<ExternalCodeMapping>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, TError,{id: string;data: NonReadonly<ExternalCodeMapping>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedExternalCodeMapping>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedExternalCodeMapping>}, TContext> => {
 
 const mutationKey = ['commissioningExternalCodeMappingsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -10769,7 +10818,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, {id: string;data: NonReadonly<ExternalCodeMapping>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, {id: string;data: NonReadonly<PatchedExternalCodeMapping>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningExternalCodeMappingsPartialUpdate(id,data,)
@@ -10781,15 +10830,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningExternalCodeMappingsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>>
-    export type CommissioningExternalCodeMappingsPartialUpdateMutationBody = NonReadonly<ExternalCodeMapping>
+    export type CommissioningExternalCodeMappingsPartialUpdateMutationBody = NonReadonly<PatchedExternalCodeMapping>
     export type CommissioningExternalCodeMappingsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningExternalCodeMappingsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, TError,{id: string;data: NonReadonly<ExternalCodeMapping>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedExternalCodeMapping>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningExternalCodeMappingsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ExternalCodeMapping>},
+        {id: string;data: NonReadonly<PatchedExternalCodeMapping>},
         TContext
       > => {
 
@@ -11337,14 +11386,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningForecastPartialUpdate = (
     id: string,
-    forecast: NonReadonly<Forecast>,
+    patchedForecast: NonReadonly<PatchedForecast>,
  ) => {
       
       
       return axiosService<Forecast>(
       {url: `/api/commissioning/forecast/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: forecast
+      data: patchedForecast
     },
       );
     }
@@ -11352,8 +11401,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningForecastPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, TError,{id: string;data: NonReadonly<Forecast>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, TError,{id: string;data: NonReadonly<Forecast>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedForecast>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedForecast>}, TContext> => {
 
 const mutationKey = ['commissioningForecastPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -11365,7 +11414,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, {id: string;data: NonReadonly<Forecast>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, {id: string;data: NonReadonly<PatchedForecast>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningForecastPartialUpdate(id,data,)
@@ -11377,15 +11426,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningForecastPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>>
-    export type CommissioningForecastPartialUpdateMutationBody = NonReadonly<Forecast>
+    export type CommissioningForecastPartialUpdateMutationBody = NonReadonly<PatchedForecast>
     export type CommissioningForecastPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningForecastPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, TError,{id: string;data: NonReadonly<Forecast>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedForecast>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningForecastPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Forecast>},
+        {id: string;data: NonReadonly<PatchedForecast>},
         TContext
       > => {
 
@@ -11908,14 +11957,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningHarvestPartialUpdate = (
     id: string,
-    harvest: NonReadonly<Harvest>,
+    patchedHarvest: NonReadonly<PatchedHarvest>,
  ) => {
       
       
       return axiosService<Harvest>(
       {url: `/api/commissioning/harvest/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: harvest
+      data: patchedHarvest
     },
       );
     }
@@ -11923,8 +11972,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningHarvestPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, TError,{id: string;data: NonReadonly<Harvest>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, TError,{id: string;data: NonReadonly<Harvest>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedHarvest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedHarvest>}, TContext> => {
 
 const mutationKey = ['commissioningHarvestPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -11936,7 +11985,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, {id: string;data: NonReadonly<Harvest>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, {id: string;data: NonReadonly<PatchedHarvest>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningHarvestPartialUpdate(id,data,)
@@ -11948,15 +11997,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningHarvestPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>>
-    export type CommissioningHarvestPartialUpdateMutationBody = NonReadonly<Harvest>
+    export type CommissioningHarvestPartialUpdateMutationBody = NonReadonly<PatchedHarvest>
     export type CommissioningHarvestPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningHarvestPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, TError,{id: string;data: NonReadonly<Harvest>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedHarvest>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningHarvestPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Harvest>},
+        {id: string;data: NonReadonly<PatchedHarvest>},
         TContext
       > => {
 
@@ -12388,14 +12437,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningHarvestSharePlanningPartialUpdate = (
     id: string,
-    harvestSharePlanningUpdateRequest: HarvestSharePlanningUpdateRequest,
+    patchedHarvestSharePlanningUpdateRequest: PatchedHarvestSharePlanningUpdateRequest,
  ) => {
       
       
       return axiosService<HarvestSharePlanningRow>(
       {url: `/api/commissioning/harvest_share_planning/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: harvestSharePlanningUpdateRequest
+      data: patchedHarvestSharePlanningUpdateRequest
     },
       );
     }
@@ -12403,8 +12452,8 @@ export const commissioningHarvestSharePlanningPartialUpdate = (
 
 
 export const getCommissioningHarvestSharePlanningPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, TError,{id: string;data: HarvestSharePlanningUpdateRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, TError,{id: string;data: HarvestSharePlanningUpdateRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, TError,{id: string;data: PatchedHarvestSharePlanningUpdateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, TError,{id: string;data: PatchedHarvestSharePlanningUpdateRequest}, TContext> => {
 
 const mutationKey = ['commissioningHarvestSharePlanningPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -12416,7 +12465,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, {id: string;data: HarvestSharePlanningUpdateRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, {id: string;data: PatchedHarvestSharePlanningUpdateRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningHarvestSharePlanningPartialUpdate(id,data,)
@@ -12428,15 +12477,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningHarvestSharePlanningPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>>
-    export type CommissioningHarvestSharePlanningPartialUpdateMutationBody = HarvestSharePlanningUpdateRequest
+    export type CommissioningHarvestSharePlanningPartialUpdateMutationBody = PatchedHarvestSharePlanningUpdateRequest
     export type CommissioningHarvestSharePlanningPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningHarvestSharePlanningPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, TError,{id: string;data: HarvestSharePlanningUpdateRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>, TError,{id: string;data: PatchedHarvestSharePlanningUpdateRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningHarvestSharePlanningPartialUpdate>>,
         TError,
-        {id: string;data: HarvestSharePlanningUpdateRequest},
+        {id: string;data: PatchedHarvestSharePlanningUpdateRequest},
         TContext
       > => {
 
@@ -12951,14 +13000,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningInvoiceContentsPartialUpdate = (
     id: string,
-    invoiceResellerContent: NonReadonly<InvoiceResellerContent>,
+    patchedInvoiceResellerContent: NonReadonly<PatchedInvoiceResellerContent>,
  ) => {
       
       
       return axiosService<InvoiceResellerContent>(
       {url: `/api/commissioning/invoice_contents/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: invoiceResellerContent
+      data: patchedInvoiceResellerContent
     },
       );
     }
@@ -12966,8 +13015,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningInvoiceContentsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<InvoiceResellerContent>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<InvoiceResellerContent>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedInvoiceResellerContent>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedInvoiceResellerContent>}, TContext> => {
 
 const mutationKey = ['commissioningInvoiceContentsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -12979,7 +13028,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, {id: string;data: NonReadonly<InvoiceResellerContent>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, {id: string;data: NonReadonly<PatchedInvoiceResellerContent>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningInvoiceContentsPartialUpdate(id,data,)
@@ -12991,15 +13040,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningInvoiceContentsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>>
-    export type CommissioningInvoiceContentsPartialUpdateMutationBody = NonReadonly<InvoiceResellerContent>
+    export type CommissioningInvoiceContentsPartialUpdateMutationBody = NonReadonly<PatchedInvoiceResellerContent>
     export type CommissioningInvoiceContentsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningInvoiceContentsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<InvoiceResellerContent>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedInvoiceResellerContent>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningInvoiceContentsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<InvoiceResellerContent>},
+        {id: string;data: NonReadonly<PatchedInvoiceResellerContent>},
         TContext
       > => {
 
@@ -13353,14 +13402,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningInvoicesPartialUpdate = (
     id: string,
-    invoiceReseller: NonReadonly<InvoiceReseller>,
+    patchedInvoiceReseller: NonReadonly<PatchedInvoiceReseller>,
  ) => {
       
       
       return axiosService<InvoiceReseller>(
       {url: `/api/commissioning/invoices/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: invoiceReseller
+      data: patchedInvoiceReseller
     },
       );
     }
@@ -13368,8 +13417,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningInvoicesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, TError,{id: string;data: NonReadonly<InvoiceReseller>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, TError,{id: string;data: NonReadonly<InvoiceReseller>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedInvoiceReseller>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedInvoiceReseller>}, TContext> => {
 
 const mutationKey = ['commissioningInvoicesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -13381,7 +13430,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, {id: string;data: NonReadonly<InvoiceReseller>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, {id: string;data: NonReadonly<PatchedInvoiceReseller>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningInvoicesPartialUpdate(id,data,)
@@ -13393,15 +13442,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningInvoicesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>>
-    export type CommissioningInvoicesPartialUpdateMutationBody = NonReadonly<InvoiceReseller>
+    export type CommissioningInvoicesPartialUpdateMutationBody = NonReadonly<PatchedInvoiceReseller>
     export type CommissioningInvoicesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningInvoicesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, TError,{id: string;data: NonReadonly<InvoiceReseller>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedInvoiceReseller>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningInvoicesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<InvoiceReseller>},
+        {id: string;data: NonReadonly<PatchedInvoiceReseller>},
         TContext
       > => {
 
@@ -14257,14 +14306,14 @@ drf-spectacular doesn't reject calls that omit either.
  */
 export const commissioningMemberLoansPartialUpdate = (
     id: string,
-    memberLoan: NonReadonly<MemberLoan>,
+    patchedMemberLoan: NonReadonly<PatchedMemberLoan>,
  ) => {
       
       
       return axiosService<MemberLoan>(
       {url: `/api/commissioning/member_loans/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: memberLoan
+      data: patchedMemberLoan
     },
       );
     }
@@ -14272,8 +14321,8 @@ export const commissioningMemberLoansPartialUpdate = (
 
 
 export const getCommissioningMemberLoansPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, TError,{id: string;data: NonReadonly<MemberLoan>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, TError,{id: string;data: NonReadonly<MemberLoan>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedMemberLoan>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedMemberLoan>}, TContext> => {
 
 const mutationKey = ['commissioningMemberLoansPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -14285,7 +14334,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, {id: string;data: NonReadonly<MemberLoan>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, {id: string;data: NonReadonly<PatchedMemberLoan>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningMemberLoansPartialUpdate(id,data,)
@@ -14297,15 +14346,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningMemberLoansPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>>
-    export type CommissioningMemberLoansPartialUpdateMutationBody = NonReadonly<MemberLoan>
+    export type CommissioningMemberLoansPartialUpdateMutationBody = NonReadonly<PatchedMemberLoan>
     export type CommissioningMemberLoansPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningMemberLoansPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, TError,{id: string;data: NonReadonly<MemberLoan>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedMemberLoan>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningMemberLoansPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<MemberLoan>},
+        {id: string;data: NonReadonly<PatchedMemberLoan>},
         TContext
       > => {
 
@@ -14677,14 +14726,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningMembersPartialUpdate = (
     id: string,
-    member: NonReadonly<Member>,
+    patchedMember: NonReadonly<PatchedMember>,
  ) => {
       
       
       return axiosService<Member>(
       {url: `/api/commissioning/members/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: member
+      data: patchedMember
     },
       );
     }
@@ -14692,8 +14741,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningMembersPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, TError,{id: string;data: NonReadonly<Member>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, TError,{id: string;data: NonReadonly<Member>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedMember>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedMember>}, TContext> => {
 
 const mutationKey = ['commissioningMembersPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -14705,7 +14754,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, {id: string;data: NonReadonly<Member>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, {id: string;data: NonReadonly<PatchedMember>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningMembersPartialUpdate(id,data,)
@@ -14717,15 +14766,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningMembersPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>>
-    export type CommissioningMembersPartialUpdateMutationBody = NonReadonly<Member>
+    export type CommissioningMembersPartialUpdateMutationBody = NonReadonly<PatchedMember>
     export type CommissioningMembersPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningMembersPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, TError,{id: string;data: NonReadonly<Member>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedMember>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningMembersPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Member>},
+        {id: string;data: NonReadonly<PatchedMember>},
         TContext
       > => {
 
@@ -15467,14 +15516,14 @@ linked ``ContactEntity``; the owning ``Reseller`` row
 (customer_number, invoice_*, channel flags) stays office-only.
  */
 export const commissioningMyCustomerDataPartialUpdate = (
-    myCustomerDataUpdate: MyCustomerDataUpdate,
+    patchedMyCustomerDataUpdate: PatchedMyCustomerDataUpdate,
  ) => {
       
       
       return axiosService<MyCustomerDataRead>(
       {url: `/api/commissioning/my_customer_data/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: myCustomerDataUpdate
+      data: patchedMyCustomerDataUpdate
     },
       );
     }
@@ -15482,8 +15531,8 @@ export const commissioningMyCustomerDataPartialUpdate = (
 
 
 export const getCommissioningMyCustomerDataPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, TError,{data: MyCustomerDataUpdate}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, TError,{data: MyCustomerDataUpdate}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, TError,{data: PatchedMyCustomerDataUpdate}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, TError,{data: PatchedMyCustomerDataUpdate}, TContext> => {
 
 const mutationKey = ['commissioningMyCustomerDataPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -15495,7 +15544,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, {data: MyCustomerDataUpdate}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, {data: PatchedMyCustomerDataUpdate}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningMyCustomerDataPartialUpdate(data,)
@@ -15507,15 +15556,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningMyCustomerDataPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>>
-    export type CommissioningMyCustomerDataPartialUpdateMutationBody = MyCustomerDataUpdate
+    export type CommissioningMyCustomerDataPartialUpdateMutationBody = PatchedMyCustomerDataUpdate
     export type CommissioningMyCustomerDataPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningMyCustomerDataPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, TError,{data: MyCustomerDataUpdate}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>, TError,{data: PatchedMyCustomerDataUpdate}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningMyCustomerDataPartialUpdate>>,
         TError,
-        {data: MyCustomerDataUpdate},
+        {data: PatchedMyCustomerDataUpdate},
         TContext
       > => {
 
@@ -15630,14 +15679,14 @@ row regardless of role. Encrypted columns (IBAN, ``account_owner``)
 come back as ``*_stored`` booleans, never plaintext.
  */
 export const commissioningMyMemberDataPartialUpdate = (
-    myMemberDataUpdate: MyMemberDataUpdate,
+    patchedMyMemberDataUpdate: PatchedMyMemberDataUpdate,
  ) => {
       
       
       return axiosService<MyMemberDataRead>(
       {url: `/api/commissioning/my_member_data/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: myMemberDataUpdate
+      data: patchedMyMemberDataUpdate
     },
       );
     }
@@ -15645,8 +15694,8 @@ export const commissioningMyMemberDataPartialUpdate = (
 
 
 export const getCommissioningMyMemberDataPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, TError,{data: MyMemberDataUpdate}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, TError,{data: MyMemberDataUpdate}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, TError,{data: PatchedMyMemberDataUpdate}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, TError,{data: PatchedMyMemberDataUpdate}, TContext> => {
 
 const mutationKey = ['commissioningMyMemberDataPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -15658,7 +15707,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, {data: MyMemberDataUpdate}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, {data: PatchedMyMemberDataUpdate}> = (props) => {
           const {data} = props ?? {};
 
           return  commissioningMyMemberDataPartialUpdate(data,)
@@ -15670,15 +15719,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningMyMemberDataPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>>
-    export type CommissioningMyMemberDataPartialUpdateMutationBody = MyMemberDataUpdate
+    export type CommissioningMyMemberDataPartialUpdateMutationBody = PatchedMyMemberDataUpdate
     export type CommissioningMyMemberDataPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningMyMemberDataPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, TError,{data: MyMemberDataUpdate}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>, TError,{data: PatchedMyMemberDataUpdate}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningMyMemberDataPartialUpdate>>,
         TError,
-        {data: MyMemberDataUpdate},
+        {data: PatchedMyMemberDataUpdate},
         TContext
       > => {
 
@@ -16124,14 +16173,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningOfferGroupsPartialUpdate = (
     id: string,
-    offerGroup: NonReadonly<OfferGroup>,
+    patchedOfferGroup: NonReadonly<PatchedOfferGroup>,
  ) => {
       
       
       return axiosService<OfferGroup>(
       {url: `/api/commissioning/offer_groups/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: offerGroup
+      data: patchedOfferGroup
     },
       );
     }
@@ -16139,8 +16188,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningOfferGroupsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, TError,{id: string;data: NonReadonly<OfferGroup>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, TError,{id: string;data: NonReadonly<OfferGroup>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOfferGroup>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOfferGroup>}, TContext> => {
 
 const mutationKey = ['commissioningOfferGroupsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -16152,7 +16201,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, {id: string;data: NonReadonly<OfferGroup>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, {id: string;data: NonReadonly<PatchedOfferGroup>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningOfferGroupsPartialUpdate(id,data,)
@@ -16164,15 +16213,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningOfferGroupsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>>
-    export type CommissioningOfferGroupsPartialUpdateMutationBody = NonReadonly<OfferGroup>
+    export type CommissioningOfferGroupsPartialUpdateMutationBody = NonReadonly<PatchedOfferGroup>
     export type CommissioningOfferGroupsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningOfferGroupsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, TError,{id: string;data: NonReadonly<OfferGroup>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOfferGroup>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningOfferGroupsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<OfferGroup>},
+        {id: string;data: NonReadonly<PatchedOfferGroup>},
         TContext
       > => {
 
@@ -16620,14 +16669,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningOffersPartialUpdate = (
     id: string,
-    offer: NonReadonly<Offer>,
+    patchedOffer: NonReadonly<PatchedOffer>,
  ) => {
       
       
       return axiosService<Offer>(
       {url: `/api/commissioning/offers/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: offer
+      data: patchedOffer
     },
       );
     }
@@ -16635,8 +16684,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningOffersPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, TError,{id: string;data: NonReadonly<Offer>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, TError,{id: string;data: NonReadonly<Offer>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOffer>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOffer>}, TContext> => {
 
 const mutationKey = ['commissioningOffersPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -16648,7 +16697,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, {id: string;data: NonReadonly<Offer>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, {id: string;data: NonReadonly<PatchedOffer>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningOffersPartialUpdate(id,data,)
@@ -16660,15 +16709,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningOffersPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>>
-    export type CommissioningOffersPartialUpdateMutationBody = NonReadonly<Offer>
+    export type CommissioningOffersPartialUpdateMutationBody = NonReadonly<PatchedOffer>
     export type CommissioningOffersPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningOffersPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, TError,{id: string;data: NonReadonly<Offer>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOffer>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningOffersPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Offer>},
+        {id: string;data: NonReadonly<PatchedOffer>},
         TContext
       > => {
 
@@ -17034,14 +17083,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningOrderContentsPartialUpdate = (
     id: string,
-    orderContent: NonReadonly<OrderContent>,
+    patchedOrderContent: NonReadonly<PatchedOrderContent>,
  ) => {
       
       
       return axiosService<OrderContentItem>(
       {url: `/api/commissioning/order_contents/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: orderContent
+      data: patchedOrderContent
     },
       );
     }
@@ -17049,8 +17098,8 @@ export const commissioningOrderContentsPartialUpdate = (
 
 
 export const getCommissioningOrderContentsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<OrderContent>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<OrderContent>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrderContent>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrderContent>}, TContext> => {
 
 const mutationKey = ['commissioningOrderContentsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -17062,7 +17111,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, {id: string;data: NonReadonly<OrderContent>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, {id: string;data: NonReadonly<PatchedOrderContent>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningOrderContentsPartialUpdate(id,data,)
@@ -17074,15 +17123,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningOrderContentsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>>
-    export type CommissioningOrderContentsPartialUpdateMutationBody = NonReadonly<OrderContent>
+    export type CommissioningOrderContentsPartialUpdateMutationBody = NonReadonly<PatchedOrderContent>
     export type CommissioningOrderContentsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningOrderContentsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<OrderContent>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrderContent>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningOrderContentsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<OrderContent>},
+        {id: string;data: NonReadonly<PatchedOrderContent>},
         TContext
       > => {
 
@@ -17441,14 +17490,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningOrdersDeliveryDaysPartialUpdate = (
     id: string,
-    ordersDeliveryDay: NonReadonly<OrdersDeliveryDay>,
+    patchedOrdersDeliveryDay: NonReadonly<PatchedOrdersDeliveryDay>,
  ) => {
       
       
       return axiosService<OrdersDeliveryDay>(
       {url: `/api/commissioning/orders_delivery_days/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: ordersDeliveryDay
+      data: patchedOrdersDeliveryDay
     },
       );
     }
@@ -17456,8 +17505,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningOrdersDeliveryDaysPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<OrdersDeliveryDay>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<OrdersDeliveryDay>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrdersDeliveryDay>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrdersDeliveryDay>}, TContext> => {
 
 const mutationKey = ['commissioningOrdersDeliveryDaysPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -17469,7 +17518,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, {id: string;data: NonReadonly<OrdersDeliveryDay>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, {id: string;data: NonReadonly<PatchedOrdersDeliveryDay>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningOrdersDeliveryDaysPartialUpdate(id,data,)
@@ -17481,15 +17530,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningOrdersDeliveryDaysPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>>
-    export type CommissioningOrdersDeliveryDaysPartialUpdateMutationBody = NonReadonly<OrdersDeliveryDay>
+    export type CommissioningOrdersDeliveryDaysPartialUpdateMutationBody = NonReadonly<PatchedOrdersDeliveryDay>
     export type CommissioningOrdersDeliveryDaysPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningOrdersDeliveryDaysPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<OrdersDeliveryDay>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrdersDeliveryDay>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningOrdersDeliveryDaysPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<OrdersDeliveryDay>},
+        {id: string;data: NonReadonly<PatchedOrdersDeliveryDay>},
         TContext
       > => {
 
@@ -17971,14 +18020,14 @@ Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
  */
 export const commissioningOrganicCertificatesPartialUpdate = (
     id: string,
-    organicCertificate: NonReadonly<OrganicCertificate>,
+    patchedOrganicCertificate: NonReadonly<PatchedOrganicCertificate>,
  ) => {
       
       
       return axiosService<OrganicCertificate>(
       {url: `/api/commissioning/organic_certificates/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: organicCertificate
+      data: patchedOrganicCertificate
     },
       );
     }
@@ -17986,8 +18035,8 @@ export const commissioningOrganicCertificatesPartialUpdate = (
 
 
 export const getCommissioningOrganicCertificatesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrganicCertificate>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrganicCertificate>}, TContext> => {
 
 const mutationKey = ['commissioningOrganicCertificatesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -17999,7 +18048,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, {id: string;data: NonReadonly<OrganicCertificate>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, {id: string;data: NonReadonly<PatchedOrganicCertificate>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningOrganicCertificatesPartialUpdate(id,data,)
@@ -18011,15 +18060,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningOrganicCertificatesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>>
-    export type CommissioningOrganicCertificatesPartialUpdateMutationBody = NonReadonly<OrganicCertificate>
+    export type CommissioningOrganicCertificatesPartialUpdateMutationBody = NonReadonly<PatchedOrganicCertificate>
     export type CommissioningOrganicCertificatesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningOrganicCertificatesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<OrganicCertificate>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedOrganicCertificate>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningOrganicCertificatesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<OrganicCertificate>},
+        {id: string;data: NonReadonly<PatchedOrganicCertificate>},
         TContext
       > => {
 
@@ -18738,14 +18787,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningPaymentCyclesPartialUpdate = (
     id: string,
-    paymentCycle: NonReadonly<PaymentCycle>,
+    patchedPaymentCycle: NonReadonly<PatchedPaymentCycle>,
  ) => {
       
       
       return axiosService<PaymentCycle>(
       {url: `/api/commissioning/payment_cycles/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: paymentCycle
+      data: patchedPaymentCycle
     },
       );
     }
@@ -18753,8 +18802,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningPaymentCyclesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, TError,{id: string;data: NonReadonly<PaymentCycle>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, TError,{id: string;data: NonReadonly<PaymentCycle>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPaymentCycle>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPaymentCycle>}, TContext> => {
 
 const mutationKey = ['commissioningPaymentCyclesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -18766,7 +18815,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, {id: string;data: NonReadonly<PaymentCycle>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, {id: string;data: NonReadonly<PatchedPaymentCycle>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningPaymentCyclesPartialUpdate(id,data,)
@@ -18778,15 +18827,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningPaymentCyclesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>>
-    export type CommissioningPaymentCyclesPartialUpdateMutationBody = NonReadonly<PaymentCycle>
+    export type CommissioningPaymentCyclesPartialUpdateMutationBody = NonReadonly<PatchedPaymentCycle>
     export type CommissioningPaymentCyclesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningPaymentCyclesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, TError,{id: string;data: NonReadonly<PaymentCycle>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPaymentCycle>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningPaymentCyclesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<PaymentCycle>},
+        {id: string;data: NonReadonly<PatchedPaymentCycle>},
         TContext
       > => {
 
@@ -19140,14 +19189,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningPlotsPartialUpdate = (
     id: string,
-    plot: NonReadonly<Plot>,
+    patchedPlot: NonReadonly<PatchedPlot>,
  ) => {
       
       
       return axiosService<Plot>(
       {url: `/api/commissioning/plots/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: plot
+      data: patchedPlot
     },
       );
     }
@@ -19155,8 +19204,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningPlotsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, TError,{id: string;data: NonReadonly<Plot>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, TError,{id: string;data: NonReadonly<Plot>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPlot>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPlot>}, TContext> => {
 
 const mutationKey = ['commissioningPlotsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -19168,7 +19217,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, {id: string;data: NonReadonly<Plot>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, {id: string;data: NonReadonly<PatchedPlot>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningPlotsPartialUpdate(id,data,)
@@ -19180,15 +19229,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningPlotsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>>
-    export type CommissioningPlotsPartialUpdateMutationBody = NonReadonly<Plot>
+    export type CommissioningPlotsPartialUpdateMutationBody = NonReadonly<PatchedPlot>
     export type CommissioningPlotsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningPlotsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, TError,{id: string;data: NonReadonly<Plot>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPlot>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningPlotsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Plot>},
+        {id: string;data: NonReadonly<PatchedPlot>},
         TContext
       > => {
 
@@ -19548,14 +19597,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningPurchasePartialUpdate = (
     id: string,
-    purchase: NonReadonly<Purchase>,
+    patchedPurchase: NonReadonly<PatchedPurchase>,
  ) => {
       
       
       return axiosService<Purchase>(
       {url: `/api/commissioning/purchase/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: purchase
+      data: patchedPurchase
     },
       );
     }
@@ -19563,8 +19612,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningPurchasePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, TError,{id: string;data: NonReadonly<Purchase>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, TError,{id: string;data: NonReadonly<Purchase>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPurchase>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPurchase>}, TContext> => {
 
 const mutationKey = ['commissioningPurchasePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -19576,7 +19625,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, {id: string;data: NonReadonly<Purchase>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, {id: string;data: NonReadonly<PatchedPurchase>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningPurchasePartialUpdate(id,data,)
@@ -19588,15 +19637,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningPurchasePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>>
-    export type CommissioningPurchasePartialUpdateMutationBody = NonReadonly<Purchase>
+    export type CommissioningPurchasePartialUpdateMutationBody = NonReadonly<PatchedPurchase>
     export type CommissioningPurchasePartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningPurchasePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, TError,{id: string;data: NonReadonly<Purchase>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedPurchase>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningPurchasePartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Purchase>},
+        {id: string;data: NonReadonly<PatchedPurchase>},
         TContext
       > => {
 
@@ -20210,14 +20259,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningResellersPartialUpdate = (
     id: string,
-    reseller: NonReadonly<Reseller>,
+    patchedReseller: NonReadonly<PatchedReseller>,
  ) => {
       
       
       return axiosService<Reseller>(
       {url: `/api/commissioning/resellers/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: reseller
+      data: patchedReseller
     },
       );
     }
@@ -20225,8 +20274,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningResellersPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, TError,{id: string;data: NonReadonly<Reseller>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, TError,{id: string;data: NonReadonly<Reseller>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedReseller>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedReseller>}, TContext> => {
 
 const mutationKey = ['commissioningResellersPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -20238,7 +20287,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, {id: string;data: NonReadonly<Reseller>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, {id: string;data: NonReadonly<PatchedReseller>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningResellersPartialUpdate(id,data,)
@@ -20250,15 +20299,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningResellersPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>>
-    export type CommissioningResellersPartialUpdateMutationBody = NonReadonly<Reseller>
+    export type CommissioningResellersPartialUpdateMutationBody = NonReadonly<PatchedReseller>
     export type CommissioningResellersPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningResellersPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, TError,{id: string;data: NonReadonly<Reseller>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedReseller>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningResellersPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Reseller>},
+        {id: string;data: NonReadonly<PatchedReseller>},
         TContext
       > => {
 
@@ -20641,14 +20690,14 @@ Seasons represent time periods for harvest planning and pricing.
  */
 export const commissioningSeasonPartialUpdate = (
     id: string,
-    season: NonReadonly<Season>,
+    patchedSeason: NonReadonly<PatchedSeason>,
  ) => {
       
       
       return axiosService<Season>(
       {url: `/api/commissioning/season/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: season
+      data: patchedSeason
     },
       );
     }
@@ -20656,8 +20705,8 @@ export const commissioningSeasonPartialUpdate = (
 
 
 export const getCommissioningSeasonPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, TError,{id: string;data: NonReadonly<Season>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, TError,{id: string;data: NonReadonly<Season>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSeason>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSeason>}, TContext> => {
 
 const mutationKey = ['commissioningSeasonPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -20669,7 +20718,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, {id: string;data: NonReadonly<Season>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, {id: string;data: NonReadonly<PatchedSeason>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningSeasonPartialUpdate(id,data,)
@@ -20681,15 +20730,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningSeasonPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>>
-    export type CommissioningSeasonPartialUpdateMutationBody = NonReadonly<Season>
+    export type CommissioningSeasonPartialUpdateMutationBody = NonReadonly<PatchedSeason>
     export type CommissioningSeasonPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningSeasonPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, TError,{id: string;data: NonReadonly<Season>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSeason>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningSeasonPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Season>},
+        {id: string;data: NonReadonly<PatchedSeason>},
         TContext
       > => {
 
@@ -20763,14 +20812,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningSetInvoiceNotePartialUpdate = (
     id: string,
-    setInvoiceNoteRequest: SetInvoiceNoteRequest,
+    patchedSetInvoiceNoteRequest: PatchedSetInvoiceNoteRequest,
  ) => {
       
       
       return axiosService<SetInvoiceNoteResponse>(
       {url: `/api/commissioning/set_invoice_note/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: setInvoiceNoteRequest
+      data: patchedSetInvoiceNoteRequest
     },
       );
     }
@@ -20778,8 +20827,8 @@ export const commissioningSetInvoiceNotePartialUpdate = (
 
 
 export const getCommissioningSetInvoiceNotePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, TError,{id: string;data: SetInvoiceNoteRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, TError,{id: string;data: SetInvoiceNoteRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, TError,{id: string;data: PatchedSetInvoiceNoteRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, TError,{id: string;data: PatchedSetInvoiceNoteRequest}, TContext> => {
 
 const mutationKey = ['commissioningSetInvoiceNotePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -20791,7 +20840,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, {id: string;data: SetInvoiceNoteRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, {id: string;data: PatchedSetInvoiceNoteRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningSetInvoiceNotePartialUpdate(id,data,)
@@ -20803,18 +20852,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningSetInvoiceNotePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>>
-    export type CommissioningSetInvoiceNotePartialUpdateMutationBody = SetInvoiceNoteRequest
+    export type CommissioningSetInvoiceNotePartialUpdateMutationBody = PatchedSetInvoiceNoteRequest
     export type CommissioningSetInvoiceNotePartialUpdateMutationError = ErrorResponse
 
     /**
  * @summary Set Invoice Note
  */
 export const useCommissioningSetInvoiceNotePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, TError,{id: string;data: SetInvoiceNoteRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>, TError,{id: string;data: PatchedSetInvoiceNoteRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningSetInvoiceNotePartialUpdate>>,
         TError,
-        {id: string;data: SetInvoiceNoteRequest},
+        {id: string;data: PatchedSetInvoiceNoteRequest},
         TContext
       > => {
 
@@ -20828,14 +20877,14 @@ export const useCommissioningSetInvoiceNotePartialUpdate = <TError = ErrorRespon
  */
 export const commissioningSetOrderNotePartialUpdate = (
     id: string,
-    setOrderNoteRequest: SetOrderNoteRequest,
+    patchedSetOrderNoteRequest: PatchedSetOrderNoteRequest,
  ) => {
       
       
       return axiosService<SetOrderNoteResponse>(
       {url: `/api/commissioning/set_order_note/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: setOrderNoteRequest
+      data: patchedSetOrderNoteRequest
     },
       );
     }
@@ -20843,8 +20892,8 @@ export const commissioningSetOrderNotePartialUpdate = (
 
 
 export const getCommissioningSetOrderNotePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, TError,{id: string;data: SetOrderNoteRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, TError,{id: string;data: SetOrderNoteRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, TError,{id: string;data: PatchedSetOrderNoteRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, TError,{id: string;data: PatchedSetOrderNoteRequest}, TContext> => {
 
 const mutationKey = ['commissioningSetOrderNotePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -20856,7 +20905,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, {id: string;data: SetOrderNoteRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, {id: string;data: PatchedSetOrderNoteRequest}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningSetOrderNotePartialUpdate(id,data,)
@@ -20868,18 +20917,18 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningSetOrderNotePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>>
-    export type CommissioningSetOrderNotePartialUpdateMutationBody = SetOrderNoteRequest
+    export type CommissioningSetOrderNotePartialUpdateMutationBody = PatchedSetOrderNoteRequest
     export type CommissioningSetOrderNotePartialUpdateMutationError = ErrorResponse
 
     /**
  * @summary Set Order Note
  */
 export const useCommissioningSetOrderNotePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, TError,{id: string;data: SetOrderNoteRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>, TError,{id: string;data: PatchedSetOrderNoteRequest}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningSetOrderNotePartialUpdate>>,
         TError,
-        {id: string;data: SetOrderNoteRequest},
+        {id: string;data: PatchedSetOrderNoteRequest},
         TContext
       > => {
 
@@ -21203,14 +21252,14 @@ Prices are time-bound with valid_from and valid_until dates.
  */
 export const commissioningShareArticleNetPricesPartialUpdate = (
     id: string,
-    shareArticleNetPrice: NonReadonly<ShareArticleNetPrice>,
+    patchedShareArticleNetPrice: NonReadonly<PatchedShareArticleNetPrice>,
  ) => {
       
       
       return axiosService<ShareArticleNetPrice>(
       {url: `/api/commissioning/share_article_net_prices/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareArticleNetPrice
+      data: patchedShareArticleNetPrice
     },
       );
     }
@@ -21218,8 +21267,8 @@ export const commissioningShareArticleNetPricesPartialUpdate = (
 
 
 export const getCommissioningShareArticleNetPricesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareArticleNetPrice>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareArticleNetPrice>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareArticleNetPrice>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareArticleNetPrice>}, TContext> => {
 
 const mutationKey = ['commissioningShareArticleNetPricesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -21231,7 +21280,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, {id: string;data: NonReadonly<ShareArticleNetPrice>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, {id: string;data: NonReadonly<PatchedShareArticleNetPrice>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareArticleNetPricesPartialUpdate(id,data,)
@@ -21243,15 +21292,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareArticleNetPricesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>>
-    export type CommissioningShareArticleNetPricesPartialUpdateMutationBody = NonReadonly<ShareArticleNetPrice>
+    export type CommissioningShareArticleNetPricesPartialUpdateMutationBody = NonReadonly<PatchedShareArticleNetPrice>
     export type CommissioningShareArticleNetPricesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareArticleNetPricesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareArticleNetPrice>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareArticleNetPrice>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareArticleNetPricesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareArticleNetPrice>},
+        {id: string;data: NonReadonly<PatchedShareArticleNetPrice>},
         TContext
       > => {
 
@@ -21637,14 +21686,14 @@ Supports filtering by:
  */
 export const commissioningShareArticlesPartialUpdate = (
     id: string,
-    shareArticle: NonReadonly<ShareArticle>,
+    patchedShareArticle: NonReadonly<PatchedShareArticle>,
  ) => {
       
       
       return axiosService<ShareArticle>(
       {url: `/api/commissioning/share_articles/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareArticle
+      data: patchedShareArticle
     },
       );
     }
@@ -21652,8 +21701,8 @@ export const commissioningShareArticlesPartialUpdate = (
 
 
 export const getCommissioningShareArticlesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareArticle>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareArticle>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareArticle>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareArticle>}, TContext> => {
 
 const mutationKey = ['commissioningShareArticlesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -21665,7 +21714,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, {id: string;data: NonReadonly<ShareArticle>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, {id: string;data: NonReadonly<PatchedShareArticle>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareArticlesPartialUpdate(id,data,)
@@ -21677,15 +21726,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareArticlesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>>
-    export type CommissioningShareArticlesPartialUpdateMutationBody = NonReadonly<ShareArticle>
+    export type CommissioningShareArticlesPartialUpdateMutationBody = NonReadonly<PatchedShareArticle>
     export type CommissioningShareArticlesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareArticlesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareArticle>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareArticle>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareArticlesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareArticle>},
+        {id: string;data: NonReadonly<PatchedShareArticle>},
         TContext
       > => {
 
@@ -22048,14 +22097,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningShareContentsPartialUpdate = (
     id: string,
-    shareContent: NonReadonly<ShareContent>,
+    patchedShareContent: NonReadonly<PatchedShareContent>,
  ) => {
       
       
       return axiosService<ShareContent>(
       {url: `/api/commissioning/share_contents/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareContent
+      data: patchedShareContent
     },
       );
     }
@@ -22063,8 +22112,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningShareContentsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareContent>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareContent>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareContent>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareContent>}, TContext> => {
 
 const mutationKey = ['commissioningShareContentsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -22076,7 +22125,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, {id: string;data: NonReadonly<ShareContent>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, {id: string;data: NonReadonly<PatchedShareContent>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareContentsPartialUpdate(id,data,)
@@ -22088,15 +22137,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareContentsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>>
-    export type CommissioningShareContentsPartialUpdateMutationBody = NonReadonly<ShareContent>
+    export type CommissioningShareContentsPartialUpdateMutationBody = NonReadonly<PatchedShareContent>
     export type CommissioningShareContentsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareContentsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareContent>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareContent>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareContentsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareContent>},
+        {id: string;data: NonReadonly<PatchedShareContent>},
         TContext
       > => {
 
@@ -22475,14 +22524,14 @@ week's planning data.
  */
 export const commissioningShareDeliveryPartialUpdate = (
     id: string,
-    shareDelivery: NonReadonly<ShareDelivery>,
+    patchedShareDelivery: NonReadonly<PatchedShareDelivery>,
  ) => {
       
       
       return axiosService<ShareDelivery>(
       {url: `/api/commissioning/share_delivery/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareDelivery
+      data: patchedShareDelivery
     },
       );
     }
@@ -22490,8 +22539,8 @@ export const commissioningShareDeliveryPartialUpdate = (
 
 
 export const getCommissioningShareDeliveryPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareDelivery>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareDelivery>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareDelivery>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareDelivery>}, TContext> => {
 
 const mutationKey = ['commissioningShareDeliveryPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -22503,7 +22552,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, {id: string;data: NonReadonly<ShareDelivery>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, {id: string;data: NonReadonly<PatchedShareDelivery>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareDeliveryPartialUpdate(id,data,)
@@ -22515,15 +22564,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareDeliveryPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>>
-    export type CommissioningShareDeliveryPartialUpdateMutationBody = NonReadonly<ShareDelivery>
+    export type CommissioningShareDeliveryPartialUpdateMutationBody = NonReadonly<PatchedShareDelivery>
     export type CommissioningShareDeliveryPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareDeliveryPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareDelivery>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareDelivery>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareDeliveryPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareDelivery>},
+        {id: string;data: NonReadonly<PatchedShareDelivery>},
         TContext
       > => {
 
@@ -23502,14 +23551,14 @@ share/week. Writes re-plan charges and rebuild the week's planning data.
  */
 export const commissioningShareDeliveryOverviewPartialUpdate = (
     id: string,
-    shareDeliveryOverview: NonReadonly<ShareDeliveryOverview>,
+    patchedShareDeliveryOverview: NonReadonly<PatchedShareDeliveryOverview>,
  ) => {
       
       
       return axiosService<ShareDeliveryOverview>(
       {url: `/api/commissioning/share_delivery_overview/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareDeliveryOverview
+      data: patchedShareDeliveryOverview
     },
       );
     }
@@ -23517,8 +23566,8 @@ export const commissioningShareDeliveryOverviewPartialUpdate = (
 
 
 export const getCommissioningShareDeliveryOverviewPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareDeliveryOverview>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareDeliveryOverview>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareDeliveryOverview>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareDeliveryOverview>}, TContext> => {
 
 const mutationKey = ['commissioningShareDeliveryOverviewPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -23530,7 +23579,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, {id: string;data: NonReadonly<ShareDeliveryOverview>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, {id: string;data: NonReadonly<PatchedShareDeliveryOverview>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareDeliveryOverviewPartialUpdate(id,data,)
@@ -23542,15 +23591,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareDeliveryOverviewPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>>
-    export type CommissioningShareDeliveryOverviewPartialUpdateMutationBody = NonReadonly<ShareDeliveryOverview>
+    export type CommissioningShareDeliveryOverviewPartialUpdateMutationBody = NonReadonly<PatchedShareDeliveryOverview>
     export type CommissioningShareDeliveryOverviewPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareDeliveryOverviewPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareDeliveryOverview>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareDeliveryOverview>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareDeliveryOverviewPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareDeliveryOverview>},
+        {id: string;data: NonReadonly<PatchedShareDeliveryOverview>},
         TContext
       > => {
 
@@ -24576,14 +24625,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningShareTypeVariationPricePartialUpdate = (
     id: string,
-    shareTypeVariationGrossPrice: NonReadonly<ShareTypeVariationGrossPrice>,
+    patchedShareTypeVariationGrossPrice: NonReadonly<PatchedShareTypeVariationGrossPrice>,
  ) => {
       
       
       return axiosService<ShareTypeVariationGrossPrice>(
       {url: `/api/commissioning/share_type_variation_price/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareTypeVariationGrossPrice
+      data: patchedShareTypeVariationGrossPrice
     },
       );
     }
@@ -24591,8 +24640,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningShareTypeVariationPricePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, TError,{id: string;data: NonReadonly<ShareTypeVariationGrossPrice>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, TError,{id: string;data: NonReadonly<ShareTypeVariationGrossPrice>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareTypeVariationGrossPrice>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareTypeVariationGrossPrice>}, TContext> => {
 
 const mutationKey = ['commissioningShareTypeVariationPricePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -24604,7 +24653,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, {id: string;data: NonReadonly<ShareTypeVariationGrossPrice>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, {id: string;data: NonReadonly<PatchedShareTypeVariationGrossPrice>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareTypeVariationPricePartialUpdate(id,data,)
@@ -24616,15 +24665,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareTypeVariationPricePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>>
-    export type CommissioningShareTypeVariationPricePartialUpdateMutationBody = NonReadonly<ShareTypeVariationGrossPrice>
+    export type CommissioningShareTypeVariationPricePartialUpdateMutationBody = NonReadonly<PatchedShareTypeVariationGrossPrice>
     export type CommissioningShareTypeVariationPricePartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareTypeVariationPricePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, TError,{id: string;data: NonReadonly<ShareTypeVariationGrossPrice>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareTypeVariationGrossPrice>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareTypeVariationPricePartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareTypeVariationGrossPrice>},
+        {id: string;data: NonReadonly<PatchedShareTypeVariationGrossPrice>},
         TContext
       > => {
 
@@ -24978,14 +25027,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningShareTypeVariationsPartialUpdate = (
     id: string,
-    shareTypeVariation: NonReadonly<ShareTypeVariation>,
+    patchedShareTypeVariation: NonReadonly<PatchedShareTypeVariation>,
  ) => {
       
       
       return axiosService<ShareTypeVariation>(
       {url: `/api/commissioning/share_type_variations/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareTypeVariation
+      data: patchedShareTypeVariation
     },
       );
     }
@@ -24993,8 +25042,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningShareTypeVariationsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareTypeVariation>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareTypeVariation>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareTypeVariation>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareTypeVariation>}, TContext> => {
 
 const mutationKey = ['commissioningShareTypeVariationsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -25006,7 +25055,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, {id: string;data: NonReadonly<ShareTypeVariation>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, {id: string;data: NonReadonly<PatchedShareTypeVariation>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareTypeVariationsPartialUpdate(id,data,)
@@ -25018,15 +25067,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareTypeVariationsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>>
-    export type CommissioningShareTypeVariationsPartialUpdateMutationBody = NonReadonly<ShareTypeVariation>
+    export type CommissioningShareTypeVariationsPartialUpdateMutationBody = NonReadonly<PatchedShareTypeVariation>
     export type CommissioningShareTypeVariationsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareTypeVariationsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareTypeVariation>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareTypeVariation>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareTypeVariationsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareTypeVariation>},
+        {id: string;data: NonReadonly<PatchedShareTypeVariation>},
         TContext
       > => {
 
@@ -25481,14 +25530,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningShareTypesPartialUpdate = (
     id: string,
-    shareType: NonReadonly<ShareType>,
+    patchedShareType: NonReadonly<PatchedShareType>,
  ) => {
       
       
       return axiosService<ShareType>(
       {url: `/api/commissioning/share_types/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: shareType
+      data: patchedShareType
     },
       );
     }
@@ -25496,8 +25545,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningShareTypesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareType>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareType>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareType>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareType>}, TContext> => {
 
 const mutationKey = ['commissioningShareTypesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -25509,7 +25558,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, {id: string;data: NonReadonly<ShareType>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, {id: string;data: NonReadonly<PatchedShareType>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningShareTypesPartialUpdate(id,data,)
@@ -25521,15 +25570,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningShareTypesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>>
-    export type CommissioningShareTypesPartialUpdateMutationBody = NonReadonly<ShareType>
+    export type CommissioningShareTypesPartialUpdateMutationBody = NonReadonly<PatchedShareType>
     export type CommissioningShareTypesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningShareTypesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, TError,{id: string;data: NonReadonly<ShareType>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShareType>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningShareTypesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<ShareType>},
+        {id: string;data: NonReadonly<PatchedShareType>},
         TContext
       > => {
 
@@ -25825,14 +25874,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningSharesPartialUpdate = (
     id: string,
-    share: NonReadonly<Share>,
+    patchedShare: NonReadonly<PatchedShare>,
  ) => {
       
       
       return axiosService<Share>(
       {url: `/api/commissioning/shares/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: share
+      data: patchedShare
     },
       );
     }
@@ -25840,8 +25889,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningSharesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<Share>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<Share>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShare>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShare>}, TContext> => {
 
 const mutationKey = ['commissioningSharesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -25853,7 +25902,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, {id: string;data: NonReadonly<Share>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, {id: string;data: NonReadonly<PatchedShare>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningSharesPartialUpdate(id,data,)
@@ -25865,15 +25914,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningSharesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>>
-    export type CommissioningSharesPartialUpdateMutationBody = NonReadonly<Share>
+    export type CommissioningSharesPartialUpdateMutationBody = NonReadonly<PatchedShare>
     export type CommissioningSharesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningSharesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<Share>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedShare>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningSharesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Share>},
+        {id: string;data: NonReadonly<PatchedShare>},
         TContext
       > => {
 
@@ -26418,14 +26467,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningSharesDeliveryDaysPartialUpdate = (
     id: string,
-    sharesDeliveryDay: NonReadonly<SharesDeliveryDay>,
+    patchedSharesDeliveryDay: NonReadonly<PatchedSharesDeliveryDay>,
  ) => {
       
       
       return axiosService<SharesDeliveryDay>(
       {url: `/api/commissioning/shares_delivery_days/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: sharesDeliveryDay
+      data: patchedSharesDeliveryDay
     },
       );
     }
@@ -26433,8 +26482,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningSharesDeliveryDaysPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<SharesDeliveryDay>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<SharesDeliveryDay>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSharesDeliveryDay>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSharesDeliveryDay>}, TContext> => {
 
 const mutationKey = ['commissioningSharesDeliveryDaysPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -26446,7 +26495,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, {id: string;data: NonReadonly<SharesDeliveryDay>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, {id: string;data: NonReadonly<PatchedSharesDeliveryDay>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningSharesDeliveryDaysPartialUpdate(id,data,)
@@ -26458,15 +26507,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningSharesDeliveryDaysPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>>
-    export type CommissioningSharesDeliveryDaysPartialUpdateMutationBody = NonReadonly<SharesDeliveryDay>
+    export type CommissioningSharesDeliveryDaysPartialUpdateMutationBody = NonReadonly<PatchedSharesDeliveryDay>
     export type CommissioningSharesDeliveryDaysPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningSharesDeliveryDaysPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<SharesDeliveryDay>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedSharesDeliveryDay>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningSharesDeliveryDaysPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<SharesDeliveryDay>},
+        {id: string;data: NonReadonly<PatchedSharesDeliveryDay>},
         TContext
       > => {
 
@@ -26940,14 +26989,14 @@ const {mutation: mutationOptions} = options ?
  */
 export const commissioningStoragesPartialUpdate = (
     id: string,
-    storage: NonReadonly<Storage>,
+    patchedStorage: NonReadonly<PatchedStorage>,
  ) => {
       
       
       return axiosService<Storage>(
       {url: `/api/commissioning/storages/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: storage
+      data: patchedStorage
     },
       );
     }
@@ -26955,8 +27004,8 @@ export const commissioningStoragesPartialUpdate = (
 
 
 export const getCommissioningStoragesPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, TError,{id: string;data: NonReadonly<Storage>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, TError,{id: string;data: NonReadonly<Storage>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedStorage>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedStorage>}, TContext> => {
 
 const mutationKey = ['commissioningStoragesPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -26968,7 +27017,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, {id: string;data: NonReadonly<Storage>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, {id: string;data: NonReadonly<PatchedStorage>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningStoragesPartialUpdate(id,data,)
@@ -26980,15 +27029,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningStoragesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>>
-    export type CommissioningStoragesPartialUpdateMutationBody = NonReadonly<Storage>
+    export type CommissioningStoragesPartialUpdateMutationBody = NonReadonly<PatchedStorage>
     export type CommissioningStoragesPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningStoragesPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, TError,{id: string;data: NonReadonly<Storage>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedStorage>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningStoragesPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Storage>},
+        {id: string;data: NonReadonly<PatchedStorage>},
         TContext
       > => {
 
@@ -27441,14 +27490,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningTheoreticalCleanAmountsPartialUpdate = (
     id: string,
-    theoreticalCleanAmount: NonReadonly<TheoreticalCleanAmount>,
+    patchedTheoreticalCleanAmount: NonReadonly<PatchedTheoreticalCleanAmount>,
  ) => {
       
       
       return axiosService<TheoreticalCleanAmount>(
       {url: `/api/commissioning/theoretical_clean_amounts/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: theoreticalCleanAmount
+      data: patchedTheoreticalCleanAmount
     },
       );
     }
@@ -27456,8 +27505,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningTheoreticalCleanAmountsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalCleanAmount>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalCleanAmount>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalCleanAmount>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalCleanAmount>}, TContext> => {
 
 const mutationKey = ['commissioningTheoreticalCleanAmountsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -27469,7 +27518,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, {id: string;data: NonReadonly<TheoreticalCleanAmount>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, {id: string;data: NonReadonly<PatchedTheoreticalCleanAmount>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningTheoreticalCleanAmountsPartialUpdate(id,data,)
@@ -27481,15 +27530,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningTheoreticalCleanAmountsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>>
-    export type CommissioningTheoreticalCleanAmountsPartialUpdateMutationBody = NonReadonly<TheoreticalCleanAmount>
+    export type CommissioningTheoreticalCleanAmountsPartialUpdateMutationBody = NonReadonly<PatchedTheoreticalCleanAmount>
     export type CommissioningTheoreticalCleanAmountsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningTheoreticalCleanAmountsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalCleanAmount>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalCleanAmount>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningTheoreticalCleanAmountsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<TheoreticalCleanAmount>},
+        {id: string;data: NonReadonly<PatchedTheoreticalCleanAmount>},
         TContext
       > => {
 
@@ -27843,14 +27892,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningTheoreticalHarvestsPartialUpdate = (
     id: string,
-    theoreticalHarvest: NonReadonly<TheoreticalHarvest>,
+    patchedTheoreticalHarvest: NonReadonly<PatchedTheoreticalHarvest>,
  ) => {
       
       
       return axiosService<TheoreticalHarvest>(
       {url: `/api/commissioning/theoretical_harvests/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: theoreticalHarvest
+      data: patchedTheoreticalHarvest
     },
       );
     }
@@ -27858,8 +27907,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningTheoreticalHarvestsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalHarvest>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalHarvest>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalHarvest>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalHarvest>}, TContext> => {
 
 const mutationKey = ['commissioningTheoreticalHarvestsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -27871,7 +27920,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, {id: string;data: NonReadonly<TheoreticalHarvest>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, {id: string;data: NonReadonly<PatchedTheoreticalHarvest>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningTheoreticalHarvestsPartialUpdate(id,data,)
@@ -27883,15 +27932,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningTheoreticalHarvestsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>>
-    export type CommissioningTheoreticalHarvestsPartialUpdateMutationBody = NonReadonly<TheoreticalHarvest>
+    export type CommissioningTheoreticalHarvestsPartialUpdateMutationBody = NonReadonly<PatchedTheoreticalHarvest>
     export type CommissioningTheoreticalHarvestsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningTheoreticalHarvestsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalHarvest>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalHarvest>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningTheoreticalHarvestsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<TheoreticalHarvest>},
+        {id: string;data: NonReadonly<PatchedTheoreticalHarvest>},
         TContext
       > => {
 
@@ -28245,14 +28294,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningTheoreticalPurchaseAmountsPartialUpdate = (
     id: string,
-    theoreticalPurchase: NonReadonly<TheoreticalPurchase>,
+    patchedTheoreticalPurchase: NonReadonly<PatchedTheoreticalPurchase>,
  ) => {
       
       
       return axiosService<TheoreticalPurchase>(
       {url: `/api/commissioning/theoretical_purchase_amounts/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: theoreticalPurchase
+      data: patchedTheoreticalPurchase
     },
       );
     }
@@ -28260,8 +28309,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningTheoreticalPurchaseAmountsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalPurchase>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalPurchase>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalPurchase>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalPurchase>}, TContext> => {
 
 const mutationKey = ['commissioningTheoreticalPurchaseAmountsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -28273,7 +28322,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, {id: string;data: NonReadonly<TheoreticalPurchase>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, {id: string;data: NonReadonly<PatchedTheoreticalPurchase>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningTheoreticalPurchaseAmountsPartialUpdate(id,data,)
@@ -28285,15 +28334,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningTheoreticalPurchaseAmountsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>>
-    export type CommissioningTheoreticalPurchaseAmountsPartialUpdateMutationBody = NonReadonly<TheoreticalPurchase>
+    export type CommissioningTheoreticalPurchaseAmountsPartialUpdateMutationBody = NonReadonly<PatchedTheoreticalPurchase>
     export type CommissioningTheoreticalPurchaseAmountsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningTheoreticalPurchaseAmountsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalPurchase>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalPurchase>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningTheoreticalPurchaseAmountsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<TheoreticalPurchase>},
+        {id: string;data: NonReadonly<PatchedTheoreticalPurchase>},
         TContext
       > => {
 
@@ -28647,14 +28696,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningTheoreticalWashAmountsPartialUpdate = (
     id: string,
-    theoreticalWashAmount: NonReadonly<TheoreticalWashAmount>,
+    patchedTheoreticalWashAmount: NonReadonly<PatchedTheoreticalWashAmount>,
  ) => {
       
       
       return axiosService<TheoreticalWashAmount>(
       {url: `/api/commissioning/theoretical_wash_amounts/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: theoreticalWashAmount
+      data: patchedTheoreticalWashAmount
     },
       );
     }
@@ -28662,8 +28711,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningTheoreticalWashAmountsPartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalWashAmount>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalWashAmount>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalWashAmount>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalWashAmount>}, TContext> => {
 
 const mutationKey = ['commissioningTheoreticalWashAmountsPartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -28675,7 +28724,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, {id: string;data: NonReadonly<TheoreticalWashAmount>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, {id: string;data: NonReadonly<PatchedTheoreticalWashAmount>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningTheoreticalWashAmountsPartialUpdate(id,data,)
@@ -28687,15 +28736,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningTheoreticalWashAmountsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>>
-    export type CommissioningTheoreticalWashAmountsPartialUpdateMutationBody = NonReadonly<TheoreticalWashAmount>
+    export type CommissioningTheoreticalWashAmountsPartialUpdateMutationBody = NonReadonly<PatchedTheoreticalWashAmount>
     export type CommissioningTheoreticalWashAmountsPartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningTheoreticalWashAmountsPartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<TheoreticalWashAmount>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedTheoreticalWashAmount>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningTheoreticalWashAmountsPartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<TheoreticalWashAmount>},
+        {id: string;data: NonReadonly<PatchedTheoreticalWashAmount>},
         TContext
       > => {
 
@@ -29770,14 +29819,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const commissioningWastePartialUpdate = (
     id: string,
-    waste: NonReadonly<Waste>,
+    patchedWaste: NonReadonly<PatchedWaste>,
  ) => {
       
       
       return axiosService<Waste>(
       {url: `/api/commissioning/waste/${id}/`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
-      data: waste
+      data: patchedWaste
     },
       );
     }
@@ -29785,8 +29834,8 @@ const {mutation: mutationOptions} = options ?
 
 
 export const getCommissioningWastePartialUpdateMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, TError,{id: string;data: NonReadonly<Waste>}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, TError,{id: string;data: NonReadonly<Waste>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedWaste>}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedWaste>}, TContext> => {
 
 const mutationKey = ['commissioningWastePartialUpdate'];
 const {mutation: mutationOptions} = options ?
@@ -29798,7 +29847,7 @@ const {mutation: mutationOptions} = options ?
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, {id: string;data: NonReadonly<Waste>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, {id: string;data: NonReadonly<PatchedWaste>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  commissioningWastePartialUpdate(id,data,)
@@ -29810,15 +29859,15 @@ const {mutation: mutationOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CommissioningWastePartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>>
-    export type CommissioningWastePartialUpdateMutationBody = NonReadonly<Waste>
+    export type CommissioningWastePartialUpdateMutationBody = NonReadonly<PatchedWaste>
     export type CommissioningWastePartialUpdateMutationError = ErrorResponse
 
     export const useCommissioningWastePartialUpdate = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, TError,{id: string;data: NonReadonly<Waste>}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningWastePartialUpdate>>, TError,{id: string;data: NonReadonly<PatchedWaste>}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof commissioningWastePartialUpdate>>,
         TError,
-        {id: string;data: NonReadonly<Waste>},
+        {id: string;data: NonReadonly<PatchedWaste>},
         TContext
       > => {
 

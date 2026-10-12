@@ -62,9 +62,9 @@ class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerial
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
-        # The link rows' foreign-key ids, not the linked objects: the create
-        # and update responses render a forecast without a prefetch, where
-        # reaching through to the object costs a query per link.
+        # The link rows' foreign-key ids, not the linked objects: no route
+        # prefetches the linked objects, so reaching through to one would cost
+        # a query per link.
         for variation_rel in instance.forecastsharetypevariation_set.all():
             data[f"variation_{variation_rel.share_type_variation_id}"] = True
 
@@ -110,11 +110,21 @@ class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerial
         data = super().validate(data)
 
         # Validate variation + offer-group ids unconditionally — a bogus id
-        # must be rejected even when its flag is falsey (deselected).
-        for key in data:
-            if key.startswith("variation_"):
-                variation_id = key.replace("variation_", "")
-                if not ShareTypeVariation.objects.filter(id=variation_id).exists():
+        # must be rejected even when its flag is falsey (deselected). One
+        # lookup per kind, since a payload carries a flag per variation.
+        variation_ids = {
+            key.removeprefix("variation_"): key
+            for key in data
+            if key.startswith("variation_")
+        }
+        if variation_ids:
+            known = set(
+                ShareTypeVariation.objects.filter(id__in=variation_ids).values_list(
+                    "id", flat=True
+                )
+            )
+            for variation_id, key in variation_ids.items():
+                if variation_id not in known:
                     # Typed 404 with a stable code (matches the service-layer
                     # check + the sibling OfferGroupNotFound), instead of a
                     # generic 400 / a bare ValueError → 500.
@@ -124,9 +134,19 @@ class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerial
                         details={"variation_id": variation_id},
                     )
 
-            elif key.startswith("offer_group_"):
-                offer_group_id = key.replace("offer_group_", "")
-                if not OfferGroup.objects.filter(id=offer_group_id).exists():
+        offer_group_ids = {
+            key.removeprefix("offer_group_"): key
+            for key in data
+            if key.startswith("offer_group_")
+        }
+        if offer_group_ids:
+            known = set(
+                OfferGroup.objects.filter(id__in=offer_group_ids).values_list(
+                    "id", flat=True
+                )
+            )
+            for offer_group_id, key in offer_group_ids.items():
+                if offer_group_id not in known:
                     raise OfferGroupNotFound(
                         f"OfferGroup with id {offer_group_id} does not exist",
                         field=key,

@@ -8,7 +8,10 @@ import {
   commissioningDeliveryStationsPartialUpdate,
   getCommissioningDeliveryStationsListQueryKey,
 } from "@shared/api/generated/commissioning/commissioning";
-import type { DeliveryStation } from "@shared/api/generated/models";
+import type {
+  DeliveryStation,
+  PatchedDeliveryStation,
+} from "@shared/api/generated/models";
 import { EditFormModal, useModalMutation } from "@shared/modals/shared";
 import {
   PictureUploadField,
@@ -122,18 +125,18 @@ export const DeliveryStationInfoModal: FC<DeliveryStationInfoModalProps> = ({
     }
   };
 
-  const handleSubmit = (values: Record<string, unknown>) =>
+  const handleSubmit = (values: PatchedDeliveryStation) =>
     run(
       async () => {
-        const payload: Record<string, unknown> = { ...values };
+        const payload: PatchedDeliveryStation = { ...values };
         // Empty coord strings aren't valid decimals — send null to clear.
-        for (const key of ["coords_lat", "coords_lon"]) {
+        for (const key of ["coords_lat", "coords_lon"] as const) {
           if (payload[key] === "" || payload[key] === undefined)
             payload[key] = null;
         }
         await commissioningDeliveryStationsPartialUpdate(
           String(deliveryStation.id ?? ""),
-          payload as unknown as DeliveryStation,
+          payload,
         );
         await invalidateStations();
       },

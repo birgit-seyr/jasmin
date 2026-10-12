@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { notify } from "@shared/utils";
+import { getServerErrorMessage } from "@shared/utils/apiError";
 
 interface UseRejectModalOptions<TResp> {
   /** Backend reject call — takes the record id + the trimmed reason string. Its
@@ -59,8 +60,7 @@ export function useRejectModal<T extends TableRecord, TResp = unknown>({
       handleClose();
       return data;
     } catch (error) {
-      console.error("Failed to reject:", error);
-      notify.error(t(errorKey));
+      notify.error(getServerErrorMessage(error) ?? t(errorKey));
       throw error;
     } finally {
       setLoading(false);

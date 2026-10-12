@@ -18,7 +18,7 @@ import { buildDeliveryNotePdfData } from "./resellerPdfData";
 export async function generateAndUploadDeliveryNotePDF(
   deliveryNoteId: string,
   t: TFunction,
-  tenant: Record<string, unknown>,
+  tenant: Record<string, unknown> | null,
   getSetting: (key: string) => unknown,
   logoUrl: string | null | undefined,
   bioLogoUrl?: string | null,

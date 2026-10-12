@@ -83,7 +83,7 @@ export async function buildResellerPdfContext({
   bioLogoUrl,
   docType,
 }: {
-  tenant: Record<string, unknown>;
+  tenant: Record<string, unknown> | null;
   getSetting: GetSetting;
   logoUrl: string | null | undefined;
   bioLogoUrl?: string | null;

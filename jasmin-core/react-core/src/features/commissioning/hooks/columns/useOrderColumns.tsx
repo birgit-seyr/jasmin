@@ -61,7 +61,7 @@ const holdsOnlyOfferBoundCrates = (record: CrateOrderContentRow) =>
 function orderCrateColumns(
   columns: CrateColumn[],
   crateOptions: CrateOption[],
-  dataCrates: Record<string, unknown>[],
+  dataCrates: readonly CrateOrderContentRow[],
 ): CrateColumn[] {
   const usedCrateTypes = new Set(dataCrates.map((item) => item.crate_type));
   const availableOptions = crateOptions.filter(
@@ -86,7 +86,7 @@ function orderCrateColumns(
 interface UseOrderColumnsParams {
   /** The Orders page scope (``useOrdersData``'s ``listParams``). */
   params: CommissioningCrateContentsListParams;
-  dataCrates: Record<string, unknown>[];
+  dataCrates: readonly CrateOrderContentRow[];
 }
 
 export function useOrderColumns({ params, dataCrates }: UseOrderColumnsParams) {

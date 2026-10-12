@@ -1,0 +1,10 @@
+/* The crates tab: a title with its tooltip, and a narrower table. */
+.orders__tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.orders__crates {
+  width: 70%;
+}

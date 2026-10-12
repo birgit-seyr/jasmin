@@ -266,6 +266,17 @@ def _delete_crate_line(rows: _DocumentCrateRows, line_id: CrateLineId) -> None:
     rows.model.objects.filter(pk__in=line_pks).delete()
 
 
+# A PATCH runs ``update`` with the same body and answer, so it documents them too.
+@extend_schema_view(
+    partial_update=extend_schema(
+        request=CrateDeliveryNoteContentWriteRequestSerializer,
+        responses={
+            200: CrateItemSummarySerializer,
+            404: ErrorResponseSerializer,
+            409: ErrorResponseSerializer,
+        },
+    ),
+)
 class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsOffice
@@ -521,6 +532,17 @@ class CrateDeliveryNoteContentViewSet(RolePermissionsMixin, viewsets.ModelViewSe
 # ---------------------------------------------------------------------------
 
 
+# A PATCH runs ``update`` with the same body and answer, so it documents them too.
+@extend_schema_view(
+    partial_update=extend_schema(
+        request=CrateInvoiceContentWriteRequestSerializer,
+        responses={
+            200: CrateItemSummarySerializer,
+            404: ErrorResponseSerializer,
+            409: ErrorResponseSerializer,
+        },
+    ),
+)
 class CrateContentInvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaff
     write_permission = IsOffice

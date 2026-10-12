@@ -57,6 +57,32 @@ describe("getErrorMessage", () => {
   it("uses Error.message for thrown JS errors", () => {
     expect(getErrorMessage(new Error("Plain JS"))).toBe("Plain JS");
   });
+
+  it("keeps a thrown JS error's message ahead of the fallback", () => {
+    expect(getErrorMessage(new Error("Translated reason"), "Default")).toBe(
+      "Translated reason",
+    );
+  });
+
+  it("prefers the fallback over axios' text when the server gave no reason", () => {
+    expect(getErrorMessage(axiosErrorWith({}, 503), "Speichern fehlgeschlagen")).toBe(
+      "Speichern fehlgeschlagen",
+    );
+  });
+
+  it("prefers the fallback over axios' text for a network failure", () => {
+    const err = new AxiosError("Network Error", "ERR_NETWORK");
+    (err as unknown as { isAxiosError: boolean }).isAxiosError = true;
+    expect(getErrorMessage(err, "Speichern fehlgeschlagen")).toBe(
+      "Speichern fehlgeschlagen",
+    );
+  });
+
+  it("still prefers the server's reason over the fallback", () => {
+    expect(
+      getErrorMessage(axiosErrorWith({ message: "Mail server down" }, 503), "Default"),
+    ).toBe("Mail server down");
+  });
 });
 
 describe("getServerErrorMessage", () => {
@@ -78,7 +104,7 @@ describe("getServerErrorMessage", () => {
     expect(getServerErrorMessage(err)).toBeUndefined();
   });
 
-  it("leaves getErrorMessage falling back to the axios text", () => {
+  it("leaves getErrorMessage without a fallback on the axios text", () => {
     expect(getErrorMessage(axiosErrorWith({}, 503))).toBe("Request failed");
   });
 });

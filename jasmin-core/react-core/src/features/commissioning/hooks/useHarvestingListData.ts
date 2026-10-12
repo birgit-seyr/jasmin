@@ -74,16 +74,13 @@ export function useHarvestingListData({
   selectedYear,
   selectedWeek,
   selectedDay,
-  fallbackWeek,
   isPast,
   isGardenerView,
   roundUpToFullPU,
 }: {
   selectedYear: number;
-  selectedWeek: number | null;
+  selectedWeek: number;
   selectedDay: number | null;
-  /** The week to ask for while no week is selected: today's, read at mount. */
-  fallbackWeek: number;
   isPast: boolean;
   isGardenerView: boolean;
   roundUpToFullPU: boolean;
@@ -97,7 +94,7 @@ export function useHarvestingListData({
   // ── Related days + variations totals for the selected harvest day ──
 
   // The selected week is the harvest's week.
-  const harvestWeek = selectedWeek ?? fallbackWeek;
+  const harvestWeek = selectedWeek;
   const { getRelatedDays, isLoaded: daysLoaded } = useCurrentDays(
     harvestWeek,
     selectedYear,
@@ -200,7 +197,7 @@ export function useHarvestingListData({
     useMemo<CommissioningDocumentationSummarySummaryRetrieveParams>(
       () => ({
         year: selectedYear,
-        delivery_week: selectedWeek!,
+        delivery_week: selectedWeek,
         day_number: selectedDay!,
         is_past: isPast,
         model: "harvest",

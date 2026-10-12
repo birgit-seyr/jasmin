@@ -47,7 +47,6 @@ export default function AmountShareTypeVariations({
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
 
   const [showTours, setShowTours] = useState(false);
@@ -64,7 +63,7 @@ export default function AmountShareTypeVariations({
   // Only needed to decide whether the "show tours" switch is meaningful.
   const { toursExist, daysLoading } = usePlanningAxes({
     year: selectedYear,
-    week: selectedWeek ?? currentWeek,
+    week: selectedWeek,
     requireStations: true,
     needTours: true,
   });

@@ -77,8 +77,11 @@ const MemberDetail = () => {
     useState<ShareDelivery | null>(null);
   const { logoShape, logoAspectRatio } = useLogoShape(logoUrl);
 
-  const currentWeek = dayjs().isoWeek();
-  const currentYear = dayjs().isoWeekYear();
+  // Read once, when the page mounts, so every render asks for the same week.
+  const [{ currentWeek, currentYear }] = useState(() => {
+    const now = dayjs();
+    return { currentWeek: now.isoWeek(), currentYear: now.isoWeekYear() };
+  });
 
   const { data: member, isLoading: memberLoading } =
     useCommissioningMembersRetrieve(id!, {
@@ -108,6 +111,7 @@ const MemberDetail = () => {
     variables: togglingOptinVariables,
   } = useCommissioningShareDeliveryToggleOptinCreate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: getCommissioningShareDeliveryListQueryKey(),

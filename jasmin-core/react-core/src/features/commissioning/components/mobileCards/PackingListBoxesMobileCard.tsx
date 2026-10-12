@@ -15,7 +15,7 @@ import {
   MobileCardTitle,
 } from "./primitives";
 import { recordText } from "./recordText";
-import { getSizeLabelOrEmpty } from "./sizeLabel";
+import { getSizeLabelOrEmpty } from "@features/commissioning/utils/sizeLabel";
 
 /** The packing list's box-combination columns, grouped by share type. */
 type CombinationGroups = EditableColumnConfig<TableRecord>[];

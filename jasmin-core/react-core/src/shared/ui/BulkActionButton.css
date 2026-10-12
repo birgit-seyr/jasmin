@@ -1,0 +1,11 @@
+/* A bulk action sits beside a table's selection, lowered to line up with the
+   filters next to it. A caller's `style` overrides either value. */
+.bulk-action-button {
+  margin-top: 2.5em;
+  height: 1.8em;
+}
+
+/* Inside a table row or a button row there is nothing to line up with. */
+.bulk-action-button.bulk-action-button--flush {
+  margin-top: 0;
+}

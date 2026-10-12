@@ -18,6 +18,7 @@ export default function ReplyComposer({ ticketId }: { ticketId: string }) {
 
   const replyMutation = useSupportTicketsReplyCreate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: getSupportTicketsRetrieveQueryKey(ticketId),

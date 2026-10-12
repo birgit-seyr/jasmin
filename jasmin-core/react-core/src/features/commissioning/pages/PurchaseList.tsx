@@ -12,7 +12,6 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   CommissioningDocumentationSummaryAddAdditionalTheoreticalAmountCreateBody,
-  CommissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdateBody,
   CommissioningDocumentationSummarySummaryRetrieveParams,
 } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
@@ -100,7 +99,7 @@ function describePdfPeriod({
 }
 
 export default function PurchaseList() {
-  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek, currentWeek } =
+  const { selectedYear, setSelectedYear, selectedWeek, setSelectedWeek } =
     useYearWeekState();
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
   const isPast = useMemo(
@@ -161,18 +160,18 @@ export default function PurchaseList() {
     useMemo<CommissioningDocumentationSummarySummaryRetrieveParams>(
       () => ({
         year: selectedYear,
-        delivery_week: selectedWeek ?? currentWeek,
+        delivery_week: selectedWeek,
         is_past: isPast,
         model: "purchase",
         seller: selectedReseller ?? undefined,
         is_preparation_lists: true,
       }),
-      [selectedYear, selectedWeek, currentWeek, selectedReseller, isPast],
+      [selectedYear, selectedWeek, selectedReseller, isPast],
     );
 
   const nextWeekParams =
     useMemo<CommissioningDocumentationSummarySummaryRetrieveParams>(() => {
-      const nextWeek = nextIsoWeek(selectedYear, selectedWeek ?? currentWeek);
+      const nextWeek = nextIsoWeek(selectedYear, selectedWeek);
       return {
         year: nextWeek.year,
         delivery_week: nextWeek.week,
@@ -181,7 +180,7 @@ export default function PurchaseList() {
         seller: selectedReseller ?? undefined,
         is_preparation_lists: true,
       };
-    }, [selectedYear, selectedWeek, currentWeek, selectedReseller]);
+    }, [selectedYear, selectedWeek, selectedReseller]);
 
   const { data: rawCurrentWeek, isFetching: currentWeekFetching } =
     useCommissioningDocumentationSummarySummaryRetrieve(listParams);
@@ -351,7 +350,7 @@ export default function PurchaseList() {
         ...transformedData,
         amount: calculatedAmount,
         year: selectedYear,
-        delivery_week: selectedWeek ?? currentWeek,
+        delivery_week: selectedWeek,
         size: transformedData.size || "M",
         model: "purchase",
         seller: selectedReseller,
@@ -367,7 +366,7 @@ export default function PurchaseList() {
         note: typeof note === "string" && note.trim() ? note : null,
       };
     },
-    [selectedYear, selectedWeek, currentWeek, selectedReseller],
+    [selectedYear, selectedWeek, selectedReseller],
   );
 
   const customEdit = useCallback((record: TableRecord, form: FormInstance) => {
@@ -594,7 +593,7 @@ export default function PurchaseList() {
               )
             : commissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdate(
                 id,
-                payload as unknown as CommissioningDocumentationSummaryUpdateAdditionalTheoreticalAmountPartialUpdateBody,
+                payload,
               ),
       }),
     [],

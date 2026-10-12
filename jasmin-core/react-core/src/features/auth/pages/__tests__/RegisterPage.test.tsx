@@ -328,13 +328,9 @@ describe("RegisterPage submit", () => {
   });
 
   it("surfaces an error alert and keeps the form mounted on a 500 with no payload", async () => {
-    // ``getErrorMessage`` short-circuits on ``axiosErr.message`` BEFORE
-    // hitting our caller-supplied fallback, so the canned
-    // "Could not complete your registration. Please try again." string
-    // is effectively dead code while axios's "Request failed with status
-    // code 500" is non-empty. We verify the surfaced behaviour instead:
-    // the AntD error alert shows axios's message, the form stays mounted
-    // for retry, and no navigation happens.
+    // The server gives no reason, so the alert shows the page's translated
+    // message rather than axios' "Request failed with status code 500"; the
+    // form stays mounted for a retry, and no navigation happens.
     server.use(
       http.post("/api/auth/register/", () =>
         HttpResponse.json({}, { status: 500 }),
@@ -349,7 +345,10 @@ describe("RegisterPage submit", () => {
     );
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent ?? "").toMatch(/500/);
+    expect(alert).toHaveTextContent(
+      "Die Registrierung konnte nicht abgeschlossen werden. Bitte erneut versuchen.",
+    );
+    expect(alert.textContent ?? "").not.toMatch(/500/);
     expect(
       screen.getByRole("button", { name: "Antrag absenden" }),
     ).toBeInTheDocument();

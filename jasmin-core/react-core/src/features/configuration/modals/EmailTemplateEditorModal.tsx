@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 
-import type { EmailTemplateUpdate, TestSend } from "@shared/api/generated/models";
+import type { PatchedEmailTemplateUpdate, TestSend } from "@shared/api/generated/models";
 import {
   getNotificationsEmailTemplatesListQueryKey,
   getNotificationsEmailTemplatesRetrieveQueryKey,
@@ -144,7 +144,7 @@ export default function EmailTemplateEditorModal({ slug, onClose }: Props) {
     }
   }, [detail, labelByName]);
 
-  const buildPayload = (): EmailTemplateUpdate => ({
+  const buildPayload = (): PatchedEmailTemplateUpdate => ({
     subject: chipsToPlainText(subjectHtml),
     body_html: chipsToPlaceholders(bodyHtml),
     body_text: detail?.body_text ?? "",
@@ -152,6 +152,7 @@ export default function EmailTemplateEditorModal({ slug, onClose }: Props) {
 
   const saveMutation = useNotificationsEmailTemplatesPartialUpdate({
     mutation: {
+      meta: { silent: true },
       onSuccess: (data) => {
         notify.success(t("email_templates.saved"));
         queryClient.setQueryData(
@@ -171,6 +172,7 @@ export default function EmailTemplateEditorModal({ slug, onClose }: Props) {
 
   const resetMutation = useNotificationsEmailTemplatesReset({
     mutation: {
+      meta: { silent: true },
       onSuccess: (data) => {
         setSubjectHtml(plainTextToChips(data.subject, labelByName));
         setBodyHtml(placeholdersToChips(data.body_html, labelByName));
@@ -194,6 +196,7 @@ export default function EmailTemplateEditorModal({ slug, onClose }: Props) {
 
   const testMutation = useNotificationsEmailTemplatesTestSend({
     mutation: {
+      meta: { silent: true },
       onSuccess: (data) => notify.success(data.detail),
       onError: () =>
         notify.error(

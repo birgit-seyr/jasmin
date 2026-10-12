@@ -32,7 +32,7 @@ export default function DocumentationOverview() {
     selectedWeek,
     setSelectedWeek,
     currentWeek,
-  } = useYearWeekState();
+  } = useYearWeekState({ allWeeks: true });
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedShareArticle, setSelectedShareArticle] = useState<
     string | null

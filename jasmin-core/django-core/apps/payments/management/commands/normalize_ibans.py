@@ -28,6 +28,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django_tenants.utils import schema_context
 
+from apps.payments.errors import SepaFirstUseBeforeSigned, SepaMandateIncomplete
 from apps.payments.models import BillingProfile
 from apps.payments.serializers import normalized_iban
 from apps.shared.iban_validator import validate_iban as validate_iban_format
@@ -47,6 +48,15 @@ def _is_valid_iban(iban: str) -> bool:
     except DjangoValidationError:
         return False
     return True
+
+
+def _refused_fields(
+    exc: DjangoValidationError | SepaMandateIncomplete | SepaFirstUseBeforeSigned,
+) -> list[str]:
+    """The columns a refused save names, for the report."""
+    if isinstance(exc, DjangoValidationError):
+        return sorted(exc.message_dict)
+    return sorted(exc.details.get("fields") or [exc.field or exc.code])
 
 
 def _member_label(profile: BillingProfile) -> str:
@@ -74,12 +84,16 @@ def _normalise_tenant(*, dry_run: bool) -> _TenantOutcome:
         try:
             with transaction.atomic():
                 profile.save(update_fields=["iban"])
-        except DjangoValidationError as exc:
+        except (
+            DjangoValidationError,
+            SepaMandateIncomplete,
+            SepaFirstUseBeforeSigned,
+        ) as exc:
             # ``save()`` runs ``full_clean()``, which can refuse a row for a
             # reason other than its IBAN (an active SEPA profile missing its
             # account holder). That row stays as it was, and is reported.
             outcome.unsaveable.append(
-                f"{_member_label(profile)}: {', '.join(sorted(exc.message_dict))}"
+                f"{_member_label(profile)}: {', '.join(_refused_fields(exc))}"
             )
             continue
         outcome.normalised += 1

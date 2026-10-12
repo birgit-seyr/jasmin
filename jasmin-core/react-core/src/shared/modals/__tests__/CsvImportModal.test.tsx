@@ -9,7 +9,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import api from "@shared/services/api";
+import { commissioningDataImportCreate } from "@shared/api/generated/commissioning/commissioning";
 import { CsvImportButton } from "../CsvImportModal";
 
 vi.mock("react-i18next", () => ({
@@ -22,7 +22,9 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-vi.mock("@shared/services/api", () => ({ default: { post: vi.fn() } }));
+vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
+  commissioningDataImportCreate: vi.fn(),
+}));
 
 // ``useRoles`` is real; it reads the signed-in user's roles from here.
 const auth = vi.hoisted(() => ({ roles: ["office"] as string[] }));
@@ -109,12 +111,17 @@ describe("CsvImportButton", () => {
   });
 
   describe("upload", () => {
-    const post = vi.mocked(api.post);
-    const sentForm = () => post.mock.calls[0][1] as FormData;
+    const post = vi.mocked(commissioningDataImportCreate);
+    const sentBody = () => post.mock.calls[0][0];
 
     async function importFile() {
       post.mockResolvedValue({
-        data: { model_name: "share_article", successful: 1, failed: 0, results: [], errors: [] },
+        model_name: "share_article",
+        total_rows: 1,
+        successful: 1,
+        failed: 0,
+        results: [],
+        errors: [],
       });
       await open();
       const inputs = document.querySelectorAll<HTMLInputElement>('input[type="file"]');
@@ -131,8 +138,8 @@ describe("CsvImportButton", () => {
 
       await importFile();
 
-      expect(sentForm().get("model_name")).toBe("share_article");
-      expect(JSON.parse(String(sentForm().get("fixed_values")))).toEqual({
+      expect(sentBody().model_name).toBe("share_article");
+      expect(JSON.parse(String(sentBody().fixed_values))).toEqual({
         is_extra: true,
         default_movement_unit: "PCS",
       });
@@ -141,17 +148,15 @@ describe("CsvImportButton", () => {
     it("lists a dry run's failed rows with their row number and message", async () => {
       post.mockClear();
       post.mockResolvedValue({
-        data: {
-          model_name: "share_article",
-          total_rows: 3,
-          successful: 1,
-          failed: 2,
-          results: [],
-          errors: [
-            { row: 3, error: "name: This field is required.", data: {} },
-            { row: 4, error: "number: A valid integer is required.", data: {} },
-          ],
-        },
+        model_name: "share_article",
+        total_rows: 3,
+        successful: 1,
+        failed: 2,
+        results: [],
+        errors: [
+          { row: 3, error: "name: This field is required.", data: {}, code: "" },
+          { row: 4, error: "number: A valid integer is required.", data: {}, code: "" },
+        ],
       });
       renderButton();
       await open();
@@ -165,7 +170,7 @@ describe("CsvImportButton", () => {
       expect(
         await screen.findByText("csv_upload.dry_run_notice"),
       ).toBeInTheDocument();
-      expect(sentForm().get("dry_run")).toBe("true");
+      expect(sentBody().dry_run).toBe(true);
       const row3 = document.querySelector('tr[data-row-key="3"]');
       const row4 = document.querySelector('tr[data-row-key="4"]');
       expect(row3).toHaveTextContent("3");
@@ -179,7 +184,7 @@ describe("CsvImportButton", () => {
 
       await importFile();
 
-      expect(sentForm().has("fixed_values")).toBe(false);
+      expect(sentBody()).not.toHaveProperty("fixed_values");
     });
   });
 });

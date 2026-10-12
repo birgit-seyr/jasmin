@@ -21,6 +21,7 @@ import { useDateFormat } from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { ToolTipIcon } from "@shared/ui";
+import "./AbosBulkActions.css";
 
 type Outcome = { id: string; label: string; reason: string };
 
@@ -47,7 +48,7 @@ export default function AbosBulkActions({
   const [validUntil, setValidUntil] = useState<Dayjs | null>(nextYearSunday);
 
   const renderReasons = (items: Outcome[]) => (
-    <ul style={{ margin: "4px 0 10px", paddingLeft: "1.2em" }}>
+    <ul className="abos-bulk-actions__reasons">
       {items.map((item) => (
         <li key={item.id}>
           <strong>{item.label}</strong> — {t(`abos.renewal_reason.${item.reason}`)}
@@ -58,6 +59,7 @@ export default function AbosBulkActions({
 
   const { mutate, isPending } = useCommissioningAbosBulkRenewCreate({
     mutation: {
+      meta: { silent: true },
       onSuccess: (result) => {
         setModalOpen(false);
         const { skipped, failed } = result;
@@ -121,7 +123,7 @@ export default function AbosBulkActions({
         disabled={nothingSelected}
         loading={isPending}
         size="small"
-        style={{ marginTop: "2.5em", height: "1.8em" }}
+        className="abos-bulk-actions__button"
         onClick={openModal}
       >
         {t("abos.bulk_renew")}
@@ -152,7 +154,7 @@ export default function AbosBulkActions({
           format={dateFormat}
           allowClear={false}
           disabledDate={(current) => current.day() !== 0}
-          style={{ width: "100%", marginTop: 6 }}
+          className="abos-bulk-actions__date"
         />
       </Modal>
     </div>

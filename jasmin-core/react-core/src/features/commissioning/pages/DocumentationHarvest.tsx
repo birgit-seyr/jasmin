@@ -124,7 +124,6 @@ export default function DocumentationHarvest() {
     selectedYear,
     setSelectedYear,
     selectedWeek,
-    currentWeek,
     setSelectedWeek,
     selectedDay,
     setSelectedDay,
@@ -226,7 +225,7 @@ export default function DocumentationHarvest() {
                   : "";
               },
             },
-          ] as EditableColumnConfig<TableRecord>[])
+          ] satisfies EditableColumnConfig<TableRecord>[])
         : []),
       {
         title: <>{t("commissioning.actual_harvest")}</>,
@@ -308,7 +307,7 @@ export default function DocumentationHarvest() {
         <DaySelector
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
-          selectedWeek={selectedWeek ?? currentWeek}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={[0, 1, 2, 3, 4, 5, 6]}
         />
@@ -361,7 +360,7 @@ export default function DocumentationHarvest() {
                         theoretical_harvest_unit: row.unit,
                         theoretical_harvest_size: row.size,
                         year: selectedYear,
-                        delivery_week: selectedWeek ?? currentWeek,
+                        delivery_week: selectedWeek,
                         day_number: selectedDay ?? 0,
                         storage: selectedStorage,
                       },

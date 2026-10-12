@@ -173,6 +173,7 @@ export default function SuperAdminOpsChecklist() {
   };
 
   const markDoneMutation = useMutation({
+    meta: { silent: true },
     mutationFn: async (item: OpsChecklistItem) => {
       await axiosService.post<OpsChecklistItem>(
         SUPER_ADMIN_ENDPOINTS.opsChecklistMarkDone(item.id),

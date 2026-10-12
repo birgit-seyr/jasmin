@@ -3,7 +3,11 @@ import "../registerRoboto";
 import { DocumentTypeEnum } from "@shared/api/generated/models";
 import { formatNumber } from "@shared/utils/numberFormat";
 import { decimalsForUnit } from "@shared/utils/amountFormat";
-import { itemLineNetto, roundHalfUp } from "@shared/utils/lineNetto";
+import {
+  itemLineNetto,
+  roundHalfUp,
+  type LineNettoInput,
+} from "@shared/utils/lineNetto";
 
 /**
  * A storno or correction is a credit note (ZUGFeRD TypeCode 381, positive
@@ -73,16 +77,21 @@ export interface ResellerInfo {
 
 export type OrganicStatus = "organic" | "in_conversion" | "conventional";
 
+/**
+ * A document line as the PDFs read it, typed as the API sends it: money and
+ * amounts arrive as Decimal strings, so every reader goes through
+ * ``Number()``.
+ */
 export interface LineItemBase {
-  share_article_name?: string;
-  crate_type_name?: string;
-  sort?: string;
-  amount: number;
-  price_per_unit: number;
+  share_article_name?: string | null;
+  crate_type_name?: string | null;
+  sort?: string | null;
+  amount?: number | string | null;
+  price_per_unit?: number | string | null;
   unit?: string;
-  size?: string;
-  tax_rate?: number;
-  rabatt?: number;
+  size?: string | null;
+  tax_rate?: number | string;
+  rabatt?: number | null;
   /** Net line total (supplied by the backend; see models/mixin.py). */
   line_netto?: number | string;
   /** EU 2018/848 disclosure on the ShareArticle. Lines with
@@ -90,13 +99,13 @@ export interface LineItemBase {
    * ``"in_conversion"`` get double. ``"conventional"`` is unmarked.
    * Whichever footer lines the PDF renders depends on which marks
    * actually appear in the document. */
-  organic_status?: OrganicStatus;
+  organic_status?: string | null;
 }
 
 /** Suffix appended to the article name on customer-facing PDFs.
  * Returns ``""`` for conventional / unknown so caller can blindly
  * concatenate. */
-export function organicMarker(status: OrganicStatus | undefined): string {
+export function organicMarker(status: string | null | undefined): string {
   if (status === "organic") return " *";
   if (status === "in_conversion") return " **";
   return "";
@@ -282,7 +291,7 @@ export const baseStyles = StyleSheet.create({
  * one level up and pass it through).
  */
 export function formatAmount(
-  amount: number,
+  amount: number | string | null | undefined,
   unit?: string,
   locale: string = "de-DE",
 ): string {
@@ -309,7 +318,7 @@ export function formatAmount(
  * grouped together by rate so combined brutto matches the backend exactly.
  */
 export function computeTaxBreakdown(
-  ...itemGroups: LineItemBase[][]
+  ...itemGroups: (LineNettoInput & { tax_rate?: number | string | null })[][]
 ): TaxBreakdownItem[] {
   const buckets: Record<string, { rate: number; netto: number }> = {};
   for (const items of itemGroups) {
@@ -390,7 +399,8 @@ export async function convertLogoToBase64(
       reader.readAsDataURL(blob);
     });
   } catch (err) {
-    console.error("Failed to convert logo:", err);
+    // The document is still valid without its logo, so it renders without.
+    console.warn("Failed to convert logo:", err);
     return null;
   }
 }

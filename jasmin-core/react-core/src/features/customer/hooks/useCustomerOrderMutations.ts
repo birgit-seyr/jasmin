@@ -4,7 +4,11 @@ import {
   commissioningOrderContentsCreate,
   commissioningOrderContentsPartialUpdate,
 } from "@shared/api/generated/commissioning/commissioning";
-import type { OrderContent, UnitEnum } from "@shared/api/generated/models";
+import type {
+  OrderContent,
+  PatchedOrderContent,
+  UnitEnum,
+} from "@shared/api/generated/models";
 import type { Writable } from "@shared/api/typeHelpers";
 import { notify, pickTierPrice } from "@shared/utils";
 import {
@@ -105,15 +109,13 @@ export function useCustomerOrderMutations({
       const computedAmount = (amount * amountPerPu).toFixed(3);
 
       if (record.order_content_id) {
-        const patch: Partial<Writable<OrderContent>> = {
+        const patch: PatchedOrderContent = {
           amount: computedAmount,
           price_per_unit: String(price),
         };
         await commissioningOrderContentsPartialUpdate(
           record.order_content_id,
-          // PATCH sends a partial body against the generated full-model
-          // signature — single directional cast at the orval boundary.
-          patch as OrderContent,
+          patch,
         );
         return;
       }

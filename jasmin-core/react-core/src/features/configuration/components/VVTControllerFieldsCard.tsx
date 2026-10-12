@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useTenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
-import type { Tenant } from "@shared/api/generated/models";
 import { useTenant } from "@hooks/index";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
@@ -46,6 +45,7 @@ export default function VVTControllerFieldsCard() {
 
   const { mutate, isPending } = useTenantsTenantsPartialUpdate({
     mutation: {
+      meta: { silent: true },
       onSuccess: async () => {
         notify.success(t("gdpr.vvt_controller_saved"));
         await refreshTenant();
@@ -63,7 +63,7 @@ export default function VVTControllerFieldsCard() {
 
   const handleSave = () => {
     if (!tenantId) return;
-    mutate({ id: tenantId, data: values as unknown as Tenant });
+    mutate({ id: tenantId, data: values });
   };
 
   const fields: Array<{ key: keyof ControllerFields; label: string }> = [

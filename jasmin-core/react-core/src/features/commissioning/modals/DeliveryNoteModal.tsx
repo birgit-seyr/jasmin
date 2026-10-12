@@ -15,7 +15,6 @@ import {
   useCommissioningDeliveryNotesRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { CommissioningCrateContentsDeliveryNoteDestroyParams } from "@shared/api/generated/models/commissioningCrateContentsDeliveryNoteDestroyParams";
-import type { CrateDeliveryNoteContent } from "@shared/api/generated/models/crateDeliveryNoteContent";
 import type { CrateDeliveryNoteContentWriteRequest } from "@shared/api/generated/models/crateDeliveryNoteContentWriteRequest";
 import type { DeliveryNoteResellerContent } from "@shared/api/generated/models/deliveryNoteResellerContent";
 import { useRoles } from "@shared/auth";
@@ -220,18 +219,16 @@ export default function DeliveryNoteModal({
 
   const apiFunctionsCrates = useMemo<ApiFunctions>(
     () =>
-      wrapApiFunctions<CrateDeliveryNoteContentWriteRequest & TableRecord>({
+      wrapApiFunctions<
+        CrateDeliveryNoteContentWriteRequest & TableRecord,
+        Record<string, string>,
+        CommissioningCrateContentsDeliveryNoteDestroyParams
+      >({
         create: (data) => commissioningCrateContentsDeliveryNoteCreate(data),
         update: (id, data) =>
-          commissioningCrateContentsDeliveryNotePartialUpdate(
-            id,
-            data as unknown as CrateDeliveryNoteContent,
-          ),
+          commissioningCrateContentsDeliveryNotePartialUpdate(id, data),
         delete: (id, data) =>
-          commissioningCrateContentsDeliveryNoteDestroy(
-            id,
-            data as unknown as CommissioningCrateContentsDeliveryNoteDestroyParams,
-          ),
+          commissioningCrateContentsDeliveryNoteDestroy(id, data),
       }),
     [],
   );

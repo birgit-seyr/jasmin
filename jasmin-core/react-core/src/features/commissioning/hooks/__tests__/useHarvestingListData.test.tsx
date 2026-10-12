@@ -96,7 +96,6 @@ function renderRows(rows: unknown[], roundUpToFullPU: boolean) {
         selectedYear: 2026,
         selectedWeek: 41,
         selectedDay: 2,
-        fallbackWeek: 41,
         isPast: false,
         isGardenerView: false,
         roundUpToFullPU,

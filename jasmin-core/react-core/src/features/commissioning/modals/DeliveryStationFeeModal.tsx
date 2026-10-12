@@ -9,7 +9,10 @@ import {
   commissioningDeliveryStationsPartialUpdate,
   getCommissioningDeliveryStationsListQueryKey,
 } from "@shared/api/generated/commissioning/commissioning";
-import type { DeliveryStation } from "@shared/api/generated/models";
+import type {
+  DeliveryStation,
+  PatchedDeliveryStation,
+} from "@shared/api/generated/models";
 import { EditFormModal, useModalMutation } from "@shared/modals/shared";
 import NumberInput from "@shared/ui/NumberInput";
 
@@ -72,25 +75,24 @@ export const DeliveryStationFeeModal: FC<DeliveryStationFeeModalProps> = ({
 
   if (!deliveryStation) return null;
 
-  const handleSubmit = (values: Record<string, unknown>) =>
+  const handleSubmit = (values: Record<(typeof FEE_FIELDS)[number], unknown>) =>
     run(
       async () => {
         // Money fields are Decimal-as-string on the wire; NumberInput yields a
         // number → coerce back to String so the server DecimalField keeps cents.
         // A cleared field means no fee, which the server stores as 0: it
         // refuses null.
-        const payload: Record<string, unknown> = { ...values };
+        const payload: PatchedDeliveryStation = {};
         for (const key of FEE_FIELDS) {
-          const value = payload[key];
-          if (value === null || value === undefined || value === "") {
-            payload[key] = "0";
-          } else if (typeof value === "number") {
-            payload[key] = String(value);
-          }
+          const value = values[key];
+          payload[key] =
+            value === null || value === undefined || value === ""
+              ? "0"
+              : String(value);
         }
         await commissioningDeliveryStationsPartialUpdate(
           String(deliveryStation.id ?? ""),
-          payload as unknown as DeliveryStation,
+          payload,
         );
         await invalidateStations();
       },

@@ -30,7 +30,7 @@ import {
 export async function generateAndUploadInvoicePDF(
   invoiceId: string,
   t: TFunction,
-  tenant: Record<string, unknown>,
+  tenant: Record<string, unknown> | null,
   getSetting: (key: string) => unknown,
   logoUrl: string | null | undefined,
   bioLogoUrl?: string | null,

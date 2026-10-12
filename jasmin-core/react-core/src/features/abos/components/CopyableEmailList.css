@@ -1,0 +1,8 @@
+/* A copyable e-mail distribution list. */
+.copyable-email-list__hint {
+  display: block;
+}
+
+.copyable-email-list__header {
+  margin-bottom: 8px;
+}

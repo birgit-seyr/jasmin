@@ -71,6 +71,12 @@
   --color-error-text: #c62828;
   /* The border that marks the order day selects on the Orders page. */
   --color-order-day-border: #743984;
+  /* Download and export buttons: a lavender fill, and the far end of the
+     gradient a disabled one fades into. */
+  --color-download-bg: rgb(193, 172, 213);
+  --color-download-text: #000000;
+  --color-download-disabled-bg-end: #e5e5e5;
+  --color-bevel-highlight: rgba(255, 255, 255, 0.6);
   /* And for something waiting on someone, and for plain information. */
   --color-warning-bg: #fff3e0;
   --color-warning-text: #b34700;
@@ -177,6 +183,10 @@
   --color-error-border: #5c2223;
   --color-error-text: #ff7875;
   --color-order-day-border: #b57fc6;
+  --color-download-bg: rgb(100, 70, 130);
+  --color-download-text: #e0e0e0;
+  --color-download-disabled-bg-end: #1a1a1a;
+  --color-bevel-highlight: rgba(255, 255, 255, 0.6);
   --color-warning-bg: #2b1d11;
   --color-warning-text: #f3b765;
   --color-info-bg: #111d2c;

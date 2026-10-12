@@ -9,7 +9,6 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import type {
   AdminConfirmationRequest,
-  Member,
 } from "@shared/api/generated/models";
 import {
   adminConfirmationAuditItems,
@@ -61,7 +60,7 @@ export const AdminConfirmationModalMembers: FC<
     patch: (id, value) =>
       patchMember.mutateAsync({
         id,
-        data: { membership_paper_received_at: value } as Member,
+        data: { membership_paper_received_at: value },
       }),
     onPatched: () =>
       void queryClient.invalidateQueries({

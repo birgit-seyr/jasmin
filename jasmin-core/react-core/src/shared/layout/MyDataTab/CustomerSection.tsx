@@ -15,7 +15,10 @@ import {
   useCommissioningMyCustomerDataPartialUpdate,
   useCommissioningMyCustomerDataRetrieve,
 } from "@shared/api/generated/commissioning/commissioning";
-import type { MyCustomerDataRead } from "@shared/api/generated/models";
+import type {
+  MyCustomerDataRead,
+  PatchedMyCustomerDataUpdate,
+} from "@shared/api/generated/models";
 import { notify } from "@shared/utils";
 import StoredOrEditField from "./StoredOrEditField";
 
@@ -58,6 +61,7 @@ export default function CustomerSection({ onSaved }: { onSaved: () => void }) {
 
   const { mutate, isPending } = useCommissioningMyCustomerDataPartialUpdate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         notify.success(t("profile.saved"));
         setEditingIban(false);
@@ -86,10 +90,10 @@ export default function CustomerSection({ onSaved }: { onSaved: () => void }) {
     ]),
   );
 
-  const onFinish = (values: Record<string, string>) => {
-    const payload: Record<string, string> = { ...values };
+  const onFinish = (values: PatchedMyCustomerDataUpdate) => {
+    const payload = { ...values };
     if (!editingIban) delete payload.iban;
-    mutate({ data: payload as never });
+    mutate({ data: payload });
   };
 
   return (

@@ -15,7 +15,7 @@ import { authPartialUpdate } from "@shared/api/generated/auth/auth";
 import {
   ThemeEnum,
   type UserLanguageEnum,
-  type UserProfileUpdateRequest,
+  type PatchedUserProfileUpdateRequest,
 } from "@shared/api/generated/models";
 import { isSupportedLanguageCode } from "@shared/i18n/languages";
 import { notify } from "@shared/utils";
@@ -301,7 +301,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
         // Only fields the server persists for a profile PATCH;
         // sidebar_collapsed is a local-only preference.
-        const profilePayload: UserProfileUpdateRequest = {};
+        const profilePayload: PatchedUserProfileUpdateRequest = {};
         // A language from browser/tenant detection can be anything — switch
         // the UI to it locally below, but never send an unsupported code to
         // the server, whose choice field would 400.

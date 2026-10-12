@@ -47,7 +47,6 @@ export default function ShareDays() {
     setSelectedYear,
     selectedWeek,
     setSelectedWeek,
-    currentWeek,
   } = useYearWeekState();
   const isPast = useMemo(
     () => isWeekInPast(selectedYear, selectedWeek),
@@ -67,9 +66,9 @@ export default function ShareDays() {
     () => ({
       year: selectedYear,
       // The week picker offers no "all weeks", so a week is always picked.
-      delivery_week: selectedWeek ?? currentWeek,
+      delivery_week: selectedWeek,
     }),
-    [selectedYear, selectedWeek, currentWeek],
+    [selectedYear, selectedWeek],
   );
 
   const { t } = useTranslation();
@@ -122,7 +121,7 @@ export default function ShareDays() {
         dataToSend as unknown as Share,
         {
           year: selectedYear,
-          delivery_week: selectedWeek ?? currentWeek,
+          delivery_week: selectedWeek,
           day_number: deliveryDay,
         },
       );
@@ -136,9 +135,10 @@ export default function ShareDays() {
         ? responseData.find((day) => day.delivery_day === deliveryDay)
         : responseData;
 
+      // The table reports a thrown save as failed, so the row keeps the
+      // office's values instead of turning blank.
       if (!updatedDayData) {
-        console.error("Could not find updated day data in response");
-        return {} as TableRecord;
+        throw new Error("The saved day is missing from the response");
       }
 
       // Make sure it has the correct structure with id field
@@ -147,7 +147,7 @@ export default function ShareDays() {
         id: updatedDayData.id || (updatedDayData.delivery_day as number) + 1,
       } as TableRecord;
     },
-    [selectedYear, selectedWeek, currentWeek],
+    [selectedYear, selectedWeek],
   );
 
   const columns = useMemo<EditableColumnConfig<TableRecord>[]>(

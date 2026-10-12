@@ -2,21 +2,13 @@ import { Form } from "antd";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { commissioningShareDeliveryPartialUpdate } from "@shared/api/generated/commissioning/commissioning";
-import type { ShareDelivery } from "@shared/api/generated/models";
+import type {
+  PatchedShareDelivery,
+  ShareDelivery,
+} from "@shared/api/generated/models";
 import { useModalMutation } from "@shared/modals/shared/useModalMutation";
 
 type DeliveryRecord = ShareDelivery;
-
-/** The subset of writable ``ShareDelivery`` fields this modal patches. */
-type ShareDeliveryPatch = Partial<
-  Pick<
-    ShareDelivery,
-    | "delivery_station_day"
-    | "joker_taken"
-    | "donation_joker_taken"
-    | "apply_to_future"
-  >
->;
 
 export const useMemberDeliveryEditModal = () => {
   const { t } = useTranslation();
@@ -61,7 +53,7 @@ export const useMemberDeliveryEditModal = () => {
       // rendered (tenant has ``uses_jokers=false``). Dropping it
       // from the payload preserves whatever the row currently has,
       // instead of silently clearing it to false.
-      const payload: ShareDeliveryPatch = {
+      const payload: PatchedShareDelivery = {
         delivery_station_day: values.delivery_station_day as string | undefined,
         apply_to_future: Boolean(values.apply_to_future),
       };
@@ -72,14 +64,7 @@ export const useMemberDeliveryEditModal = () => {
         payload.donation_joker_taken = Boolean(values.donation_joker_taken);
       }
       await run(
-        // Directional cast at the orval boundary: this is a PATCH with a
-        // partial body, but the generated signature wants the full
-        // NonReadonly<ShareDelivery> model.
-        () =>
-          commissioningShareDeliveryPartialUpdate(
-            deliveryId!,
-            payload as ShareDelivery,
-          ),
+        () => commissioningShareDeliveryPartialUpdate(deliveryId!, payload),
         {
           successMessage: t("members.delivery_updated_successfully"),
           errorMessage: t("members.delivery_update_failed"),

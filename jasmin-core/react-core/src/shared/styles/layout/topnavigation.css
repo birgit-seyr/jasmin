@@ -104,10 +104,11 @@
   font-size: 10px;
 }
 
-/* The edit-mode toggle in the top bar shows in the primary green — the same
-   green AntD's colorPrimary is set to. Doubled with .ant-btn so it outranks
-   the text button's own colour. */
-.ant-btn.modal-toggle-button {
+/* The edit-mode toggle and the help button in the top bar show in the
+   primary green — the same green AntD's colorPrimary is set to. Doubled with
+   .ant-btn so they outrank the text button's own colour. */
+.ant-btn.modal-toggle-button,
+.ant-btn.help-button {
   color: var(--color-primary-hover);
 }
 

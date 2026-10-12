@@ -71,6 +71,7 @@ export default function ConsentsSection() {
 
   const revokeMutation = useCommissioningConsentsRevokeCreate({
     mutation: {
+      meta: { silent: true },
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: getGdprMyDataRetrieveQueryKey(),

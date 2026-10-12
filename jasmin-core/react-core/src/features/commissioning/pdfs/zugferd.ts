@@ -1,7 +1,6 @@
 import type { TFunction } from "i18next";
 import {
   organicStatusLabel,
-  type OrganicStatus,
 } from "@hooks/configuration/useOrganicGate";
 import {
   isCreditNote,
@@ -146,10 +145,10 @@ function formatDueDate(dateString: string, daysToAdd: number): string {
  * "Bio-Status" in DE); the ``Value`` is the localised status label
  * shared with the PDF + UI via ``organicStatusLabel``. */
 function organicCharacteristicXml(
-  status: OrganicStatus | undefined,
+  status: string | null | undefined,
   t: TFunction,
 ): string {
-  if (!status || status === "conventional") return "";
+  if (status !== "organic" && status !== "in_conversion") return "";
   return `
           <ram:ApplicableProductCharacteristic>
             <ram:Description>${escapeXml(

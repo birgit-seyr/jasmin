@@ -2,17 +2,11 @@ import { useCallback, useState } from "react";
 import type { Key } from "react";
 import { useTranslation } from "react-i18next";
 import { commissioningHarvestPartialUpdate } from "@shared/api/generated/commissioning/commissioning";
-import type { DayNumberEnum, Harvest } from "@shared/api/generated/models";
+import type { DayNumberEnum, PatchedHarvest } from "@shared/api/generated/models";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { notify } from "@shared/utils";
 import { getServerErrorMessage } from "@shared/utils/apiError";
 import { roundHalfUp } from "@shared/utils/lineNetto";
-
-/** The writable ``Harvest`` fields a confirmation patches. */
-type HarvestConfirmationPatch = Pick<
-  Harvest,
-  "amount" | "year" | "delivery_week" | "day_number"
->;
 
 /**
  * Manages the "confirm harvest" modal state for the harvesting list mobile
@@ -23,13 +17,11 @@ type HarvestConfirmationPatch = Pick<
  */
 export function useHarvestConfirmation(params: {
   selectedYear: number;
-  selectedWeek: number | null;
+  selectedWeek: number;
   selectedDay: DayNumberEnum | null;
-  fallbackWeek: number;
   onSaved: () => void;
 }) {
-  const { selectedYear, selectedWeek, selectedDay, fallbackWeek, onSaved } =
-    params;
+  const { selectedYear, selectedWeek, selectedDay, onSaved } = params;
   const { t } = useTranslation();
 
   const [record, setRecord] = useState<TableRecord | null>(null);
@@ -61,18 +53,13 @@ export function useHarvestConfirmation(params: {
     if (!record) return;
     setSaving(true);
     try {
-      const confirmation: HarvestConfirmationPatch = {
+      const confirmation: PatchedHarvest = {
         amount: (amount ?? 0).toFixed(2),
         year: selectedYear,
-        delivery_week: selectedWeek ?? fallbackWeek,
+        delivery_week: selectedWeek,
         day_number: selectedDay ?? 0,
       };
-      // The schema has no separate PATCH body type, so the generated
-      // partial update asks for a whole Harvest; a PATCH sends only these.
-      await commissioningHarvestPartialUpdate(
-        String(record.key),
-        confirmation as Harvest,
-      );
+      await commissioningHarvestPartialUpdate(String(record.key), confirmation);
       setConfirmedKeys((prev) => new Set(prev).add(record.key));
       onSaved();
       close();
@@ -89,7 +76,6 @@ export function useHarvestConfirmation(params: {
     selectedYear,
     selectedWeek,
     selectedDay,
-    fallbackWeek,
     onSaved,
     close,
     t,

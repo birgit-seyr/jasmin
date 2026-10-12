@@ -62,3 +62,22 @@
   font-weight: bold;
   text-align: center;
 }
+
+/* Group name and sum in a per-group card's title. */
+.invoice-group-card__title {
+  gap: 4em;
+}
+
+/* "For selected" label above a bulk button row; the row's buttons carry
+   their own top margin, so both are pulled together. */
+.invoices__selection-label {
+  margin-top: 2em;
+  margin-bottom: -2em;
+}
+
+.invoices__button-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: -20px;
+}

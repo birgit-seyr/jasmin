@@ -7,7 +7,6 @@ import {
   useSupportTicketsCreate,
 } from "@shared/api/generated/support/support";
 import type {
-  SupportTicketCreate,
   TicketPriorityEnum,
 } from "@shared/api/generated/models";
 import EditFormModal from "@shared/modals/shared/EditFormModal";
@@ -54,6 +53,7 @@ export default function SupportTicketModal({
 
   const createMutation = useSupportTicketsCreate({
     mutation: {
+      meta: { silent: true },
       onSuccess: (ticket) => {
         void queryClient.invalidateQueries({
           queryKey: getSupportTicketsListQueryKey(),
@@ -80,17 +80,16 @@ export default function SupportTicketModal({
       okText={t("support.modal.submit")}
       loading={createMutation.isPending}
       onCancel={onClose}
-      onSubmit={(values) => {
-        const ticketValues = values as unknown as TicketFormValues;
-        return createMutation.mutateAsync({
+      onSubmit={(values: TicketFormValues) =>
+        createMutation.mutateAsync({
           data: {
-            subject: ticketValues.subject,
-            priority: ticketValues.priority,
-            description: ticketValues.description,
+            subject: values.subject,
+            priority: values.priority,
+            description: values.description,
             context: captureSupportContext(),
-          } as SupportTicketCreate,
-        });
-      }}
+          },
+        })
+      }
     >
       <Form.Item
         name="subject"

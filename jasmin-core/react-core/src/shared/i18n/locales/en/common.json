@@ -60,6 +60,7 @@
   "import": "Import",
   "copy": "Copy",
   "copied": "Copied",
+  "copy_failed": "Couldn't write to the clipboard. Select the text and copy it manually.",
   "loading_sidebar": "Loading sidebar…",
   "paste": "Paste",
   "cut": "Cut",

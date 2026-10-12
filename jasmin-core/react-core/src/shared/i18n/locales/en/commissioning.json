@@ -729,6 +729,7 @@
   "copied_to_offer_group_some_skipped": "{{count}} offer(s) copied to {{offerGroup}}, {{skipped}} were already there",
   "copied_to_offer_group_none": "Nothing copied: {{offerGroup}} already has these offers",
   "copy_failed": "Copy failed",
+  "order_note_save_failed": "The order note wasn't saved. Open the order and enter the note again.",
   "crate_price": "Crate price",
   "delivery_note_send_failed": "Failed to send delivery note",
   "delivery_note_sent_to_reseller": "Delivery note sent to reseller",

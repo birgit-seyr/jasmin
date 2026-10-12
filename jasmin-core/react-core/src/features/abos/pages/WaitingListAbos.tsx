@@ -264,21 +264,17 @@ export default function WaitingListAbos() {
     ) => {
       if (!value) return {};
 
-      try {
-        const selectedVariation = allShareTypeVariations.find(
-          (variation) => variation.value === value,
-        );
+      const selectedVariation = allShareTypeVariations.find(
+        (variation) => variation.value === value,
+      );
 
-        if (selectedVariation && selectedVariation.active_price_per_delivery) {
-          form.setFieldsValue({
-            price_per_delivery: selectedVariation.active_price_per_delivery,
-          });
-          return {
-            price_per_delivery: selectedVariation.active_price_per_delivery,
-          };
-        }
-      } catch (error) {
-        console.error("Error setting weekly_price:", error);
+      if (selectedVariation && selectedVariation.active_price_per_delivery) {
+        form.setFieldsValue({
+          price_per_delivery: selectedVariation.active_price_per_delivery,
+        });
+        return {
+          price_per_delivery: selectedVariation.active_price_per_delivery,
+        };
       }
 
       return {};
@@ -292,7 +288,7 @@ export default function WaitingListAbos() {
   // termCapacity evaluator the modal / abos-select / overview use. Offering
   // holds the slot, so an already-offered (SPOT_AVAILABLE) row reads as full
   // here and can't be double-offered.
-  const offerMutation = useCommissioningAbosOfferSpotCreate();
+  const offerMutation = useCommissioningAbosOfferSpotCreate({ mutation: { meta: { silent: true } } });
 
   const variationById = useMemo(() => {
     const map = new Map<string, (typeof allShareTypeVariations)[number]>();

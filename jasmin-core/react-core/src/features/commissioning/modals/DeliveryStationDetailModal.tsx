@@ -286,9 +286,7 @@ const DeliveryStationDetailModal: FC<DeliveryStationDetailModalProps> = ({
       try {
         await commissioningDeliveryStationsDaysPartialUpdate(
           String(selectedDescriptionRecord.id),
-          {
-            special_instructions: htmlContent,
-          } as unknown as DeliveryStationDay,
+          { special_instructions: htmlContent },
         );
         notify.success(t("common.saved_successfully"));
         invalidateData();

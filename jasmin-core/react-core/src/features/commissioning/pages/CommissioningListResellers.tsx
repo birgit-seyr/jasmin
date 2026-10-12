@@ -76,7 +76,7 @@ export default function CommissioningListResellers() {
   const listParams = useMemo<CommissioningCommissioningListsResellersListParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek!,
+      delivery_week: selectedWeek,
       day_number: selectedDay!,
     }),
     [selectedYear, selectedWeek, selectedDay],
@@ -85,7 +85,7 @@ export default function CommissioningListResellers() {
   const daysParams = useMemo<CommissioningDaysWithOrdersRetrieveParams>(
     () => ({
       year: selectedYear,
-      delivery_week: selectedWeek!,
+      delivery_week: selectedWeek,
     }),
     [selectedYear, selectedWeek],
   );
@@ -199,7 +199,7 @@ export default function CommissioningListResellers() {
         <DaySelector
           selectedDay={selectedDay}
           setSelectedDay={setSelectedDay}
-          selectedWeek={selectedWeek!}
+          selectedWeek={selectedWeek}
           selectedYear={selectedYear}
           days={[0, 1, 2, 3, 4, 5, 6]}
           suffix={t("commissioning.delivery_day")}
@@ -212,7 +212,7 @@ export default function CommissioningListResellers() {
           <CommissioningListResellersPDFGenerator
             data={resellers.length > 0 ? resellers : null}
             year={selectedYear}
-            week={selectedWeek!}
+            week={selectedWeek}
             dayName={getDayName(selectedDay, t)}
             filename={generateFilename}
             buttonText={t("download.commissioning_list")}

@@ -20,13 +20,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserProfileUpdateRequest'
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/UserProfileUpdateRequest'
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/UserProfileUpdateRequest'
+              $ref: '#/components/schemas/PatchedUserProfileUpdateRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -170,13 +170,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AdminUserUpdateRequest'
+              $ref: '#/components/schemas/PatchedAdminUserUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/AdminUserUpdateRequest'
+              $ref: '#/components/schemas/PatchedAdminUserUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/AdminUserUpdateRequest'
+              $ref: '#/components/schemas/PatchedAdminUserUpdateRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -1358,14 +1358,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Subscription'
+              $ref: '#/components/schemas/PatchedSubscription'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Subscription'
+              $ref: '#/components/schemas/PatchedSubscription'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Subscription'
-        required: true
+              $ref: '#/components/schemas/PatchedSubscription'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -2836,14 +2835,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConsentDocument'
+              $ref: '#/components/schemas/PatchedConsentDocument'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ConsentDocument'
+              $ref: '#/components/schemas/PatchedConsentDocument'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ConsentDocument'
-        required: true
+              $ref: '#/components/schemas/PatchedConsentDocument'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -3251,13 +3249,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConsentRecord'
+              $ref: '#/components/schemas/PatchedConsentRecord'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ConsentRecord'
+              $ref: '#/components/schemas/PatchedConsentRecord'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ConsentRecord'
+              $ref: '#/components/schemas/PatchedConsentRecord'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -3580,14 +3578,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CoopShare'
+              $ref: '#/components/schemas/PatchedCoopShare'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CoopShare'
+              $ref: '#/components/schemas/PatchedCoopShare'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CoopShare'
-        required: true
+              $ref: '#/components/schemas/PatchedCoopShare'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -3993,14 +3990,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CrateOrderContentUpdateRequest'
+              $ref: '#/components/schemas/PatchedCrateOrderContentUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CrateOrderContentUpdateRequest'
+              $ref: '#/components/schemas/PatchedCrateOrderContentUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CrateOrderContentUpdateRequest'
-        required: true
+              $ref: '#/components/schemas/PatchedCrateOrderContentUpdateRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -4341,14 +4337,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CrateDeliveryNoteContent'
+              $ref: '#/components/schemas/PatchedCrateDeliveryNoteContentWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CrateDeliveryNoteContent'
+              $ref: '#/components/schemas/PatchedCrateDeliveryNoteContentWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CrateDeliveryNoteContent'
-        required: true
+              $ref: '#/components/schemas/PatchedCrateDeliveryNoteContentWriteRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -4356,7 +4351,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CrateDeliveryNoteContent'
+                $ref: '#/components/schemas/CrateItemSummary'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -4371,12 +4378,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '404':
           content:
             application/json:
               schema:
@@ -4655,14 +4656,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CrateContentInvoiceReseller'
+              $ref: '#/components/schemas/PatchedCrateInvoiceContentWriteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CrateContentInvoiceReseller'
+              $ref: '#/components/schemas/PatchedCrateInvoiceContentWriteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CrateContentInvoiceReseller'
-        required: true
+              $ref: '#/components/schemas/PatchedCrateInvoiceContentWriteRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -4670,7 +4670,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CrateContentInvoiceReseller'
+                $ref: '#/components/schemas/CrateItemSummary'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -4685,12 +4697,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
         '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '404':
           content:
             application/json:
               schema:
@@ -4961,14 +4967,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CrateNetPrice'
+              $ref: '#/components/schemas/PatchedCrateNetPrice'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CrateNetPrice'
+              $ref: '#/components/schemas/PatchedCrateNetPrice'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CrateNetPrice'
-        required: true
+              $ref: '#/components/schemas/PatchedCrateNetPrice'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -5232,14 +5237,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Crate'
+              $ref: '#/components/schemas/PatchedCrate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Crate'
+              $ref: '#/components/schemas/PatchedCrate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Crate'
-        required: true
+              $ref: '#/components/schemas/PatchedCrate'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -6202,14 +6206,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DefaultShareArticleInShare'
+              $ref: '#/components/schemas/PatchedDefaultShareArticleInShare'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DefaultShareArticleInShare'
+              $ref: '#/components/schemas/PatchedDefaultShareArticleInShare'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DefaultShareArticleInShare'
-        required: true
+              $ref: '#/components/schemas/PatchedDefaultShareArticleInShare'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -6578,14 +6581,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DefaultShareContentRequest'
+              $ref: '#/components/schemas/PatchedDefaultShareContentRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DefaultShareContentRequest'
+              $ref: '#/components/schemas/PatchedDefaultShareContentRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DefaultShareContentRequest'
-        required: true
+              $ref: '#/components/schemas/PatchedDefaultShareContentRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -6905,14 +6907,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeliveryExceptionPeriod'
+              $ref: '#/components/schemas/PatchedDeliveryExceptionPeriod'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DeliveryExceptionPeriod'
+              $ref: '#/components/schemas/PatchedDeliveryExceptionPeriod'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DeliveryExceptionPeriod'
-        required: true
+              $ref: '#/components/schemas/PatchedDeliveryExceptionPeriod'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -7165,14 +7166,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeliveryNoteResellerContent'
+              $ref: '#/components/schemas/PatchedDeliveryNoteResellerContent'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DeliveryNoteResellerContent'
+              $ref: '#/components/schemas/PatchedDeliveryNoteResellerContent'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DeliveryNoteResellerContent'
-        required: true
+              $ref: '#/components/schemas/PatchedDeliveryNoteResellerContent'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -7407,13 +7407,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeliveryNoteReseller'
+              $ref: '#/components/schemas/PatchedDeliveryNoteReseller'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DeliveryNoteReseller'
+              $ref: '#/components/schemas/PatchedDeliveryNoteReseller'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DeliveryNoteReseller'
+              $ref: '#/components/schemas/PatchedDeliveryNoteReseller'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -7913,13 +7913,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeliveryStation'
+              $ref: '#/components/schemas/PatchedDeliveryStation'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DeliveryStation'
+              $ref: '#/components/schemas/PatchedDeliveryStation'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DeliveryStation'
+              $ref: '#/components/schemas/PatchedDeliveryStation'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -8225,14 +8225,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeliveryStationDay'
+              $ref: '#/components/schemas/PatchedDeliveryStationDay'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DeliveryStationDay'
+              $ref: '#/components/schemas/PatchedDeliveryStationDay'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DeliveryStationDay'
-        required: true
+              $ref: '#/components/schemas/PatchedDeliveryStationDay'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -8987,14 +8986,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExternalCodeMapping'
+              $ref: '#/components/schemas/PatchedExternalCodeMapping'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ExternalCodeMapping'
+              $ref: '#/components/schemas/PatchedExternalCodeMapping'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ExternalCodeMapping'
-        required: true
+              $ref: '#/components/schemas/PatchedExternalCodeMapping'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -9383,14 +9381,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Forecast'
+              $ref: '#/components/schemas/PatchedForecast'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Forecast'
+              $ref: '#/components/schemas/PatchedForecast'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Forecast'
-        required: true
+              $ref: '#/components/schemas/PatchedForecast'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -9805,14 +9802,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Harvest'
+              $ref: '#/components/schemas/PatchedHarvest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Harvest'
+              $ref: '#/components/schemas/PatchedHarvest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Harvest'
-        required: true
+              $ref: '#/components/schemas/PatchedHarvest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -10172,13 +10168,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/HarvestSharePlanningUpdateRequest'
+              $ref: '#/components/schemas/PatchedHarvestSharePlanningUpdateRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/HarvestSharePlanningUpdateRequest'
+              $ref: '#/components/schemas/PatchedHarvestSharePlanningUpdateRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/HarvestSharePlanningUpdateRequest'
+              $ref: '#/components/schemas/PatchedHarvestSharePlanningUpdateRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -10590,14 +10586,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InvoiceResellerContent'
+              $ref: '#/components/schemas/PatchedInvoiceResellerContent'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/InvoiceResellerContent'
+              $ref: '#/components/schemas/PatchedInvoiceResellerContent'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/InvoiceResellerContent'
-        required: true
+              $ref: '#/components/schemas/PatchedInvoiceResellerContent'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -10848,13 +10843,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InvoiceReseller'
+              $ref: '#/components/schemas/PatchedInvoiceReseller'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/InvoiceReseller'
+              $ref: '#/components/schemas/PatchedInvoiceReseller'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/InvoiceReseller'
+              $ref: '#/components/schemas/PatchedInvoiceReseller'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -11463,14 +11458,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MemberLoan'
+              $ref: '#/components/schemas/PatchedMemberLoan'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/MemberLoan'
+              $ref: '#/components/schemas/PatchedMemberLoan'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/MemberLoan'
-        required: true
+              $ref: '#/components/schemas/PatchedMemberLoan'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -11768,13 +11762,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Member'
+              $ref: '#/components/schemas/PatchedMember'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Member'
+              $ref: '#/components/schemas/PatchedMember'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Member'
+              $ref: '#/components/schemas/PatchedMember'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -12361,14 +12355,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MyCustomerDataUpdate'
+              $ref: '#/components/schemas/PatchedMyCustomerDataUpdate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/MyCustomerDataUpdate'
+              $ref: '#/components/schemas/PatchedMyCustomerDataUpdate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/MyCustomerDataUpdate'
-        required: true
+              $ref: '#/components/schemas/PatchedMyCustomerDataUpdate'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -12454,13 +12447,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MyMemberDataUpdate'
+              $ref: '#/components/schemas/PatchedMyMemberDataUpdate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/MyMemberDataUpdate'
+              $ref: '#/components/schemas/PatchedMyMemberDataUpdate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/MyMemberDataUpdate'
+              $ref: '#/components/schemas/PatchedMyMemberDataUpdate'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -12794,14 +12787,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OfferGroup'
+              $ref: '#/components/schemas/PatchedOfferGroup'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/OfferGroup'
+              $ref: '#/components/schemas/PatchedOfferGroup'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/OfferGroup'
-        required: true
+              $ref: '#/components/schemas/PatchedOfferGroup'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -13179,14 +13171,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Offer'
+              $ref: '#/components/schemas/PatchedOffer'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Offer'
+              $ref: '#/components/schemas/PatchedOffer'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Offer'
-        required: true
+              $ref: '#/components/schemas/PatchedOffer'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -13493,14 +13484,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OrderContent'
+              $ref: '#/components/schemas/PatchedOrderContent'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/OrderContent'
+              $ref: '#/components/schemas/PatchedOrderContent'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/OrderContent'
-        required: true
+              $ref: '#/components/schemas/PatchedOrderContent'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -13745,14 +13735,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OrdersDeliveryDay'
+              $ref: '#/components/schemas/PatchedOrdersDeliveryDay'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/OrdersDeliveryDay'
+              $ref: '#/components/schemas/PatchedOrdersDeliveryDay'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/OrdersDeliveryDay'
-        required: true
+              $ref: '#/components/schemas/PatchedOrdersDeliveryDay'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -14100,14 +14089,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OrganicCertificate'
+              $ref: '#/components/schemas/PatchedOrganicCertificate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/OrganicCertificate'
+              $ref: '#/components/schemas/PatchedOrganicCertificate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/OrganicCertificate'
-        required: true
+              $ref: '#/components/schemas/PatchedOrganicCertificate'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -14765,14 +14753,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PaymentCycle'
+              $ref: '#/components/schemas/PatchedPaymentCycle'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PaymentCycle'
+              $ref: '#/components/schemas/PatchedPaymentCycle'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PaymentCycle'
-        required: true
+              $ref: '#/components/schemas/PatchedPaymentCycle'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -15015,14 +15002,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Plot'
+              $ref: '#/components/schemas/PatchedPlot'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Plot'
+              $ref: '#/components/schemas/PatchedPlot'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Plot'
-        required: true
+              $ref: '#/components/schemas/PatchedPlot'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -15296,14 +15282,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Purchase'
+              $ref: '#/components/schemas/PatchedPurchase'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Purchase'
+              $ref: '#/components/schemas/PatchedPurchase'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Purchase'
-        required: true
+              $ref: '#/components/schemas/PatchedPurchase'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -15793,14 +15778,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Reseller'
+              $ref: '#/components/schemas/PatchedReseller'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Reseller'
+              $ref: '#/components/schemas/PatchedReseller'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Reseller'
-        required: true
+              $ref: '#/components/schemas/PatchedReseller'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -16070,14 +16054,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Season'
+              $ref: '#/components/schemas/PatchedSeason'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Season'
+              $ref: '#/components/schemas/PatchedSeason'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Season'
-        required: true
+              $ref: '#/components/schemas/PatchedSeason'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -16166,13 +16149,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetInvoiceNoteRequest'
+              $ref: '#/components/schemas/PatchedSetInvoiceNoteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SetInvoiceNoteRequest'
+              $ref: '#/components/schemas/PatchedSetInvoiceNoteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SetInvoiceNoteRequest'
+              $ref: '#/components/schemas/PatchedSetInvoiceNoteRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -16223,13 +16206,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SetOrderNoteRequest'
+              $ref: '#/components/schemas/PatchedSetOrderNoteRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SetOrderNoteRequest'
+              $ref: '#/components/schemas/PatchedSetOrderNoteRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SetOrderNoteRequest'
+              $ref: '#/components/schemas/PatchedSetOrderNoteRequest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -16477,14 +16460,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareArticleNetPrice'
+              $ref: '#/components/schemas/PatchedShareArticleNetPrice'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareArticleNetPrice'
+              $ref: '#/components/schemas/PatchedShareArticleNetPrice'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareArticleNetPrice'
-        required: true
+              $ref: '#/components/schemas/PatchedShareArticleNetPrice'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -16824,14 +16806,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareArticle'
+              $ref: '#/components/schemas/PatchedShareArticle'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareArticle'
+              $ref: '#/components/schemas/PatchedShareArticle'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareArticle'
-        required: true
+              $ref: '#/components/schemas/PatchedShareArticle'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -17105,14 +17086,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareContent'
+              $ref: '#/components/schemas/PatchedShareContent'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareContent'
+              $ref: '#/components/schemas/PatchedShareContent'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareContent'
-        required: true
+              $ref: '#/components/schemas/PatchedShareContent'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -17426,14 +17406,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareDelivery'
+              $ref: '#/components/schemas/PatchedShareDelivery'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareDelivery'
+              $ref: '#/components/schemas/PatchedShareDelivery'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareDelivery'
-        required: true
+              $ref: '#/components/schemas/PatchedShareDelivery'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -18181,14 +18160,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareDeliveryOverview'
+              $ref: '#/components/schemas/PatchedShareDeliveryOverview'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareDeliveryOverview'
+              $ref: '#/components/schemas/PatchedShareDeliveryOverview'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareDeliveryOverview'
-        required: true
+              $ref: '#/components/schemas/PatchedShareDeliveryOverview'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -18818,14 +18796,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareTypeVariationGrossPrice'
+              $ref: '#/components/schemas/PatchedShareTypeVariationGrossPrice'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareTypeVariationGrossPrice'
+              $ref: '#/components/schemas/PatchedShareTypeVariationGrossPrice'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareTypeVariationGrossPrice'
-        required: true
+              $ref: '#/components/schemas/PatchedShareTypeVariationGrossPrice'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -19156,14 +19133,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareTypeVariation'
+              $ref: '#/components/schemas/PatchedShareTypeVariation'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareTypeVariation'
+              $ref: '#/components/schemas/PatchedShareTypeVariation'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareTypeVariation'
-        required: true
+              $ref: '#/components/schemas/PatchedShareTypeVariation'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -19533,14 +19509,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShareType'
+              $ref: '#/components/schemas/PatchedShareType'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ShareType'
+              $ref: '#/components/schemas/PatchedShareType'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/ShareType'
-        required: true
+              $ref: '#/components/schemas/PatchedShareType'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -19786,14 +19761,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Share'
+              $ref: '#/components/schemas/PatchedShare'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Share'
+              $ref: '#/components/schemas/PatchedShare'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Share'
-        required: true
+              $ref: '#/components/schemas/PatchedShare'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -20243,14 +20217,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SharesDeliveryDay'
+              $ref: '#/components/schemas/PatchedSharesDeliveryDay'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/SharesDeliveryDay'
+              $ref: '#/components/schemas/PatchedSharesDeliveryDay'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/SharesDeliveryDay'
-        required: true
+              $ref: '#/components/schemas/PatchedSharesDeliveryDay'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -20563,14 +20536,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Storage'
+              $ref: '#/components/schemas/PatchedStorage'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Storage'
+              $ref: '#/components/schemas/PatchedStorage'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Storage'
-        required: true
+              $ref: '#/components/schemas/PatchedStorage'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -20903,14 +20875,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TheoreticalCleanAmount'
+              $ref: '#/components/schemas/PatchedTheoreticalCleanAmount'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TheoreticalCleanAmount'
+              $ref: '#/components/schemas/PatchedTheoreticalCleanAmount'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TheoreticalCleanAmount'
-        required: true
+              $ref: '#/components/schemas/PatchedTheoreticalCleanAmount'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -21180,14 +21151,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TheoreticalHarvest'
+              $ref: '#/components/schemas/PatchedTheoreticalHarvest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TheoreticalHarvest'
+              $ref: '#/components/schemas/PatchedTheoreticalHarvest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TheoreticalHarvest'
-        required: true
+              $ref: '#/components/schemas/PatchedTheoreticalHarvest'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -21457,14 +21427,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TheoreticalPurchase'
+              $ref: '#/components/schemas/PatchedTheoreticalPurchase'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TheoreticalPurchase'
+              $ref: '#/components/schemas/PatchedTheoreticalPurchase'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TheoreticalPurchase'
-        required: true
+              $ref: '#/components/schemas/PatchedTheoreticalPurchase'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -21734,14 +21703,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TheoreticalWashAmount'
+              $ref: '#/components/schemas/PatchedTheoreticalWashAmount'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TheoreticalWashAmount'
+              $ref: '#/components/schemas/PatchedTheoreticalWashAmount'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TheoreticalWashAmount'
-        required: true
+              $ref: '#/components/schemas/PatchedTheoreticalWashAmount'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -22342,14 +22310,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Waste'
+              $ref: '#/components/schemas/PatchedWaste'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Waste'
+              $ref: '#/components/schemas/PatchedWaste'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Waste'
-        required: true
+              $ref: '#/components/schemas/PatchedWaste'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -23393,13 +23360,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EmailTemplateUpdate'
+              $ref: '#/components/schemas/PatchedEmailTemplateUpdate'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/EmailTemplateUpdate'
+              $ref: '#/components/schemas/PatchedEmailTemplateUpdate'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/EmailTemplateUpdate'
+              $ref: '#/components/schemas/PatchedEmailTemplateUpdate'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -23834,14 +23801,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BillingProfile'
+              $ref: '#/components/schemas/PatchedBillingProfile'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/BillingProfile'
+              $ref: '#/components/schemas/PatchedBillingProfile'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/BillingProfile'
-        required: true
+              $ref: '#/components/schemas/PatchedBillingProfile'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -24699,14 +24665,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AbsenceCategory'
+              $ref: '#/components/schemas/PatchedAbsenceCategory'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/AbsenceCategory'
+              $ref: '#/components/schemas/PatchedAbsenceCategory'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/AbsenceCategory'
-        required: true
+              $ref: '#/components/schemas/PatchedAbsenceCategory'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -24955,14 +24920,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Employee'
+              $ref: '#/components/schemas/PatchedEmployee'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Employee'
+              $ref: '#/components/schemas/PatchedEmployee'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Employee'
-        required: true
+              $ref: '#/components/schemas/PatchedEmployee'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -25352,14 +25316,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WeeklyPlanCategory'
+              $ref: '#/components/schemas/PatchedWeeklyPlanCategory'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/WeeklyPlanCategory'
+              $ref: '#/components/schemas/PatchedWeeklyPlanCategory'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/WeeklyPlanCategory'
-        required: true
+              $ref: '#/components/schemas/PatchedWeeklyPlanCategory'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -25707,14 +25670,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TenantEmailConfig'
+              $ref: '#/components/schemas/PatchedTenantEmailConfig'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/TenantEmailConfig'
+              $ref: '#/components/schemas/PatchedTenantEmailConfig'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/TenantEmailConfig'
-        required: true
+              $ref: '#/components/schemas/PatchedTenantEmailConfig'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -26210,14 +26172,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Tenant'
+              $ref: '#/components/schemas/PatchedTenant'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Tenant'
+              $ref: '#/components/schemas/PatchedTenant'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Tenant'
-        required: true
+              $ref: '#/components/schemas/PatchedTenant'
       security:
       - tenantBoundJwtAuth: []
       responses:
@@ -26661,29 +26622,6 @@ components:
       - reseller_id
       - roles
       - user_language
-    AdminUserUpdateRequest:
-      type: object
-      description: All fields optional — PATCH semantics.
-      properties:
-        first_name:
-          type: string
-          maxLength: 255
-        last_name:
-          type: string
-          maxLength: 255
-        user_language:
-          allOf:
-          - $ref: '#/components/schemas/UserLanguageEnum'
-          nullable: true
-        roles:
-          type: array
-          items:
-            type: string
-        account_status:
-          $ref: '#/components/schemas/AccountStatusEnum'
-        reseller_id:
-          type: string
-          nullable: true
     AppLabelEnum:
       enum:
       - commissioning
@@ -28730,53 +28668,6 @@ components:
       oneOf:
       - $ref: '#/components/schemas/CrateOrderSummary'
       - $ref: '#/components/schemas/CrateOrderContentDeletedAck'
-    CrateOrderContentUpdateRequest:
-      type: object
-      description: |-
-        Validated request body for ``CrateOrderContentViewSet.partial_update``.
-
-        The crate line comes from the URL (its line id, or a bare crate type id
-        for every line of the type); the period (year / delivery_week /
-        day_number / reseller) is required to scope the rows while the mutable
-        line fields are optional (PATCH). Same rationale as the create serializer
-        — keep malformed period ints off the 500 path.
-      properties:
-        year:
-          type: integer
-          maximum: 2100
-          minimum: 1900
-        delivery_week:
-          type: integer
-          maximum: 53
-          minimum: 1
-        day_number:
-          type: integer
-          maximum: 6
-          minimum: 0
-        reseller:
-          type: string
-        amount:
-          type: integer
-          minimum: 1
-        price_per_unit:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
-          nullable: true
-        rabatt:
-          type: integer
-          maximum: 100
-          minimum: 0
-          nullable: true
-        note:
-          type: string
-          nullable: true
-          maxLength: 500
-      required:
-      - day_number
-      - delivery_week
-      - reseller
-      - year
     CrateOrderSummary:
       type: object
       description: |-
@@ -30739,22 +30630,6 @@ components:
           type: string
       required:
       - detail
-    EmailTemplateUpdate:
-      type: object
-      description: |-
-        All fields optional: the view always runs this with
-        ``partial=True`` (PATCH semantics), and passing an explicit
-        ``request=`` to extend_schema bypasses spectacular's auto
-        ``Patched*`` all-optional component — required fields here would
-        force generated clients to always send the full template.
-      properties:
-        subject:
-          type: string
-          maxLength: 512
-        body_html:
-          type: string
-        body_text:
-          type: string
     EmailTemplateVariable:
       type: object
       properties:
@@ -32918,91 +32793,6 @@ components:
           type: integer
           nullable: true
           readOnly: true
-    MyCustomerDataUpdate:
-      type: object
-      description: |-
-        Incoming shape for ``PATCH /commissioning/my_customer_data/``.
-
-        Edits the linked ``ContactEntity``. The owning ``Reseller`` row
-        (customer_number, invoice_*, channel flags) stays office-only.
-      properties:
-        company_name:
-          type: string
-          nullable: true
-          maxLength: 200
-        first_name:
-          type: string
-          nullable: true
-          maxLength: 200
-        last_name:
-          type: string
-          nullable: true
-          maxLength: 200
-        address:
-          type: string
-          maxLength: 300
-        zip_code:
-          type: string
-          maxLength: 5
-        city:
-          type: string
-          maxLength: 100
-        country:
-          type: string
-          nullable: true
-          maxLength: 100
-        email:
-          nullable: true
-          oneOf:
-          - type: string
-            format: email
-            maxLength: 150
-          - type: string
-            maxLength: 0
-        email_2:
-          type: string
-          nullable: true
-          maxLength: 150
-        email_3:
-          nullable: true
-          oneOf:
-          - type: string
-            format: email
-            maxLength: 150
-          - type: string
-            maxLength: 0
-        order_email:
-          nullable: true
-          oneOf:
-          - type: string
-            format: email
-            maxLength: 150
-          - type: string
-            maxLength: 0
-        phone:
-          type: string
-          nullable: true
-          maxLength: 150
-        phone_2:
-          type: string
-          nullable: true
-          maxLength: 150
-        phone_3:
-          type: string
-          nullable: true
-          maxLength: 150
-        uid:
-          type: string
-          nullable: true
-          maxLength: 100
-        iban:
-          type: string
-          nullable: true
-          maxLength: 34
-      required:
-      - address
-      - city
-      - zip_code
     MyDataCoopShare:
       type: object
       description: |-
@@ -33150,70 +32940,6 @@ components:
           items:
             $ref: '#/components/schemas/MyDataCoopShare'
           readOnly: true
-    MyMemberDataUpdate:
-      type: object
-      description: |-
-        Incoming shape for ``PATCH /commissioning/my_member_data/``.
-
-        Field allowlist for member self-edit. Office-only flags
-        (``is_active``, ``is_trial``, ``member_number``, entry_date,
-        coop-share totals) are NOT in this list and silently ignored
-        if a client tries to send them — DRF only deserialises what's
-        declared. Validators (IBAN format, email uniqueness) come from
-        the model fields automatically.
-      properties:
-        first_name:
-          type: string
-          nullable: true
-          maxLength: 255
-        last_name:
-          type: string
-          nullable: true
-          maxLength: 255
-        company_name:
-          type: string
-          nullable: true
-          maxLength: 255
-        pickup_name:
-          type: string
-          nullable: true
-          maxLength: 255
-        address:
-          type: string
-          nullable: true
-          maxLength: 255
-        zip_code:
-          type: string
-          nullable: true
-          maxLength: 10
-        city:
-          type: string
-          nullable: true
-          maxLength: 100
-        country:
-          type: string
-          nullable: true
-          maxLength: 100
-        email:
-          nullable: true
-          oneOf:
-          - type: string
-            format: email
-            maxLength: 255
-          - type: string
-            maxLength: 0
-        birth_date:
-          type: string
-          format: date
-          nullable: true
-        iban:
-          type: string
-          nullable: true
-          maxLength: 34
-        account_owner:
-          type: string
-          nullable: true
-          maxLength: 255
     MySepaMandate:
       type: object
       description: |-
@@ -34530,6 +34256,5036 @@ components:
           writeOnly: true
       required:
       - email
+    PatchedAbsenceCategory:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        name:
+          type: string
+          maxLength: 200
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedAdminUserUpdateRequest:
+      type: object
+      description: All fields optional — PATCH semantics.
+      properties:
+        first_name:
+          type: string
+          maxLength: 255
+        last_name:
+          type: string
+          maxLength: 255
+        user_language:
+          allOf:
+          - $ref: '#/components/schemas/UserLanguageEnum'
+          nullable: true
+        roles:
+          type: array
+          items:
+            type: string
+        account_status:
+          $ref: '#/components/schemas/AccountStatusEnum'
+        reseller_id:
+          type: string
+          nullable: true
+    PatchedBillingProfile:
+      type: object
+      description: |-
+        Provides ``get_member_string`` for a ``member_string =
+        SerializerMethodField()`` — a human-readable ``# <number> - <first> <last>``
+        label (name only when the member has no number yet). Subclasses override
+        ``_resolve_member(obj)`` (default ``obj.member``); the formatter is shared so
+        the label can't drift across the subscription / coop-share / loan rows.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        member:
+          type: string
+        member_string:
+          type: string
+          readOnly: true
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        iban:
+          type: string
+          writeOnly: true
+          maxLength: 34
+        account_holder:
+          type: string
+          writeOnly: true
+          maxLength: 200
+        iban_masked:
+          type: string
+          readOnly: true
+        account_holder_masked:
+          type: string
+          readOnly: true
+        sepa_mandate_reference:
+          type: string
+          nullable: true
+          maxLength: 35
+        sepa_mandate_signed_at:
+          type: string
+          format: date
+          nullable: true
+        sepa_mandate_first_use_at:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: Set when first SEPA debit is exported. Drives FRST→RCUR.
+        sepa_mandate_paper_received_at:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+        notes:
+          type: string
+        is_sepa_ready:
+          type: boolean
+          readOnly: true
+    PatchedConsentDocument:
+      type: object
+      description: |-
+        Read-and-write serializer for ConsentDocument.
+
+        ``body_sha256`` is computed in ``Model.save()`` — never set from
+        the wire — so it's marked read-only here. ``valid_until`` is set
+        automatically by ``TimeBoundMixin.handle_succession`` when a
+        successor is published; we keep it on the wire so the admin UI
+        can show "this version was retired on …", but it's read-only.
+
+        ``can_be_deleted`` is injected by ``DeletableMixin`` and answers
+        "is any ConsentRecord pointing at this document?" — False once
+        any member has consented, True otherwise. The frontend hides the
+        delete button when False; the FK's ``on_delete=PROTECT`` enforces
+        the same at the DB layer.
+
+        We DO NOT use ``fields = "__all__"`` here on purpose — see the
+        module docstring of this file. The explicit list means adding
+        a new column to the model never silently widens the public API.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/ConsentKindEnum'
+        version:
+          type: string
+          description: Stable identifier. ISO date like '2026-05-20' or semver-style
+            '3.1' both work; pick one convention per tenant.
+          maxLength: 40
+        locale:
+          type: string
+          default: de
+          maxLength: 10
+        title:
+          type: string
+          maxLength: 200
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        body:
+          type: string
+          description: Verbatim text shown to the member. Markdown or HTML depending
+            on tenant convention — store it as-shown.
+        body_sha256:
+          type: string
+          readOnly: true
+          description: Computed on save. Lets us detect post-hoc edits to ``body``
+            even though by policy they shouldn't happen.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedConsentRecord:
+      type: object
+      description: |-
+        Read serializer — full document summary embedded so the UI can
+        render "you agreed to <title> v<version> on <date>" without a
+        second round-trip.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        member:
+          type: string
+          readOnly: true
+        document:
+          allOf:
+          - $ref: '#/components/schemas/ConsentDocumentSummary'
+          readOnly: true
+        consented_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ip_address:
+          type: string
+          readOnly: true
+          nullable: true
+        user_agent:
+          type: string
+          readOnly: true
+        revoked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revoked_reason:
+          type: string
+          readOnly: true
+        revoked_by:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Office staff revoking on the member's behalf, OR the member
+            themselves via the self-service portal.
+        is_active:
+          type: boolean
+          readOnly: true
+    PatchedCoopShare:
+      type: object
+      description: |-
+        ``member_string`` is a human-readable label, same contract as
+        :class:`MemberLoanSerializer`. It must be a ``SerializerMethodField``:
+        a plain ``CharField(read_only=True)`` has no matching model attribute,
+        so DRF would silently drop the key from every payload (SkipField) while
+        the schema declares it present.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        member_string:
+          type: string
+          readOnly: true
+        admin_confirmed:
+          type: boolean
+          readOnly: true
+        admin_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejected_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejection_reason:
+          type: string
+          readOnly: true
+          nullable: true
+        cancelled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cancelled_effective_at:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        amount_of_coop_shares:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        value_one_coop_share:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Value of one share when this one was subscribed. Set on create;
+            an update keeps the stored value.
+        is_increase:
+          type: boolean
+        note:
+          type: string
+          nullable: true
+        payback_due_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        paid_back_date:
+          type: string
+          format: date
+          nullable: true
+        admin_confirmed_by:
+          type: string
+          readOnly: true
+          nullable: true
+        cancelled_by:
+          type: string
+          readOnly: true
+          nullable: true
+        member:
+          type: string
+        transfer:
+          type: string
+          readOnly: true
+          nullable: true
+        settled_by_transfer:
+          type: string
+          readOnly: true
+          nullable: true
+        admin_confirmed_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+    PatchedCrate:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        is_active:
+          type: boolean
+        name:
+          type: string
+          maxLength: 200
+        number:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        short_name:
+          type: string
+          nullable: true
+          maxLength: 50
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedCrateDeliveryNoteContentWriteRequest:
+      type: object
+      description: |-
+        Request body for creating or updating a crate line on a delivery note.
+
+        ``tax_rate`` null or omitted resolves the crate's rate for the delivery
+        date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+        / ``note`` keeps the stored value.
+      properties:
+        delivery_note_id:
+          type: string
+        crate_type:
+          type: string
+        amount:
+          type: integer
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        rabatt:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+    PatchedCrateInvoiceContentWriteRequest:
+      type: object
+      description: |-
+        Request body for creating or updating a crate line on an invoice.
+
+        ``tax_rate`` null or omitted resolves the crate's rate for the invoice
+        date. On update, an omitted ``price_per_unit`` / ``rabatt`` / ``tax_rate``
+        / ``note`` keeps the stored value.
+      properties:
+        invoice_id:
+          type: string
+        crate_type:
+          type: string
+        amount:
+          type: integer
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        rabatt:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+    PatchedCrateNetPrice:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        short_name:
+          type: string
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        crate:
+          type: string
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedCrateOrderContentUpdateRequest:
+      type: object
+      description: |-
+        Validated request body for ``CrateOrderContentViewSet.partial_update``.
+
+        The crate line comes from the URL (its line id, or a bare crate type id
+        for every line of the type); the period (year / delivery_week /
+        day_number / reseller) is required to scope the rows while the mutable
+        line fields are optional (PATCH). Same rationale as the create serializer
+        — keep malformed period ints off the 500 path.
+      properties:
+        year:
+          type: integer
+          maximum: 2100
+          minimum: 1900
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          type: integer
+          maximum: 6
+          minimum: 0
+        reseller:
+          type: string
+        amount:
+          type: integer
+          minimum: 1
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        rabatt:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+    PatchedDefaultShareArticleInShare:
+      type: object
+      description: |-
+        Default quantity of a ``ShareArticle`` inside a ``ShareTypeVariation``.
+
+        Used by the ``DefaultShareArticlesInShare`` configuration page (one cell
+        per (share_article, share_type_variation) pair). The ``unit`` is optional
+        and falls back to the share article's ``default_movement_unit``.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        share_type_variation_size:
+          type: string
+          readOnly: true
+        share_type_id:
+          type: string
+          readOnly: true
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+        unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          nullable: true
+        share_type_variation:
+          type: string
+        share_article:
+          type: string
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedDefaultShareContentRequest:
+      type: object
+      description: |-
+        Validate dynamically-named numeric cells in ``to_internal_value``.
+
+        Subclasses implement ``_is_dynamic_amount_key(key)``. Matching cells whose
+        value is a scaffold sentinel are dropped; the rest are coerced to a finite
+        ``Decimal`` (rejecting negatives) and merged into ``validated_data`` under
+        their original key. Place the mixin BEFORE ``serializers.Serializer`` in the
+        bases so ``super()`` reaches DRF.
+      properties:
+        year:
+          type: integer
+        share_article:
+          type: string
+        share_option:
+          type: string
+        unit:
+          type: string
+        size:
+          type: string
+        range_1:
+          type: integer
+        range_2:
+          type: integer
+        only_odd_weeks:
+          type: boolean
+          default: false
+        only_even_weeks:
+          type: boolean
+          default: false
+        only_every_three_weeks:
+          type: boolean
+          default: false
+        note:
+          type: string
+          nullable: true
+        seller:
+          type: string
+          nullable: true
+    PatchedDeliveryExceptionPeriod:
+      type: object
+      description: |-
+        A whole-week ``[valid_from (Monday) … valid_until (Sunday)]`` range during
+        which a ShareTypeVariation is not delivered. Bounds must align to whole
+        weeks and must not overlap another pause for the same variation.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        share_type_variation:
+          type: string
+        share_type_variation_string:
+          type: string
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        is_locked:
+          type: boolean
+          readOnly: true
+    PatchedDeliveryNoteReseller:
+      type: object
+      description: |-
+        Adds ``created_by_name`` — a human-readable name for the document's
+        ``created_by`` user — to a parent document serializer (Invoice /
+        DeliveryNote). Injected via ``get_fields()`` for the same metaclass reason
+        as ``LinePricingFieldsMixin``.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        line_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryNoteResellerContent'
+          readOnly: true
+        crate_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrateItemSummary'
+          readOnly: true
+        sum_netto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        sum_brutto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        reseller_name:
+          type: string
+          readOnly: true
+          nullable: true
+        reseller_address:
+          type: string
+          readOnly: true
+        reseller_zip:
+          type: string
+          readOnly: true
+        reseller_city:
+          type: string
+          readOnly: true
+        reseller_country:
+          type: string
+          readOnly: true
+          nullable: true
+        delivery_note_number:
+          type: string
+          readOnly: true
+        delivery_note_date:
+          type: string
+          format: date
+          readOnly: true
+        order_number:
+          type: string
+          readOnly: true
+        order_date:
+          type: string
+          format: date
+          nullable: true
+          description: Order date via the shared ISO-week resolver (year/week/day_number).
+          readOnly: true
+        order_prefix:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        prefix:
+          type: string
+          readOnly: true
+          default: ''
+        number:
+          type: integer
+          readOnly: true
+          nullable: true
+        date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        file:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        has_been_sent_to_reseller_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        is_cancelled:
+          type: boolean
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        order:
+          type: string
+          readOnly: true
+        tax_breakdown:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        created_by_name:
+          type: string
+          nullable: true
+          description: Return a human-readable name for ``created_by``.
+          readOnly: true
+    PatchedDeliveryNoteResellerContent:
+      type: object
+      description: |-
+        Adds ``share_article_name`` + ``organic_status`` to a line-item content
+        serializer (Invoice / DeliveryNote), resolving through the line's ``offer``
+        when ``share_article`` isn't set directly.
+
+        ``organic_status`` is the EU 2018/848 disclosure: the PDF appends "*" (organic)
+        or "**" (in transition) to the article name and prints a footer block
+        referencing ``Tenant.organic_control_number`` iff any line carries one of
+        those marks. Injected via ``get_fields()`` for the same metaclass reason as
+        ``LinePricingFieldsMixin``.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        source_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        source_unit:
+          type: string
+          readOnly: true
+          nullable: true
+        source_size:
+          type: string
+          readOnly: true
+          nullable: true
+        source_price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        source_rabatt:
+          type: integer
+          readOnly: true
+          nullable: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        description:
+          type: string
+          nullable: true
+          maxLength: 200
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        sort:
+          type: string
+          nullable: true
+          maxLength: 200
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        rabatt:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        offer:
+          type: string
+          nullable: true
+        share_article:
+          type: string
+          nullable: true
+        delivery_note:
+          type: string
+        order_content:
+          type: string
+          readOnly: true
+          nullable: true
+        line_netto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        line_brutto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        share_article_name:
+          type: string
+          nullable: true
+          description: Get share article name from direct relation or through offer.
+          readOnly: true
+        organic_status:
+          type: string
+          nullable: true
+          readOnly: true
+        amount_differs:
+          type: boolean
+          readOnly: true
+        original_amount:
+          type: string
+          readOnly: true
+        price_per_unit_differs:
+          type: boolean
+          readOnly: true
+        original_price_per_unit:
+          type: string
+          readOnly: true
+        rabatt_differs:
+          type: boolean
+          readOnly: true
+        original_rabatt:
+          type: string
+          readOnly: true
+        unit_differs:
+          type: boolean
+          readOnly: true
+        original_unit:
+          type: string
+          readOnly: true
+        size_differs:
+          type: boolean
+          readOnly: true
+        original_size:
+          type: string
+          readOnly: true
+    PatchedDeliveryStation:
+      type: object
+      description: Serializer for DeliveryStation with dynamic contact and day fields.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        can_be_deleted:
+          type: boolean
+          description: Check if this instance can be deleted
+          readOnly: true
+        tour_assignment_missing:
+          type: boolean
+          readOnly: true
+        linked_reseller_can_be_deleted:
+          type: boolean
+          readOnly: true
+        iban_masked:
+          type: string
+          readOnly: true
+        iban_stored:
+          type: boolean
+          readOnly: true
+        is_active:
+          type: boolean
+        short_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        is_also_reseller:
+          type: boolean
+        is_also_seller:
+          type: boolean
+        info:
+          type: string
+          nullable: true
+          maxLength: 1024
+        access_code:
+          type: string
+          nullable: true
+          maxLength: 100
+        messenger_group_link:
+          type: string
+          nullable: true
+          maxLength: 150
+        contact_name:
+          type: string
+          nullable: true
+          maxLength: 150
+        contact_phone:
+          type: string
+          nullable: true
+          maxLength: 50
+        picture:
+          type: string
+          format: uri
+          nullable: true
+        photo_link:
+          type: string
+          nullable: true
+          maxLength: 512
+        self_service:
+          type: boolean
+        fee_per_box_net:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        fee_per_month_net:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        fee_per_year_net:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        fees_billing_period:
+          allOf:
+          - $ref: '#/components/schemas/PaymentCycleEnum'
+          nullable: true
+        contact:
+          type: string
+          readOnly: true
+        linked_reseller:
+          type: string
+          nullable: true
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        acronym:
+          type: string
+          nullable: true
+          maxLength: 200
+        address:
+          type: string
+          maxLength: 300
+        zip_code:
+          type: string
+          maxLength: 5
+        city:
+          type: string
+          maxLength: 100
+        country:
+          type: string
+          nullable: true
+          maxLength: 100
+        coords_lon:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
+          nullable: true
+        coords_lat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
+          nullable: true
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        email_2:
+          type: string
+          nullable: true
+          maxLength: 150
+        email_3:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        order_email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          nullable: true
+          maxLength: 150
+        phone_2:
+          type: string
+          nullable: true
+          maxLength: 150
+        phone_3:
+          type: string
+          nullable: true
+          maxLength: 150
+        uid:
+          type: string
+          nullable: true
+          maxLength: 100
+        iban:
+          type: string
+          nullable: true
+          maxLength: 34
+    PatchedDeliveryStationDay:
+      type: object
+      description: |-
+        Serializer for DeliveryStationDay CRUD operations.
+
+        Supports dynamic variation fields for tour overview.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        delivery_station_short_name:
+          type: string
+          readOnly: true
+        delivery_day_number:
+          type: string
+          readOnly: true
+        delivery_station_name:
+          type: string
+          readOnly: true
+          nullable: true
+        coords_lat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
+          readOnly: true
+          nullable: true
+        coords_lon:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
+          readOnly: true
+          nullable: true
+        capacity_by_week:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/CapacityWeekEntry'
+          nullable: true
+          readOnly: true
+        tour_assignment_missing:
+          type: boolean
+          readOnly: true
+        tour_number:
+          type: integer
+          minimum: 1
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        delivery_time_begin:
+          type: string
+          format: time
+          nullable: true
+        delivery_time_end:
+          type: string
+          format: time
+          nullable: true
+        pickup_time_begin:
+          type: string
+          format: time
+          nullable: true
+        pickup_time_end:
+          type: string
+          format: time
+          nullable: true
+        additional_pickup_days:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        additional_pickup_time_begin_1:
+          type: string
+          format: time
+          nullable: true
+        additional_pickup_time_end_1:
+          type: string
+          format: time
+          nullable: true
+        additional_pickup_time_begin_2:
+          type: string
+          format: time
+          nullable: true
+        additional_pickup_time_end_2:
+          type: string
+          format: time
+          nullable: true
+        special_instructions:
+          type: string
+          nullable: true
+        stop_order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        delivery_station:
+          type: string
+        delivery_day:
+          type: string
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedEmailTemplateUpdate:
+      type: object
+      description: |-
+        All fields optional: the view always runs this with
+        ``partial=True`` (PATCH semantics), and passing an explicit
+        ``request=`` to extend_schema bypasses spectacular's auto
+        ``Patched*`` all-optional component — required fields here would
+        force generated clients to always send the full template.
+      properties:
+        subject:
+          type: string
+          maxLength: 512
+        body_html:
+          type: string
+        body_text:
+          type: string
+    PatchedEmployee:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        short_name_for_weekly_plan:
+          type: string
+          maxLength: 50
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        employee_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        user:
+          type: string
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedExternalCodeMapping:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/ExternalCodeMappingKindEnum'
+        external_code:
+          type: string
+          maxLength: 128
+        internal_id:
+          type: string
+          maxLength: 12
+        note:
+          type: string
+          nullable: true
+          maxLength: 255
+    PatchedForecast:
+      type: object
+      description: Mixin to automatically add related name fields.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
+          nullable: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          allOf:
+          - $ref: '#/components/schemas/VegetableSizeEnum'
+          default: M
+        note:
+          type: string
+          nullable: true
+        for_all_harvest_shares:
+          type: boolean
+        for_all_harvest_shares_fruit:
+          type: boolean
+        for_all_resellers:
+          type: boolean
+        for_all_markets:
+          type: boolean
+        bed_number:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+          readOnly: true
+          nullable: true
+        plot:
+          type: string
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+        share_article_name:
+          type: string
+          readOnly: true
+        plot_name:
+          type: string
+          readOnly: true
+    PatchedHarvest:
+      type: object
+      description: |-
+        Mixin to add dynamic storage fields functionality to serializers.
+        example: storage_xkdiealkyi
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        note:
+          type: string
+          nullable: true
+        amount_per_pu:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        washing:
+          type: boolean
+        cleaning:
+          type: boolean
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+        harvesting_crate:
+          type: string
+          nullable: true
+    PatchedHarvestSharePlanningUpdateRequest:
+      type: object
+      description: |-
+        Base for the share-planning request serializers — validates the dynamic
+        ``day_<id>_variation_<id>`` amount cells via the shared pattern.
+      properties:
+        year:
+          type: integer
+        delivery_week:
+          type: integer
+        note:
+          type: string
+          nullable: true
+        seller:
+          type: string
+          nullable: true
+        cleaning:
+          type: boolean
+          default: false
+        washing:
+          type: boolean
+          default: false
+        kg_per_piece:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        packing_station:
+          type: integer
+          default: 1
+    PatchedInvoiceReseller:
+      type: object
+      description: |-
+        Adds ``created_by_name`` — a human-readable name for the document's
+        ``created_by`` user — to a parent document serializer (Invoice /
+        DeliveryNote). Injected via ``get_fields()`` for the same metaclass reason
+        as ``LinePricingFieldsMixin``.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        line_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceResellerContent'
+          readOnly: true
+        crate_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrateItemSummary'
+          readOnly: true
+        sum_netto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        sum_brutto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        reseller_name:
+          type: string
+          nullable: true
+          readOnly: true
+        reseller_name2:
+          type: string
+          nullable: true
+          readOnly: true
+        reseller_address:
+          type: string
+          nullable: true
+          readOnly: true
+        reseller_zip:
+          type: string
+          nullable: true
+          readOnly: true
+        reseller_city:
+          type: string
+          nullable: true
+          readOnly: true
+        reseller_country:
+          type: string
+          nullable: true
+          readOnly: true
+        reseller_uid:
+          type: string
+          nullable: true
+          readOnly: true
+        reseller_payment_terms_in_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        reseller_early_payment_discount_percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        reseller_early_payment_discount_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        invoice_number:
+          type: string
+          readOnly: true
+        invoice_date:
+          type: string
+          format: date
+          readOnly: true
+        corresponding_delivery_notes:
+          type: string
+          nullable: true
+          description: Get list of delivery notes referenced by invoice contents
+          readOnly: true
+        cancels_invoice_number:
+          type: string
+          nullable: true
+          description: Get formatted number of the cancelled invoice (e.g. RE-1).
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        prefix:
+          type: string
+          readOnly: true
+          default: ''
+        number:
+          type: integer
+          readOnly: true
+          nullable: true
+        date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        file:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        xml_file:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        document_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        document_hash_version:
+          type: integer
+          readOnly: true
+        recipient_snapshot:
+          readOnly: true
+          nullable: true
+        has_been_sent_to_reseller_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        has_been_sent_to_accounting_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        has_been_paid:
+          type: boolean
+        document_type:
+          allOf:
+          - $ref: '#/components/schemas/DocumentTypeEnum'
+          readOnly: true
+          default: invoice
+        correction_reason:
+          type: string
+          readOnly: true
+          nullable: true
+          description: Explanation for why this correction/storno was created
+        items_are_grouped:
+          type: boolean
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        reseller:
+          type: string
+          readOnly: true
+        cancels_invoice:
+          type: string
+          readOnly: true
+          nullable: true
+          description: If this is a storno, reference to the original invoice being
+            cancelled
+        cancelled_by_invoice:
+          type: string
+          readOnly: true
+          nullable: true
+          description: If this invoice was cancelled, reference to the storno document
+        tax_breakdown:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        created_by_name:
+          type: string
+          nullable: true
+          description: Return a human-readable name for ``created_by``.
+          readOnly: true
+    PatchedInvoiceResellerContent:
+      type: object
+      description: |-
+        Adds ``share_article_name`` + ``organic_status`` to a line-item content
+        serializer (Invoice / DeliveryNote), resolving through the line's ``offer``
+        when ``share_article`` isn't set directly.
+
+        ``organic_status`` is the EU 2018/848 disclosure: the PDF appends "*" (organic)
+        or "**" (in transition) to the article name and prints a footer block
+        referencing ``Tenant.organic_control_number`` iff any line carries one of
+        those marks. Injected via ``get_fields()`` for the same metaclass reason as
+        ``LinePricingFieldsMixin``.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        source_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          readOnly: true
+          nullable: true
+        source_unit:
+          type: string
+          readOnly: true
+          nullable: true
+        source_size:
+          type: string
+          readOnly: true
+          nullable: true
+        source_price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        source_rabatt:
+          type: integer
+          readOnly: true
+          nullable: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        description:
+          type: string
+          nullable: true
+          maxLength: 200
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        sort:
+          type: string
+          nullable: true
+          maxLength: 200
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        rabatt:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        offer:
+          type: string
+          nullable: true
+        share_article:
+          type: string
+          nullable: true
+        invoice:
+          type: string
+        order_content:
+          type: string
+          readOnly: true
+          nullable: true
+        delivery_note_contents:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        line_netto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        line_brutto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        share_article_name:
+          type: string
+          nullable: true
+          description: Get share article name from direct relation or through offer.
+          readOnly: true
+        organic_status:
+          type: string
+          nullable: true
+          readOnly: true
+        amount_differs:
+          type: boolean
+          readOnly: true
+        original_amount:
+          type: string
+          readOnly: true
+        price_per_unit_differs:
+          type: boolean
+          readOnly: true
+        original_price_per_unit:
+          type: string
+          readOnly: true
+        rabatt_differs:
+          type: boolean
+          readOnly: true
+        original_rabatt:
+          type: string
+          readOnly: true
+        unit_differs:
+          type: boolean
+          readOnly: true
+        original_unit:
+          type: string
+          readOnly: true
+        size_differs:
+          type: boolean
+          readOnly: true
+        original_size:
+          type: string
+          readOnly: true
+    PatchedMember:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        linked_user_info:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        active_subscriptions_count:
+          type: integer
+          readOnly: true
+        coop_shares_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        coop_shares_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        coop_shares_pending_count:
+          type: integer
+          readOnly: true
+        payback_due_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        iban_masked:
+          type: string
+          readOnly: true
+        account_owner_masked:
+          type: string
+          readOnly: true
+        admin_confirmed:
+          type: boolean
+          readOnly: true
+        admin_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejected_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejection_reason:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        cancelled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cancelled_effective_at:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        on_waiting_list:
+          type: boolean
+        waiting_list_status:
+          allOf:
+          - $ref: '#/components/schemas/WaitingListStatusEnum'
+          readOnly: true
+        waiting_list_position:
+          type: integer
+          readOnly: true
+          nullable: true
+        notification_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        notification_expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        response_received_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        notification_token:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        is_active:
+          type: boolean
+        entry_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        is_trial:
+          type: boolean
+        trial_converted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cancellation_email_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        member_number:
+          type: integer
+          readOnly: true
+          nullable: true
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        pickup_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        address:
+          type: string
+          nullable: true
+          maxLength: 255
+        zip_code:
+          type: string
+          nullable: true
+          maxLength: 10
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        country:
+          type: string
+          nullable: true
+          maxLength: 100
+        number_of_rates:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        account_owner:
+          type: string
+          writeOnly: true
+          nullable: true
+          maxLength: 255
+        iban:
+          type: string
+          writeOnly: true
+          nullable: true
+          maxLength: 34
+        sepa_consent:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        withdrawal_consent:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        privacy_consent:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        consent_withdrawn_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        membership_paper_received_at:
+          type: string
+          format: date
+          nullable: true
+        cancellation_reason:
+          type: string
+          nullable: true
+        is_student:
+          type: boolean
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
+        email_2:
+          type: string
+          nullable: true
+          maxLength: 255
+        email_3:
+          type: string
+          nullable: true
+          maxLength: 255
+        note:
+          type: string
+          nullable: true
+        admin_confirmed_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        cancelled_by:
+          type: string
+          readOnly: true
+          nullable: true
+        user:
+          type: string
+          readOnly: true
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+        admin_confirmed_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        created_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+    PatchedMemberLoan:
+      type: object
+      description: |-
+        Per-member loan entry. Mirrors :class:`CoopShareSerializer` —
+        ``member_string`` is a human-readable label the office UI shows
+        next to the row when the table is filtered to "all members".
+      properties:
+        id:
+          type: string
+          readOnly: true
+        member_string:
+          type: string
+          readOnly: true
+        admin_confirmed:
+          type: boolean
+          readOnly: true
+        admin_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejected_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejection_reason:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        amount:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        interest_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        cancelled_reason:
+          type: string
+          nullable: true
+        paid_back_date:
+          type: string
+          format: date
+          nullable: true
+        admin_confirmed_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        member:
+          type: string
+    PatchedMyCustomerDataUpdate:
+      type: object
+      description: |-
+        Incoming shape for ``PATCH /commissioning/my_customer_data/``.
+
+        Edits the linked ``ContactEntity``. The owning ``Reseller`` row
+        (customer_number, invoice_*, channel flags) stays office-only.
+      properties:
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        address:
+          type: string
+          maxLength: 300
+        zip_code:
+          type: string
+          maxLength: 5
+        city:
+          type: string
+          maxLength: 100
+        country:
+          type: string
+          nullable: true
+          maxLength: 100
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        email_2:
+          type: string
+          nullable: true
+          maxLength: 150
+        email_3:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        order_email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          nullable: true
+          maxLength: 150
+        phone_2:
+          type: string
+          nullable: true
+          maxLength: 150
+        phone_3:
+          type: string
+          nullable: true
+          maxLength: 150
+        uid:
+          type: string
+          nullable: true
+          maxLength: 100
+        iban:
+          type: string
+          nullable: true
+          maxLength: 34
+    PatchedMyMemberDataUpdate:
+      type: object
+      description: |-
+        Incoming shape for ``PATCH /commissioning/my_member_data/``.
+
+        Field allowlist for member self-edit. Office-only flags
+        (``is_active``, ``is_trial``, ``member_number``, entry_date,
+        coop-share totals) are NOT in this list and silently ignored
+        if a client tries to send them — DRF only deserialises what's
+        declared. Validators (IBAN format, email uniqueness) come from
+        the model fields automatically.
+      properties:
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        pickup_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        address:
+          type: string
+          nullable: true
+          maxLength: 255
+        zip_code:
+          type: string
+          nullable: true
+          maxLength: 10
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        country:
+          type: string
+          nullable: true
+          maxLength: 100
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 255
+          - type: string
+            maxLength: 0
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        iban:
+          type: string
+          nullable: true
+          maxLength: 34
+        account_owner:
+          type: string
+          nullable: true
+          maxLength: 255
+    PatchedOffer:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        share_article_name:
+          type: string
+          readOnly: true
+        forecast_exists:
+          type: boolean
+          readOnly: true
+        amount_ordered:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          readOnly: true
+        organic_status:
+          type: string
+          readOnly: true
+          nullable: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        sort:
+          type: string
+          nullable: true
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 40
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          allOf:
+          - $ref: '#/components/schemas/VegetableSizeEnum'
+          default: M
+        amount_per_pu:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,3})?$
+        price_1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        price_2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        price_3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        cleaning:
+          type: boolean
+        washing:
+          type: boolean
+        comes_from_long_term_storage:
+          type: boolean
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        used_crate:
+          type: string
+          nullable: true
+        offer_group:
+          type: string
+        reseller:
+          type: string
+          nullable: true
+    PatchedOfferGroup:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        reseller_names:
+          type: string
+          readOnly: true
+        number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        name:
+          type: string
+          nullable: true
+          maxLength: 200
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        rabatt_price_tier_2:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        rabatt_price_tier_3:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        is_default:
+          type: boolean
+          readOnly: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedOrderContent:
+      type: object
+      description: |-
+        Adds ``line_netto`` and ``line_brutto`` (string decimals) to a line-item
+        serializer. Values come straight from the model's ``LinePricingMixin``
+        properties so the formula lives in one place (``models.mixin``).
+
+        The fields are injected via ``get_fields()`` (same pattern as
+        ``DeletableMixin``): this mixin is a plain ``object``, and DRF's
+        metaclass only collects declared Field class attributes from
+        serializer bases — declared on a non-Serializer mixin they are
+        silently dropped, leaving the fields neither at runtime nor in the
+        schema.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        year:
+          type: integer
+          writeOnly: true
+        delivery_week:
+          type: integer
+          writeOnly: true
+        day_number:
+          type: integer
+          writeOnly: true
+        reseller:
+          type: string
+          writeOnly: true
+        harvesting_day:
+          type: integer
+          writeOnly: true
+          nullable: true
+        packing_day:
+          type: integer
+          writeOnly: true
+          nullable: true
+        washing_day:
+          type: integer
+          writeOnly: true
+          nullable: true
+        cleaning_day:
+          type: integer
+          writeOnly: true
+          nullable: true
+        last_possible_ordering_day:
+          type: integer
+          writeOnly: true
+          nullable: true
+        order_id:
+          type: string
+          readOnly: true
+        order_number:
+          type: string
+          readOnly: true
+        order_number_prefix:
+          type: string
+          readOnly: true
+        order_is_finalized:
+          type: boolean
+          readOnly: true
+        delivery_note_is_finalized:
+          type: boolean
+          readOnly: true
+        delivery_note_id:
+          type: string
+          readOnly: true
+        delivery_note_number:
+          type: string
+          readOnly: true
+        delivery_note_prefix:
+          type: string
+          readOnly: true
+        invoice_id:
+          type: string
+          readOnly: true
+        invoice_number:
+          type: string
+          readOnly: true
+        invoice_prefix:
+          type: string
+          readOnly: true
+        has_invoice:
+          type: boolean
+          readOnly: true
+        has_finalized_invoice:
+          type: boolean
+          readOnly: true
+        is_finalized:
+          type: boolean
+        finalized_at:
+          type: string
+          format: date-time
+          nullable: true
+        description:
+          type: string
+          nullable: true
+          maxLength: 200
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        sort:
+          type: string
+          nullable: true
+          maxLength: 200
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        rabatt:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        cleaning:
+          type: boolean
+          nullable: true
+        washing:
+          type: boolean
+          nullable: true
+        comes_from_long_term_storage:
+          type: boolean
+          nullable: true
+        finalized_by:
+          type: string
+          nullable: true
+        offer:
+          type: string
+          nullable: true
+        share_article:
+          type: string
+          nullable: true
+        order:
+          type: string
+          readOnly: true
+        line_netto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        line_brutto:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedOrdersDeliveryDay:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          minimum: 0
+          maximum: 32767
+        default_last_possible_ordering_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_last_possible_ordering_time:
+          type: string
+          format: time
+          nullable: true
+        default_packing_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_harvesting_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_washing_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_cleaning_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_get_current_stock_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        acronym:
+          type: string
+          nullable: true
+          maxLength: 4
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedOrganicCertificate:
+      type: object
+      description: |-
+        A reseller's time-bound organic certificate. ``valid_from`` (Monday) and
+        the optional ``valid_until`` (Sunday) are enforced by TimeBoundMixin, and
+        successive certificates chain (one OPEN certificate per reseller).
+      properties:
+        id:
+          type: string
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        certificate_number:
+          type: string
+          nullable: true
+          maxLength: 100
+        link:
+          nullable: true
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        reseller:
+          type: string
+    PatchedPaymentCycle:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        choice:
+          $ref: '#/components/schemas/PaymentCycleEnum'
+    PatchedPlot:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        name:
+          type: string
+          maxLength: 255
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedPurchase:
+      type: object
+      description: |-
+        Mixin to add dynamic storage fields functionality to serializers.
+        example: storage_xkdiealkyi
+      properties:
+        id:
+          type: string
+          readOnly: true
+        seller_first_name:
+          type: string
+          readOnly: true
+        seller_last_name:
+          type: string
+          readOnly: true
+        seller_company_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        note:
+          type: string
+          nullable: true
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        amount_per_pu:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        organic_status:
+          $ref: '#/components/schemas/OrganicStatusEnum'
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+        seller:
+          type: string
+          nullable: true
+    PatchedReseller:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        has_orders:
+          type: boolean
+          readOnly: true
+        has_active_organic_certificate:
+          type: boolean
+          readOnly: true
+        is_also_delivery_station:
+          type: boolean
+        linked_delivery_station:
+          type: string
+          readOnly: true
+        linked_delivery_station_can_be_deleted:
+          type: boolean
+          description: |-
+            True iff unlinking would not orphan a DS that's still in use.
+
+            Used by the frontend to disable the ``is_also_delivery_station``
+            checkbox when the link cannot safely be undone.
+          readOnly: true
+        linked_user_info:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        iban_masked:
+          type: string
+          readOnly: true
+        iban_stored:
+          type: boolean
+          readOnly: true
+        name_for_member_pages:
+          type: string
+          nullable: true
+          maxLength: 200
+        customer_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        filial_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        is_seller:
+          type: boolean
+        is_reseller:
+          type: boolean
+        is_donation_recipient:
+          type: boolean
+        is_supplier:
+          type: boolean
+        is_active_seller:
+          type: boolean
+        is_active_reseller:
+          type: boolean
+        is_active_donation_recipient:
+          type: boolean
+        is_active_supplier:
+          type: boolean
+        offer_via_email:
+          type: boolean
+          nullable: true
+        order_via_email:
+          type: boolean
+          nullable: true
+        delivery_note_via_email:
+          type: boolean
+          nullable: true
+        invoice_via_email:
+          type: boolean
+        invoice_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        invoice_name2:
+          type: string
+          nullable: true
+          maxLength: 200
+        invoice_address:
+          type: string
+          nullable: true
+          maxLength: 300
+        invoice_plz:
+          type: string
+          nullable: true
+          maxLength: 5
+        invoice_city:
+          type: string
+          nullable: true
+          maxLength: 100
+        invoice_email:
+          type: string
+          nullable: true
+          maxLength: 200
+        organic_control_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        payment_terms_in_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        early_payment_discount_percent:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        early_payment_discount_days:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        contact:
+          type: string
+          readOnly: true
+        linked_user:
+          type: string
+          nullable: true
+        offer_group:
+          type: string
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+        company_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        first_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        last_name:
+          type: string
+          nullable: true
+          maxLength: 200
+        acronym:
+          type: string
+          nullable: true
+          maxLength: 200
+        address:
+          type: string
+          maxLength: 300
+        zip_code:
+          type: string
+          maxLength: 5
+        city:
+          type: string
+          maxLength: 100
+        country:
+          type: string
+          nullable: true
+          maxLength: 100
+        coords_lon:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
+          nullable: true
+        coords_lat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,10})?$
+          nullable: true
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        email_2:
+          type: string
+          nullable: true
+          maxLength: 150
+        email_3:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        order_email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 150
+          - type: string
+            maxLength: 0
+        phone:
+          type: string
+          nullable: true
+          maxLength: 150
+        phone_2:
+          type: string
+          nullable: true
+          maxLength: 150
+        phone_3:
+          type: string
+          nullable: true
+          maxLength: 150
+        uid:
+          type: string
+          nullable: true
+          maxLength: 100
+        iban:
+          type: string
+          nullable: true
+          maxLength: 34
+    PatchedSeason:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        weeks_without_delivery:
+          type: array
+          items:
+            type: integer
+            maximum: 53
+            minimum: 1
+    PatchedSetInvoiceNoteRequest:
+      type: object
+      description: |-
+        Request body for ``PATCH set_invoice_note/<pk>/``.
+
+        ``max_length`` mirrors ``InvoiceReseller.note`` (``CharField(max_length=500)``
+        — an internal office annotation, which is why it stays writable on a
+        finalized invoice). See ``SetOrderNoteRequestSerializer``.
+      properties:
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+    PatchedSetOrderNoteRequest:
+      type: object
+      description: |-
+        Request body for ``PATCH set_order_note/<pk>/``.
+
+        ``max_length`` mirrors ``Order.note`` (``CharField(max_length=500)``), so an
+        over-long note is a 400 naming the field rather than a ``DataError`` raised
+        by the UPDATE. ``note`` stays optional and nullable: an absent key means
+        "clear it", which is what the office autosave sends for an emptied box.
+      properties:
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+    PatchedShare:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        delivery_day_number:
+          type: integer
+          readOnly: true
+        share_type_name:
+          type: string
+          readOnly: true
+        share_type_variation_size:
+          type: string
+          readOnly: true
+        share_type_variation_average_weight:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        changed_day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
+          nullable: true
+        harvesting_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
+          nullable: true
+        packing_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
+          nullable: true
+        washing_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
+          nullable: true
+        cleaning_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
+          nullable: true
+        get_current_stock_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          readOnly: true
+          nullable: true
+        weight1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        weight2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        weight3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        weight4:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,3})?$
+          nullable: true
+        delivery_day:
+          type: string
+        share_type_variation:
+          type: string
+    PatchedShareArticle:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        share_option_list:
+          type: array
+          items:
+            type: string
+          writeOnly: true
+        net_price_for_boxes_kg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_boxes_pieces:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_boxes_bunch:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_kg_1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_kg_2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_kg_3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_kg_4:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_pieces_1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_pieces_2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_pieces_3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_pieces_4:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_bunch_1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_bunch_2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_bunch_3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        net_price_for_orders_bunch_4:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        default_crate_harvest_name:
+          type: string
+          readOnly: true
+          nullable: true
+        default_crate_reseller_name:
+          type: string
+          readOnly: true
+          nullable: true
+        is_active:
+          type: boolean
+        is_extra:
+          type: boolean
+        article_number:
+          type: string
+          nullable: true
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+        share_option:
+          allOf:
+          - $ref: '#/components/schemas/ShareTypeEnum'
+          nullable: true
+        share_option2:
+          allOf:
+          - $ref: '#/components/schemas/ShareTypeEnum'
+          nullable: true
+        share_option3:
+          allOf:
+          - $ref: '#/components/schemas/ShareTypeEnum'
+          nullable: true
+        is_purchased:
+          type: boolean
+        is_sold_to_resellers:
+          type: boolean
+        for_markets:
+          type: boolean
+        organic_status:
+          $ref: '#/components/schemas/OrganicStatusEnum'
+        default_movement_unit:
+          $ref: '#/components/schemas/UnitEnum'
+        default_offer_unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          nullable: true
+        default_harvesting_unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          nullable: true
+        default_packing_boxes_unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          nullable: true
+        default_commissioning_unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          nullable: true
+        default_market_unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          nullable: true
+        kg_per_piece_S:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        kg_per_piece_M:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        kg_per_piece_L:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        kg_per_bunch_S:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        kg_per_bunch_M:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        kg_per_bunch_L:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        pieces_per_kg_S:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        pieces_per_kg_M:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        pieces_per_kg_L:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        pieces_per_bunch_S:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        pieces_per_bunch_M:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        pieces_per_bunch_L:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        default_kg_per_pu_harvest:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        default_kg_per_pu_harvest_before_washing:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        default_pieces_per_pu_harvest:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        default_bunches_per_pu_harvest:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        default_kg_per_pu_reseller:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        default_pieces_per_pu_reseller:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        default_bunches_per_pu_reseller:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        default_kg_per_pu_purchase:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        default_pieces_per_pu_purchase:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,3})?$
+          nullable: true
+        default_bunches_per_pu_purchase:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        default_packing_station:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        percentage_added_to_bulk_packing_list:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+        percentage_added_to_commissioning_list_packing:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        default_crate_harvest:
+          type: string
+          nullable: true
+        default_crate_reseller:
+          type: string
+          nullable: true
+        seller_1:
+          type: string
+          nullable: true
+        seller_2:
+          type: string
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+        harvest_share:
+          type: boolean
+          readOnly: true
+        harvest_share_fruit:
+          type: boolean
+          readOnly: true
+        chicken_share:
+          type: boolean
+          readOnly: true
+        honey_share:
+          type: boolean
+          readOnly: true
+        oil_share:
+          type: boolean
+          readOnly: true
+        grain_share:
+          type: boolean
+          readOnly: true
+        bread_share:
+          type: boolean
+          readOnly: true
+    PatchedShareArticleNetPrice:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        net_price_for_boxes_kg:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_boxes_pieces:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_boxes_bunch:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_kg_1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_kg_2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_kg_3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_pieces_1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_pieces_2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_pieces_3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_bunch_1:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_bunch_2:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        net_price_for_orders_bunch_3:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        share_article:
+          type: string
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedShareContent:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_finalized:
+          type: boolean
+          readOnly: true
+        finalized_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          allOf:
+          - $ref: '#/components/schemas/VegetableSizeEnum'
+          default: M
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        kg_per_piece:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        backup_unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          nullable: true
+        backup_size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        backup_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        percentage_without_backup:
+          type: integer
+          maximum: 100
+          minimum: 0
+          nullable: true
+        available_for_all:
+          type: boolean
+        note:
+          type: string
+          nullable: true
+          maxLength: 500
+        packing_station:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        packing_station_backup:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        cleaning:
+          type: boolean
+          nullable: true
+        washing:
+          type: boolean
+          nullable: true
+        comes_from_long_term_storage:
+          type: boolean
+          nullable: true
+        cleaning_backup:
+          type: boolean
+          nullable: true
+        washing_backup:
+          type: boolean
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        finalized_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share:
+          type: string
+        share_article:
+          type: string
+        forecast:
+          type: string
+          nullable: true
+        seller:
+          type: string
+          nullable: true
+        backup_share_article:
+          type: string
+          nullable: true
+        delivery_station:
+          type: string
+    PatchedShareDelivery:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        share:
+          type: string
+        subscription:
+          type: string
+          nullable: true
+        delivery_station_day:
+          type: string
+          nullable: true
+        member_first_name:
+          type: string
+          readOnly: true
+        member_last_name:
+          type: string
+          readOnly: true
+        member_number:
+          type: string
+          readOnly: true
+        year:
+          type: integer
+          readOnly: true
+        delivery_week:
+          type: integer
+          readOnly: true
+        delivery_day_number:
+          type: integer
+          readOnly: true
+        delivery_station_name:
+          type: string
+          readOnly: true
+        share_type_name:
+          type: string
+          readOnly: true
+        share_type_variation_size:
+          type: string
+          readOnly: true
+        share_type_variation_type:
+          type: string
+          readOnly: true
+        ordered_share_type_name:
+          type: string
+          readOnly: true
+        ordered_variation_name:
+          type: string
+          readOnly: true
+        ordered_variation_type:
+          type: string
+          readOnly: true
+        share_content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShareContentNested'
+          readOnly: true
+        joker_taken:
+          type: boolean
+        donation_joker_taken:
+          type: boolean
+        amount_of_jokers:
+          type: integer
+          readOnly: true
+        amount_of_donation_jokers:
+          type: integer
+          readOnly: true
+        requires_optin:
+          type: boolean
+          readOnly: true
+        is_opted_in:
+          type: boolean
+          readOnly: true
+        optin_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+        optin_deadline:
+          type: string
+          format: date
+          nullable: true
+          readOnly: true
+        optin_locked:
+          type: boolean
+          readOnly: true
+        apply_to_future:
+          type: boolean
+          writeOnly: true
+    PatchedShareDeliveryOverview:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        share_type_variation_string:
+          type: string
+          readOnly: true
+        delivery_week:
+          type: integer
+          readOnly: true
+        delivery_date:
+          type: string
+          nullable: true
+          description: |-
+            ISO-8601 (``YYYY-MM-DD``) delivery date via the shared resolver.
+
+            Uses ``share_delivery_date`` — which honours the Share's
+            ``changed_day_number`` override before falling back to the delivery
+            day's ``day_number`` — so the overview matches every other delivery-
+            date surface. ``None`` for a malformed year/week/day tuple.
+          readOnly: true
+        amount_of_jokers:
+          type: integer
+          readOnly: true
+        amount_of_donation_jokers:
+          type: integer
+          readOnly: true
+        joker_taken:
+          type: boolean
+        donation_joker_taken:
+          type: boolean
+        note:
+          type: string
+          nullable: true
+        is_opted_in:
+          type: boolean
+          readOnly: true
+        optin_decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        subscription:
+          type: string
+          nullable: true
+        share:
+          type: string
+        delivery_station_day:
+          type: string
+          nullable: true
+        optin_decided_by:
+          type: string
+          readOnly: true
+          nullable: true
+    PatchedShareType:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        amount_of_jokers:
+          type: integer
+        amount_of_donation_jokers:
+          type: integer
+        share_type_variation_sizes_in_use:
+          type: string
+          readOnly: true
+        variations_valid_until_max:
+          type: string
+          format: date
+          nullable: true
+          readOnly: true
+        has_open_ended_variation:
+          type: boolean
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        name:
+          type: string
+          nullable: true
+          maxLength: 200
+        short_name:
+          type: string
+          nullable: true
+          maxLength: 50
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+        share_option:
+          allOf:
+          - $ref: '#/components/schemas/ShareTypeEnum'
+          nullable: true
+        delivery_cycle:
+          allOf:
+          - $ref: '#/components/schemas/DeliveryCycleEnum'
+          nullable: true
+        needs_complex_planning:
+          type: boolean
+        is_additional_share_type:
+          type: boolean
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedShareTypeVariation:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        active_price_per_delivery:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        active_price_sum_articles:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        active_solidarity_min_price_per_delivery:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        active_price_per_delivery_if_trial:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        active_solidarity_min_price_per_delivery_if_trial:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        capacity_by_week:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/CapacityWeekEntry'
+          nullable: true
+          readOnly: true
+        subscriptions_valid_until_max:
+          type: string
+          format: date
+          nullable: true
+          readOnly: true
+        has_open_ended_subscription:
+          type: boolean
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        variation_type:
+          $ref: '#/components/schemas/VariationTypeEnum'
+        size:
+          $ref: '#/components/schemas/ShareTypeVariationSizeEnum'
+        picture:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        average_weight:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,3})?$
+          nullable: true
+        capacity:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        is_packed_bulk:
+          type: boolean
+        requires_optin:
+          type: boolean
+        default_optin_state:
+          type: boolean
+        optin_deadline_days_before_delivery:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        allowed_for_trial_subscription:
+          type: boolean
+        share_type:
+          type: string
+        used_crate:
+          type: string
+          nullable: true
+        physical_components:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+        share_type_name:
+          type: string
+          readOnly: true
+    PatchedShareTypeVariationGrossPrice:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        share_type_variation_size:
+          type: string
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        price_per_delivery:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        solidarity_min_price_per_delivery:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        price_sum_articles:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        price_per_delivery_if_trial:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        solidarity_min_price_per_delivery_if_trial:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,2})?$
+          nullable: true
+        share_type_variation:
+          type: string
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedSharesDeliveryDay:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        can_be_deleted:
+          type: boolean
+          description: |-
+            Check if this instance can be deleted.
+
+            On the LIST path, read the parent ListSerializer's bulk-precomputed sets
+            (one batch + one Subscription query for the whole page). The detail /
+            create / update path (no list parent, or a bulk-batch failure) falls
+            through to the per-instance check — identical result.
+          readOnly: true
+        delivery_stations:
+          type: array
+          items:
+            $ref: '#/components/schemas/_DeliveryStationEntry'
+          readOnly: true
+        used_tours:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+          nullable: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          minimum: 0
+          maximum: 32767
+        default_packing_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_harvesting_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_washing_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_cleaning_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        default_get_current_stock_day:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        name:
+          type: string
+          nullable: true
+          maxLength: 200
+        number_of_tours:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        acronym:
+          type: string
+          nullable: true
+          maxLength: 4
+    PatchedStorage:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+        is_long_term_harvest_storage:
+          type: boolean
+        is_short_term_harvest_storage:
+          type: boolean
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+    PatchedSubscription:
+      type: object
+      description: |-
+        Read/write serializer for `Subscription`.
+
+        The read-only ``*_name`` / ``member_*`` fields are resolved via DRF
+        ``source=`` and ``SerializerMethodField``, not queryset annotations, so the
+        viewset queryset stays lean. Callers must keep the matching
+        ``select_related`` chain (see ``_build_subscription_queryset``) to avoid N+1.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        display_id:
+          type: string
+          description: Get human-readable display ID
+          readOnly: true
+        renewal_display_id:
+          type: string
+          readOnly: true
+        member:
+          type: string
+        share_type_variation:
+          type: string
+        member_first_name:
+          type: string
+          readOnly: true
+        member_last_name:
+          type: string
+          readOnly: true
+        member_string:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          readOnly: true
+        pickup_name:
+          type: string
+          readOnly: true
+          nullable: true
+        member_cancelled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        share_type_variation_string:
+          type: string
+          readOnly: true
+        share_type_name:
+          type: string
+          readOnly: true
+        share_type_variation_size:
+          type: string
+          readOnly: true
+        delivery_cycle:
+          type: string
+          readOnly: true
+          nullable: true
+        requires_optin:
+          type: boolean
+          readOnly: true
+        payment_cycle_name:
+          type: string
+          readOnly: true
+        delivery_day_number:
+          type: integer
+          readOnly: true
+          nullable: true
+        delivery_station_name:
+          type: string
+          readOnly: true
+          nullable: true
+        cancellation_reason:
+          type: string
+          readOnly: true
+          nullable: true
+        is_trial:
+          type: boolean
+        quantity:
+          type: integer
+          minimum: 1
+        price_per_delivery:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        notice_period_duration:
+          type: integer
+          readOnly: true
+          nullable: true
+        valid_from:
+          type: string
+          format: date
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+        deliveries_count:
+          type: integer
+          readOnly: true
+        jokers_taken:
+          type: integer
+          readOnly: true
+        amount_of_jokers:
+          type: integer
+          readOnly: true
+        donation_jokers_taken:
+          type: integer
+          readOnly: true
+        amount_of_donation_jokers:
+          type: integer
+          readOnly: true
+        automatically_renewed_at:
+          type: string
+          nullable: true
+          description: |-
+            Cancellation deadline = valid_until - N weeks. None when blank.
+
+            Computed server-side so Abos.tsx doesn't compute it per row per render
+            and the "when does this column light up" rule lives in one place.
+
+            Skip cases (return None):
+              * ``is_trial`` — trial subs don't auto-renew (see TrialPolicy).
+              * No ``valid_until`` — open-ended subs have no deadline.
+              * The deadline would fall before ``valid_from`` — short terms
+                (4-week trials, half-season subs) shouldn't surface a
+                deadline that pre-dates the subscription itself.
+            Pass-through cases:
+              * ``min_weeks_to_cancel_before_ending`` unset / 0 → return
+                ``valid_until`` itself; the column means "you must cancel
+                before this date" and a 0-week window collapses to
+                valid_until.
+          readOnly: true
+        admin_confirmed:
+          type: boolean
+          readOnly: true
+        admin_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejected_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        admin_rejection_reason:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        cancelled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        cancelled_effective_at:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        on_waiting_list:
+          type: boolean
+        waiting_list_status:
+          allOf:
+          - $ref: '#/components/schemas/WaitingListStatusEnum'
+          readOnly: true
+        waiting_list_position:
+          type: integer
+          readOnly: true
+          nullable: true
+        notification_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        notification_expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        response_received_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        notification_token:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        waiting_list_reason:
+          allOf:
+          - $ref: '#/components/schemas/WaitingListReasonEnum'
+          readOnly: true
+          nullable: true
+        subscription_number:
+          type: integer
+          readOnly: true
+          nullable: true
+        renewal_generation:
+          type: integer
+          readOnly: true
+        admin_confirmed_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        cancelled_by:
+          type: string
+          readOnly: true
+          nullable: true
+        previous_subscription:
+          type: string
+          readOnly: true
+          nullable: true
+        payment_cycle:
+          type: string
+        default_delivery_station_day:
+          type: string
+          nullable: true
+        admin_confirmed_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        created_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+        cancelled_by_name:
+          type: string
+          readOnly: true
+          nullable: true
+    PatchedTenant:
+      type: object
+      description: |-
+        Full tenant payload — staff-only on read, admin-only on write.
+
+        Read by:
+          * Office / staff UI (``ConfigurationGeneral``, ``ConfigurationEmail``,
+            reseller PDF generation, packing-list PDF headers) — these
+            pages need ``iban`` / ``sepa_*`` / ``uid`` /
+            ``organic_control_number`` / ``email_for_orders`` to render.
+          * Admin UI when PATCHing the same fields.
+
+        NOT read by member / customer pages. ``TenantViewSet.get_serializer_class``
+        routes non-staff callers to ``TenantNonStaffReadSerializer`` so those
+        fields aren't shipped to roles whose UI doesn't consume them — even
+        though the JWT is still tenant-scoped (no cross-tenant leak), the
+        operational-internal fields shouldn't ride along on every
+        ``useTenant()`` fetch a member or customer makes.
+
+        The ``settings`` / ``current_settings`` overlays live here, not on
+        ``CurrentTenantSerializer``, so anonymous callers don't receive tenant
+        operational config.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        current_settings:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        settings:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        app_icon_version:
+          type: string
+          readOnly: true
+        tenant_language:
+          $ref: '#/components/schemas/TenantLanguageEnum'
+        schema_name:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+          maxLength: 200
+        zip_code:
+          type: string
+          nullable: true
+          maxLength: 10
+        city:
+          type: string
+          nullable: true
+          maxLength: 100
+        country:
+          type: string
+          nullable: true
+          maxLength: 100
+        organic_control_number:
+          type: string
+          nullable: true
+          maxLength: 100
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        email_for_orders:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        website:
+          nullable: true
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        legal_form:
+          type: string
+          maxLength: 100
+        data_protection_contact:
+          type: string
+          maxLength: 200
+        dpo:
+          type: string
+          maxLength: 200
+        supervisory_authority:
+          type: string
+          maxLength: 200
+        register_type:
+          type: string
+          maxLength: 100
+        register_number:
+          type: string
+          maxLength: 50
+        register_court:
+          type: string
+          maxLength: 200
+        legal_representatives:
+          type: string
+          maxLength: 500
+        supervisory_board:
+          type: string
+          maxLength: 500
+        content_responsible:
+          type: string
+          maxLength: 200
+        participates_in_dispute_resolution:
+          type: boolean
+        auditing_association:
+          type: string
+        professional_association:
+          type: string
+        legal_notice_extra_html:
+          type: string
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        currency:
+          type: string
+          maxLength: 8
+        timezone:
+          type: string
+          description: Frontend display only. The Django backend uses the process-level
+            ``TIME_ZONE`` (settings.py) for every ``timezone.localdate()`` / ``timezone.now()``
+            call — it does NOT switch per tenant. Onboarding a tenant in a different
+            zone would silently get the server's concept of 'today' for backend business
+            logic. If multi-region tenants ever become a real product requirement,
+            every ``timezone.localdate()`` callsite needs to flow through this field.
+          maxLength: 64
+        date_format:
+          type: string
+          maxLength: 32
+        time_format:
+          type: string
+          maxLength: 16
+        csv_format:
+          type: string
+          maxLength: 8
+        number_locale:
+          type: string
+          maxLength: 16
+        navigation: {}
+        ai: {}
+        allow_upload_for_data_lists:
+          type: boolean
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        bio_logo:
+          type: string
+          format: uri
+          nullable: true
+        app_icon:
+          type: string
+          format: uri
+          nullable: true
+        app_short_name:
+          type: string
+          maxLength: 12
+        fiscal_year_start_month:
+          type: integer
+          maximum: 12
+          minimum: 1
+        iban:
+          type: string
+          nullable: true
+          maxLength: 34
+        uid:
+          type: string
+          nullable: true
+          maxLength: 20
+        days_until_payment_due:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        sepa_creditor_id:
+          type: string
+          maxLength: 35
+        sepa_creditor_name:
+          type: string
+          maxLength: 70
+        sepa_creditor_bic:
+          type: string
+          maxLength: 11
+        sepa_remittance_template:
+          type: string
+          maxLength: 140
+        privacy_policy_html:
+          type: string
+        action_rate_limit_overrides:
+          readOnly: true
+    PatchedTenantEmailConfig:
+      type: object
+      description: SMTP-only email config. ``smtp_password`` is write-only.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        tenant:
+          type: string
+          readOnly: true
+        smtp_host:
+          type: string
+          nullable: true
+          maxLength: 255
+        smtp_port:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        smtp_username:
+          type: string
+          nullable: true
+          maxLength: 255
+        smtp_password:
+          type: string
+          writeOnly: true
+          nullable: true
+        has_smtp_password:
+          type: boolean
+          readOnly: true
+        smtp_use_tls:
+          type: boolean
+        smtp_use_ssl:
+          type: boolean
+        from_email:
+          type: string
+          format: email
+          description: Default 'From' email address
+          maxLength: 254
+        from_name:
+          type: string
+          description: Display name for 'From' field
+          maxLength: 255
+        reply_to_email:
+          nullable: true
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        accounting_email:
+          nullable: true
+          description: Email address for sending invoices to accounting (e.g., DATEV)
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        max_emails_per_hour:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        is_active:
+          type: boolean
+        is_verified:
+          type: boolean
+          readOnly: true
+          description: Set to True when a test send through this SMTP host succeeds.
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedTheoreticalCleanAmount:
+      type: object
+      description: Mixin to automatically add related name fields.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        note:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+        share_content:
+          type: string
+          readOnly: true
+          nullable: true
+        order_content:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedTheoreticalHarvest:
+      type: object
+      description: Mixin to automatically add related name fields.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        note:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+        share_content:
+          type: string
+          readOnly: true
+          nullable: true
+        order_content:
+          type: string
+          readOnly: true
+          nullable: true
+        forecast:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedTheoreticalPurchase:
+      type: object
+      description: Mixin to automatically add related name fields.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        note:
+          type: string
+          nullable: true
+        price_per_unit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+        share_content:
+          type: string
+          readOnly: true
+          nullable: true
+        order_content:
+          type: string
+          readOnly: true
+          nullable: true
+        seller:
+          type: string
+          nullable: true
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedTheoreticalWashAmount:
+      type: object
+      description: Mixin to automatically add related name fields.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        note:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+        share_content:
+          type: string
+          readOnly: true
+          nullable: true
+        order_content:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedUserProfileUpdateRequest:
+      type: object
+      description: Request body for ``PATCH /api/auth/<user_id>/``.
+      properties:
+        first_name:
+          type: string
+          maxLength: 255
+        last_name:
+          type: string
+          maxLength: 255
+        user_language:
+          $ref: '#/components/schemas/UserLanguageEnum'
+        theme:
+          $ref: '#/components/schemas/ThemeEnum'
+    PatchedWaste:
+      type: object
+      description: |-
+        Mixin to add dynamic storage fields functionality to serializers.
+        example: storage_xkdiealkyi
+      properties:
+        id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        day_number:
+          allOf:
+          - $ref: '#/components/schemas/DayNumberEnum'
+          nullable: true
+          minimum: 0
+          maximum: 32767
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        note:
+          type: string
+          nullable: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        share_article:
+          type: string
+        storage:
+          type: string
+        share_article_name:
+          type: string
+          readOnly: true
+    PatchedWeeklyPlanCategory:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        name:
+          type: string
+          maxLength: 200
+        max_lines:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
     PaymentCycle:
       type: object
       properties:
@@ -36471,19 +41227,6 @@ components:
       - sepa_mandate_paper_received_at
       - sepa_mandate_reference
       - sepa_mandate_signed_at
-    SetInvoiceNoteRequest:
-      type: object
-      description: |-
-        Request body for ``PATCH set_invoice_note/<pk>/``.
-
-        ``max_length`` mirrors ``InvoiceReseller.note`` (``CharField(max_length=500)``
-        — an internal office annotation, which is why it stays writable on a
-        finalized invoice). See ``SetOrderNoteRequestSerializer``.
-      properties:
-        note:
-          type: string
-          nullable: true
-          maxLength: 500
     SetInvoiceNoteResponse:
       type: object
       properties:
@@ -36492,20 +41235,6 @@ components:
           nullable: true
       required:
       - note
-    SetOrderNoteRequest:
-      type: object
-      description: |-
-        Request body for ``PATCH set_order_note/<pk>/``.
-
-        ``max_length`` mirrors ``Order.note`` (``CharField(max_length=500)``), so an
-        over-long note is a 400 naming the field rather than a ``DataError`` raised
-        by the UPDATE. ``note`` stays optional and nullable: an absent key means
-        "clear it", which is what the office autosave sends for an emptied box.
-      properties:
-        note:
-          type: string
-          nullable: true
-          maxLength: 500
     SetOrderNoteResponse:
       type: object
       properties:
@@ -40580,20 +45309,6 @@ components:
       - last_name
       - theme
       - user_language
-    UserProfileUpdateRequest:
-      type: object
-      description: Request body for ``PATCH /api/auth/<user_id>/``.
-      properties:
-        first_name:
-          type: string
-          maxLength: 255
-        last_name:
-          type: string
-          maxLength: 255
-        user_language:
-          $ref: '#/components/schemas/UserLanguageEnum'
-        theme:
-          $ref: '#/components/schemas/ThemeEnum'
     VariationTypeEnum:
       enum:
       - physical

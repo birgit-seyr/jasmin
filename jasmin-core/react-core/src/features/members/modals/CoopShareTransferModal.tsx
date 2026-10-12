@@ -117,6 +117,7 @@ export default function CoopShareTransferModal({
   const { mutate: transfer, isPending } =
     useCommissioningCoopSharesTransferCreate({
       mutation: {
+        meta: { silent: true },
         onSuccess: (result) => {
           // Both members' coop share lists and the members list totals change.
           queryClient.invalidateQueries({

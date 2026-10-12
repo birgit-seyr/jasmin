@@ -90,14 +90,15 @@ const bulkCreateSummaryMock = vi.fn();
 const bulkDeleteDocsMock = vi.fn();
 const bulkSendDocsMock = vi.fn();
 const createStornoMutateAsyncMock = vi.fn();
+const createStornoHookMock = vi.fn();
 
 vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
   useCommissioningOrdersOverviewList: (params: unknown, opts?: unknown) =>
     ordersOverviewHookMock(params, opts),
-  useCommissioningInvoicesCreateStornoCreate: () => ({
-    mutateAsync: createStornoMutateAsyncMock,
-    isPending: false,
-  }),
+  useCommissioningInvoicesCreateStornoCreate: (options?: unknown) => {
+    createStornoHookMock(options);
+    return { mutateAsync: createStornoMutateAsyncMock, isPending: false };
+  },
   commissioningBulkFinalizeDocumentsCreate: (...args: unknown[]) =>
     bulkFinalizeMock(...args),
   commissioningBulkCreateDocumentsFromOrdersCreate: (...args: unknown[]) =>
@@ -584,9 +585,14 @@ describe("storno flow", () => {
     // Modal stays open (success path is what closes it) so the office can
     // correct the reason and retry.
     expect(screen.queryByRole("dialog")).toBeInTheDocument();
-    // The backend's domain error is surfaced to the office.
+    // The backend's domain error is surfaced to the office — once: the
+    // app-wide mutation toast stays silent for this mutation.
     await waitFor(() => {
-      expect(notifyMock.error).toHaveBeenCalled();
+      expect(notifyMock.error).toHaveBeenCalledWith("circular reference");
+    });
+    expect(notifyMock.error).toHaveBeenCalledTimes(1);
+    expect(createStornoHookMock).toHaveBeenCalledWith({
+      mutation: { meta: { silent: true } },
     });
   });
 });

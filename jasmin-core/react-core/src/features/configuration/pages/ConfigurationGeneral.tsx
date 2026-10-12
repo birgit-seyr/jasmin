@@ -439,11 +439,7 @@ export default function ConfigurationGeneral() {
       // new file column can never be forgotten by only one save path.
       const tenantFields = withoutTenantFileFields(currentTenantData);
 
-      // Directional cast at the orval boundary: the autosave sends a
-      // partial snapshot while the generated body type requires
-      // ``name`` — the field names/types themselves are checked by
-      // ``TenantFormState``.
-      await tenantsTenantsPartialUpdate(tenantId, tenantFields as Tenant);
+      await tenantsTenantsPartialUpdate(tenantId, tenantFields);
 
       // Pull the freshly-saved tenant row into TenantContext so the
       // form's next read of ``tenant.<field>`` reflects what's in the

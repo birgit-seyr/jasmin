@@ -38,9 +38,11 @@ export default function DebitsAbos() {
     data: runsData,
     isFetching,
     error,
-  } = usePaymentsBillingRunsList({
-    year: selectedYear,
-  });
+  } = usePaymentsBillingRunsList(
+    { year: selectedYear },
+    // The effect below reports a failed load in the page's own words.
+    { query: { meta: { silent: true } } },
+  );
 
   const runs = useMemo(
     () =>

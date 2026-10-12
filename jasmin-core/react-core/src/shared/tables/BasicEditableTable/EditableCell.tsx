@@ -1,9 +1,8 @@
 import { useRef, useEffect, useMemo } from "react";
 import type { KeyboardEvent } from "react";
 import { Form } from "antd";
-import type { InputRef } from "antd";
 import type { Dayjs } from "dayjs";
-import FormInput from "./FormInput";
+import FormInput, { type FormInputRef } from "./FormInput";
 import { useTranslation } from "react-i18next";
 import type { EditableCellProps, EditableColumnConfig, TableRecord, SelectOption } from "./types";
 import { buildLiveRecord } from "./buildLiveRecord";
@@ -138,7 +137,7 @@ const EditingCell = <T extends TableRecord = TableRecord>({
     return options as SelectOption[];
   }, [options, record, formValues]);
 
-  const inputRef = useRef<InputRef | null>(null);
+  const inputRef = useRef<FormInputRef | null>(null);
   const selectEnterCountRef = useRef(0);
 
   const { t } = useTranslation();
@@ -170,17 +169,16 @@ const EditingCell = <T extends TableRecord = TableRecord>({
     // the select macrotask fires, so the existing value isn't overwritten.
     if (editing && inputRef.current && shouldFocus) {
       requestAnimationFrame(() => {
-        const input =
-          inputRef.current?.input ??
-          (inputRef.current as unknown as HTMLInputElement | null);
+        const input = inputRef.current?.input ?? inputRef.current;
         if (!input) return;
         input.focus();
         if (
+          input instanceof HTMLInputElement &&
           inputType !== "select" &&
           inputType !== "checkbox" &&
           inputType !== "switch"
         ) {
-          input.select?.();
+          input.select();
         }
       });
     }

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { Button } from "antd";
+import type { ButtonProps } from "antd";
 import i18n from "@shared/i18n";
 import { notify } from '@shared/utils';
 import { getErrorMessage, messageForErrorCode } from '@shared/utils/apiError';
+import "./BulkActionButton.css";
 
 interface BulkItemFailure {
   id?: string | number;
@@ -50,7 +52,7 @@ interface BulkActionButtonProps<TPayload extends object, TResponse> {
     request: BulkActionRequest<NoInfer<TPayload>>,
   ) => Promise<TResponse>;
   buttonText: ReactNode;
-  buttonProps?: Record<string, unknown>;
+  buttonProps?: ButtonProps;
   onSuccess?: (data: TResponse, selectedIds: (string | number)[]) => void;
   onError?: (error: unknown, selectedIds: (string | number)[]) => void;
   disabled?: boolean;
@@ -81,7 +83,7 @@ const BulkActionButton = <
   payload,
   refreshData,
   icon,
-  style = {},
+  style,
   onClearSelection,
 }: BulkActionButtonProps<TPayload, TResponse>) => {
   const [loading, setLoading] = useState(false);
@@ -132,8 +134,9 @@ const BulkActionButton = <
         await refreshData();
       }
     } catch (error: unknown) {
-      console.error("Bulk action failed:", error);
-      notify.error(errorMessage || getErrorMessage(error, "Action failed"));
+      notify.error(
+        errorMessage || getErrorMessage(error, i18n.t("common.action_failed")),
+      );
       if (onError) {
         onError(error, selectedIds);
       }
@@ -150,11 +153,10 @@ const BulkActionButton = <
       icon={icon}
       size="small"
       {...buttonProps}
-      style={{
-        marginTop: "2.5em",
-        height: "1.8em",
-        ...style,
-      }}
+      className={["bulk-action-button", buttonProps.className]
+        .filter(Boolean)
+        .join(" ")}
+      style={style}
     >
       {buttonText}
     </Button>
