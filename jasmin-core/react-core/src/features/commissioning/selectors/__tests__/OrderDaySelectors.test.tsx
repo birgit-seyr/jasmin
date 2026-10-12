@@ -109,6 +109,24 @@ describe("OrderDaySelectors", () => {
     }
   });
 
+  it("shows a picked day by its translated weekday, Sunday included", () => {
+    renderSelectors({ orderDays: { ...ALL_DAYS, cleaning_day: 6 } });
+
+    expect(screen.getByText("configuration.acronym_tuesday")).toBeInTheDocument();
+    expect(screen.getByText("configuration.acronym_sunday")).toBeInTheDocument();
+  });
+
+  it("marks a day that differs from its default on an existing order", () => {
+    renderSelectors({
+      orderId: "order-1",
+      orderDays: ALL_DAYS,
+      oddDefaults: { ...NO_DEFAULTS, default_harvesting_day: 0 },
+    });
+
+    const differing = screen.getByText(`${DAYS[0].label}:`);
+    expect(differing).toHaveClass("order-day-label-differs");
+  });
+
   it("tells the office which days a new order lacks and who sets their defaults", () => {
     renderSelectors({
       orderDays: { ...ALL_DAYS, harvesting_day: null, packing_day: null },

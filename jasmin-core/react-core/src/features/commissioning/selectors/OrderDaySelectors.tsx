@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { Alert, Select } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { useRoles } from "@shared/auth";
 import { ToolTipIcon } from "@shared/ui";
+import { getWeekdayChoices } from "@shared/utils/weekdayChoices";
 import {
   missingOrderDays,
   type OrderDayConfig,
@@ -11,16 +13,6 @@ import type {
   OddDefaults,
   OrderDays,
 } from "@features/commissioning/hooks/useOrdersData";
-
-const DAY_OPTIONS = [
-  { value: 0, label: "MO" },
-  { value: 1, label: "DI" },
-  { value: 2, label: "MI" },
-  { value: 3, label: "DO" },
-  { value: 4, label: "FR" },
-  { value: 5, label: "SA" },
-  { value: 6, label: "SO" },
-];
 
 interface OrderDaySelectorsProps {
   days: OrderDayConfig[];
@@ -81,19 +73,20 @@ export function OrderDaySelectors({
   tooltip,
   loading = false,
 }: OrderDaySelectorsProps) {
+  const { t } = useTranslation();
+  // Work days may fall on a Sunday although deliveries don't, so the order
+  // days offer it on top of the delivery weekdays.
+  const dayOptions = useMemo(
+    () => [
+      ...getWeekdayChoices(t),
+      { value: 6, label: t("configuration.acronym_sunday") },
+    ],
+    [t],
+  );
   const missing = missingOrderDays(days, orderDays, orderId);
   return (
     <>
-      <div
-        style={{
-          marginTop: "1.5em",
-          marginBottom: "1.5em",
-          display: "flex",
-          gap: "1em",
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="order-day-selectors">
         {tooltip && <ToolTipIcon title={tooltip} />}
         {days.map(({ label, field, defaultField }) => {
           const differs =
@@ -102,25 +95,15 @@ export function OrderDaySelectors({
             orderDays[field] !== oddDefaults[defaultField];
 
           return (
-            <div
-              key={field}
-              className="flex-center-y"
-              style={{ gap: "0.25em" }}
-            >
-              <span
-                style={{
-                  color: differs ? "red" : undefined,
-                  fontWeight: differs ? "bold" : undefined,
-                }}
-              >
+            <div key={field} className="flex-center-y order-day-selector">
+              <span className={differs ? "order-day-label-differs" : undefined}>
                 {label}:
               </span>
               <Select
-                style={{ width: 80 }}
                 className={differs ? "day-select-differs" : "day-select-violet"}
                 value={orderDays[field]}
                 onChange={(val) => onDayChange(field, val)}
-                options={DAY_OPTIONS}
+                options={dayOptions}
                 disabled={orderId != null}
                 allowClear
                 size="small"

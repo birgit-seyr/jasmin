@@ -69,6 +69,8 @@
   --color-error-bg: #fff1f0;
   --color-error-border: #ffccc7;
   --color-error-text: #c62828;
+  /* The border that marks the order day selects on the Orders page. */
+  --color-order-day-border: #743984;
   /* And for something waiting on someone, and for plain information. */
   --color-warning-bg: #fff3e0;
   --color-warning-text: #b34700;
@@ -174,6 +176,7 @@
   --color-error-bg: #2a1215;
   --color-error-border: #5c2223;
   --color-error-text: #ff7875;
+  --color-order-day-border: #b57fc6;
   --color-warning-bg: #2b1d11;
   --color-warning-text: #f3b765;
   --color-info-bg: #111d2c;
