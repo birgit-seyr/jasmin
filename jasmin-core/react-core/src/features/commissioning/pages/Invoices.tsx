@@ -5,7 +5,7 @@ import {
   TableOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Flex, Radio, Tag, Typography } from "antd";
+import { Button, Card, Flex, Radio, Typography } from "antd";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,7 @@ import type {
   CommissioningOrdersOverviewListParams,
 } from "@shared/api/generated/models";
 import BulkSendDocumentsButton from "@features/commissioning/components/BulkSendDocumentsButton";
+import InvoiceNumberCell from "@features/commissioning/components/InvoiceNumberCell";
 import { InvoiceModal } from "@features/commissioning/modals";
 import StornoInvoiceModal from "@features/commissioning/modals/StornoInvoiceModal";
 // ``InvoicePDFButtons`` is light (no @react-pdf import) — safe to
@@ -80,10 +81,6 @@ interface GroupData {
   totalAmount: number;
   canInvoice: boolean;
 }
-
-/** A cancelled invoice frees its delivery note to be invoiced again. */
-const canCreateInvoice = (record: InvoiceOverviewRow) =>
-  !record.has_invoice || Boolean(record.invoice_cancelled_by);
 
 export default function Invoices() {
   const [selectedReseller, setSelectedReseller] = useState<string | null>(null);
@@ -276,7 +273,7 @@ export default function Invoices() {
       groups[groupKey].items.push(item);
       groups[groupKey].totalAmount += parseFloat(item.sum_netto || "0");
 
-      if (!canCreateInvoice(item)) {
+      if (item.has_invoice) {
         groups[groupKey].canInvoice = false;
       }
     });
@@ -478,29 +475,7 @@ export default function Invoices() {
         inputType: "text",
 
         sortable: true,
-        render: (value: unknown, record) => (
-          <>
-            {record.has_finalized_invoice ? (
-              <>
-                <CheckOutlined aria-hidden className="icon-check-success" />
-                <span className="sr-only">{t("commissioning.finalized")}</span>
-              </>
-            ) : (
-              <span className="sr-only">
-                {t("commissioning.not_finalized")}
-              </span>
-            )}
-            {value as string}
-            {record.invoice_cancelled_by ? (
-              <Tag color="red" bordered={false}>
-                {t("commissioning.storno_short")}
-                {record.invoice_storno_number
-                  ? ` ${record.invoice_storno_number}`
-                  : ""}
-              </Tag>
-            ) : null}
-          </>
-        ),
+        render: (_: unknown, record) => <InvoiceNumberCell row={record} />,
       },
       {
         title: t("commissioning.invoice_total_amount_netto"),
@@ -581,7 +556,7 @@ export default function Invoices() {
                   buttonSize="small"
                 />
               )}
-              {canCreateInvoice(record) && (
+              {!record.has_invoice && (
                 <BulkActionButton
                   selectedIds={[record.id]}
                   apiFunction={(payload) =>

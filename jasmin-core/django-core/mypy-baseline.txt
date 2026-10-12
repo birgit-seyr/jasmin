@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 310 finding(s).
+# 309 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -197,7 +197,6 @@ apps/commissioning/utils/weight.py: Incompatible types in assignment (expression
 apps/commissioning/views/documentation_views.py: "type[JasminModel]" has no attribute "objects"  [attr-defined]
 apps/commissioning/views/finalize_views.py: "Model" has no attribute "unfinalize"  [attr-defined]
 apps/commissioning/views/my_data_views.py: Unsupported operand types for > ("date" and "None")  [operator]
-apps/commissioning/views/reseller_views.py: Incompatible types in assignment (expression has type "list[Order]", variable has type "FinalizedProtectedQuerySet[Order, Order]")  [assignment]
 apps/commissioning/views/share_views.py: "object" has no attribute "id"  [attr-defined]
 apps/commissioning/views/share_views.py: "object" has no attribute "id"  [attr-defined]
 apps/commissioning/views/share_views.py: "object" has no attribute "id"  [attr-defined]

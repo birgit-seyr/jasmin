@@ -88,6 +88,7 @@ _EXPECTED_VIEW_MODULES = frozenset(
         "apps.commissioning.views.email_distribution_views",
         "apps.commissioning.views.finalize_views",
         "apps.commissioning.views.my_data_views",
+        "apps.commissioning.views.order_overview_views",
         "apps.commissioning.views.reseller_views",
         "apps.commissioning.views.share_options_views",
         "apps.commissioning.views.share_views",

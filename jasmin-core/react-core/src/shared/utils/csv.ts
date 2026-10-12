@@ -132,19 +132,35 @@ export function buildCsvString(
   return lines.join("\n");
 }
 
-/**
- * Trigger a browser download for the given CSV content. A UTF-8 BOM is prepended
- * automatically so Excel detects the encoding correctly.
- */
-export function downloadCsvBlob(
-  content: BlobPart,
-  filename: string,
-): void {
-  const bom = "\uFEFF";
-  const parts: BlobPart[] =
-    typeof content === "string" ? [bom + content] : [bom, content];
+const UTF8_BOM = "\uFEFF";
+const UTF8_BOM_BYTES = [0xef, 0xbb, 0xbf];
+
+async function startsWithUtf8Bom(content: Exclude<BlobPart, string>): Promise<boolean> {
+  const head = new Uint8Array(await new Blob([content]).slice(0, 3).arrayBuffer());
+  return UTF8_BOM_BYTES.every((byte, index) => head[index] === byte);
+}
+
+function saveCsv(parts: BlobPart[], filename: string): void {
   const blob = new Blob(parts, { type: "text/csv;charset=utf-8;" });
   downloadBlob(blob, filename.endsWith(".csv") ? filename : `${filename}.csv`);
+}
+
+/**
+ * Trigger a browser download for the given CSV content, starting with a UTF-8
+ * BOM so Excel detects the encoding. Content that already starts with one — a
+ * CSV the backend wrote — keeps its own, since a second BOM ends up in the
+ * first header cell. A string is saved at once; binary content (the blob of a
+ * backend export) only once its first bytes are read, which the returned
+ * promise waits for.
+ */
+export function downloadCsvBlob(content: BlobPart, filename: string): Promise<void> {
+  if (typeof content === "string") {
+    saveCsv([content.startsWith(UTF8_BOM) ? content : UTF8_BOM + content], filename);
+    return Promise.resolve();
+  }
+  return startsWithUtf8Bom(content).then((hasBom) =>
+    saveCsv(hasBom ? [content] : [UTF8_BOM, content], filename),
+  );
 }
 
 // Test-only access to the internal cell helpers (not part of the public CSV

@@ -13,6 +13,7 @@ rule — can import them.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit
 
 
 def frontend_base_url(tenant: Any = None) -> str:
@@ -31,10 +32,21 @@ def frontend_base_url(tenant: Any = None) -> str:
     from django.conf import settings
 
     domain = _primary_domain(tenant)
-    if domain:
-        scheme = "http" if settings.DEBUG else "https"
-        return f"{scheme}://{domain}"
-    return settings.FRONTEND_BASE_URL
+    if not domain:
+        return settings.FRONTEND_BASE_URL
+    if not settings.DEBUG:
+        return f"https://{domain}"
+    return f"http://{_with_dev_port(domain, settings.FRONTEND_BASE_URL)}"
+
+
+def _with_dev_port(domain: str, frontend_base_url: str) -> str:
+    """``domain`` with the port of ``frontend_base_url`` when it has none of its
+    own. The dev gateway serves every tenant domain on that port (3000), so a
+    bare ``e2e.localhost`` link would miss it."""
+    if urlsplit(f"//{domain}").port is not None:
+        return domain
+    port = urlsplit(frontend_base_url).port
+    return f"{domain}:{port}" if port is not None else domain
 
 
 def _primary_domain(tenant: Any) -> str | None:

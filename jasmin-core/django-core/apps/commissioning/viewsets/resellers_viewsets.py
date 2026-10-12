@@ -349,9 +349,10 @@ def uninvoiced_orders_of_outer_reseller(year: int | None = None) -> QuerySet[Ord
     An order reaches its invoice through its delivery note, by the same two
     provenance links as ``InvoiceService.get_invoice_for_delivery_note``: the
     article lines' ``delivery_note_contents`` and the crate lines'
-    ``crate_delivery_note_contents`` (the only link of a crate-only note). Only
-    an invoice that isn't cancelled covers, as billing refuses only such a
-    note. An order with no delivery note counts as uninvoiced.
+    ``crate_delivery_note_contents`` (the only link of a crate-only note). A
+    cancelled invoice covers too, as billing refuses a note any invoice holds;
+    a crate line without an invoice covers nothing. An order with no delivery
+    note counts as uninvoiced.
 
     ``year`` narrows the verdict to one order year, so a year-scoped caller
     doesn't get resellers whose only open order lies in another year.
@@ -362,15 +363,13 @@ def uninvoiced_orders_of_outer_reseller(year: int | None = None) -> QuerySet[Ord
     return orders.filter(
         ~Exists(
             InvoiceResellerContent.objects.filter(
-                delivery_note_contents__delivery_note__order=OuterRef("pk"),
-                invoice__cancelled_by_invoice__isnull=True,
+                delivery_note_contents__delivery_note__order=OuterRef("pk")
             )
         ),
         ~Exists(
             CrateContentInvoiceReseller.objects.filter(
                 crate_delivery_note_contents__delivery_note__order=OuterRef("pk"),
                 invoice__isnull=False,
-                invoice__cancelled_by_invoice__isnull=True,
             )
         ),
     )

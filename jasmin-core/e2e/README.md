@@ -38,9 +38,20 @@ The suite never touches the `test` tenant. `seed_e2e` (dev only, refuses
 
 Both carry the `seed_test_users` personas (`test-admin@`, `test-office@`,
 `test-member@` … `example.com`, password `Test-Test-2026`) without two-factor
-devices, and `e2e` also the share type, delivery day and station the office
-flows book into (`seed_e2e_commissioning`). Rows the tests create pile up
-between runs; to start over:
+devices. `e2e` also gets (`seed_e2e_commissioning`) the share type, delivery
+day and station the office flows book into, order-day defaults for every
+delivery day, the share article `E2E carrots` the reseller flow orders, and a
+confirmed weekly subscription for the member persona, so the member sees their
+member page and a payment plan (a new one starts whenever fewer than four weeks
+are left). `e2e` sends its mail through the dev stack's MailHog (`mailhog:1025`)
+and keeps the `de` CSV format under its English UI.
+
+The platform gets a super-admin `e2e-superadmin@example.com` (same password),
+for the flow on `marillen.localhost:3000`.
+
+Rows the tests create pile up between runs. The reseller flow steps through the
+unsearchable reseller list from the keyboard, so it slows down slightly with
+every run. To start over:
 
 ```bash
 docker compose -f docker-compose.dev.yml exec backend python manage.py seed_e2e --reset
@@ -48,7 +59,11 @@ docker compose -f docker-compose.dev.yml exec backend python manage.py seed_e2e 
 
 `--reset` drops and recreates only `e2e` and `e2e_other`. `*.localhost`
 resolves to loopback in Chromium; Node's resolver (the tests' API requests)
-needs it in `/etc/hosts` where the system doesn't map it.
+needs `e2e.localhost`, `e2e-other.localhost` and `marillen.localhost` in
+`/etc/hosts` where the system doesn't map them.
+
+The member persona's contact details are rewritten by the self-service flow
+on every run; nothing else depends on them.
 
 ## Logins
 
@@ -64,7 +79,34 @@ the persona in again over the API. Pick a persona with
 `test.use({ persona: "office" })`; without one a test starts logged out.
 
 Logins count against the `login` throttle (20 a minute per IP and tenant). One
-run makes four, so `--repeat-each` above 5 within a minute runs into it.
+run makes four (three personas and the invited member), so `--repeat-each`
+above 5 within a minute runs into it.
+
+`superAdmin: true` (`test.use({ superAdmin: true })`) runs a test as the
+platform super-admin instead. Its session works the same way, with the
+`sa_refresh_token` cookie (path `/api/super-admin/`, rotated on every refresh)
+on `marillen.localhost`. The super-admin login is throttled to **10 an hour per
+IP**, so the setup project logs in once per run and every test reuses the
+session. Ten runs within an hour use the budget up; reset it locally with
+
+```bash
+docker compose -f docker-compose.dev.yml exec redis \
+  sh -c "redis-cli --scan --pattern '*throttle_super_admin_login*' | xargs -r redis-cli del"
+```
+
+Never `cache.clear()` or `FLUSHDB` for this: the cache shares Redis database 0
+with Huey's queue.
+
+`accessTokenFor(persona)` returns an access token of another persona, for API
+calls a test makes as someone else (it keeps that persona's saved session
+going).
+
+## Mail
+
+`support/mailhog.ts` reads the dev stack's MailHog (`http://localhost:8025`):
+`clearMailbox(address)` at the start of a flow, `waitForMail(address)` to poll
+for the newest mail, `linksIn(mail)` for its links. Give every flow its own
+address (a run id), so the shared MailHog never mixes two runs up.
 
 Step-up asks for the password only (the personas have no TOTP device);
 `confirmStepUp(page)` answers the prompt.
@@ -94,5 +136,21 @@ Step-up asks for the password only (the personas have no TOTP device);
 ## CI
 
 `.github/workflows/e2e.yml` runs the suite nightly and on `workflow_dispatch`
-against a fresh dev stack (gateway, frontend, backend, Postgres, Redis), and
-uploads the HTML report and traces when it fails.
+against a fresh dev stack (gateway, frontend, backend, Postgres, Redis,
+MailHog), and uploads the HTML report and traces when it fails. Huey stays
+down: no flow waits on it (the invitation mail goes out in the request).
+
+## Flows
+
+| Spec | Flow |
+| ---- | ---- |
+| `login-reload` | office logs in, survives a hard reload, logs out |
+| `tenant-binding` | a session from `e2e` is refused on `e2e_other` |
+| `role-gating` | member, office and admin see and reach only their areas |
+| `member-subscription` | office books a member a subscription from next week; the share is counted |
+| `reseller-documents` | order → delivery note → invoice, finalized, cancelled; no second invoice |
+| `phone-drawer` | at 390×844 the drawer lists the field jobs only |
+| `member-self-service` | member edits their contact details, sees their payment plan, not another member's data |
+| `invitation` | office invites a member; the mailed link sets a password; the member logs in |
+| `csv-export` | the member register downloads in the tenant's CSV format |
+| `super-admin` | the super-admin's platform session lists the tenants |

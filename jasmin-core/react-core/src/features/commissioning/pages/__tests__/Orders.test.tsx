@@ -60,6 +60,13 @@ const ordersState = vi.hoisted(() => ({
   dataCrates: [] as Record<string, unknown>[],
   loading: false,
   cratesLoading: false,
+  selectedReseller: null as string | null,
+  orderDays: {
+    harvesting_day: null,
+    packing_day: null,
+    washing_day: null,
+    cleaning_day: null,
+  } as Record<string, number | null>,
 }));
 
 vi.mock("@features/commissioning/hooks/useOrdersData", () => ({
@@ -71,7 +78,7 @@ vi.mock("@features/commissioning/hooks/useOrdersData", () => ({
     setSelectedWeek: vi.fn(),
     selectedDay: 0,
     setSelectedDay: vi.fn(),
-    selectedReseller: null,
+    selectedReseller: ordersState.selectedReseller,
     setSelectedReseller: vi.fn(),
     activeTab: ordersState.activeTab,
     setActiveTab: vi.fn(),
@@ -106,11 +113,7 @@ vi.mock("@features/commissioning/hooks/useOrdersData", () => ({
       hasInvoice: false,
       hasFinalizedInvoice: false,
     },
-    orderDays: {
-      harvesting_day: null,
-      packing_day: null,
-      washing_day: null,
-    },
+    orderDays: ordersState.orderDays,
     setOrderDays: vi.fn(),
     oddDefaults: {
       default_harvesting_day: null,
@@ -232,6 +235,13 @@ beforeEach(() => {
   ordersState.dataCrates = [];
   ordersState.loading = false;
   ordersState.cratesLoading = false;
+  ordersState.selectedReseller = null;
+  ordersState.orderDays = {
+    harvesting_day: null,
+    packing_day: null,
+    washing_day: null,
+    cleaning_day: null,
+  };
   tables.crates = null;
   tables.orderLines = null;
 });
@@ -307,6 +317,42 @@ describe("Orders crate lines", () => {
     renderOrders();
     await screen.findByText("commissioning.orders");
     expect(crateTable().loading).toBe(true);
+  });
+});
+
+describe("Orders without the days a new order needs", () => {
+  it("adds and edits no line of a new order while one of its days is missing", async () => {
+    ordersState.activeTab = "articles";
+    ordersState.selectedReseller = "reseller-1";
+    ordersState.orderDays = {
+      harvesting_day: 1,
+      packing_day: 3,
+      washing_day: null,
+      cleaning_day: 2,
+    };
+    renderOrders();
+    await screen.findByText("commissioning.orders");
+
+    expect(tables.orderLines).toMatchObject({
+      permissions: { canModify: false },
+    });
+  });
+
+  it("lets the office add lines once every day is picked", async () => {
+    ordersState.activeTab = "articles";
+    ordersState.selectedReseller = "reseller-1";
+    ordersState.orderDays = {
+      harvesting_day: 1,
+      packing_day: 3,
+      washing_day: 2,
+      cleaning_day: 2,
+    };
+    renderOrders();
+    await screen.findByText("commissioning.orders");
+
+    expect(tables.orderLines).toMatchObject({
+      permissions: { canModify: true },
+    });
   });
 });
 

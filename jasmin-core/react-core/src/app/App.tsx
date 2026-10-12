@@ -18,6 +18,7 @@ const JasminApp = lazy(() => import("./JasminApp"));
 import i18n from "@shared/i18n";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { shouldRetryQuery } from "./queryRetry";
 
 // Global error fallbacks for React Query. Any useQuery/useMutation that
 // doesn't handle its own error path will surface a toast with a sensible
@@ -46,14 +47,7 @@ const queryClient = new QueryClient({
       // Cached data still paints instantly while the background refetch runs.
       staleTime: 0,
       refetchOnWindowFocus: true,
-      retry: (failureCount, error) => {
-        if (
-          (error as { response?: { status?: number } })?.response?.status ===
-          401
-        )
-          return false;
-        return failureCount < 3;
-      },
+      retry: shouldRetryQuery,
     },
   },
   queryCache: new QueryCache({

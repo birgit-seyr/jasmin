@@ -26,10 +26,14 @@ export interface OrderContent {
   delivery_week: number;
   day_number: number;
   reseller: string;
-  harvesting_day?: number;
-  packing_day?: number;
-  washing_day?: number;
-  cleaning_day?: number;
+  /** @nullable */
+  harvesting_day?: number | null;
+  /** @nullable */
+  packing_day?: number | null;
+  /** @nullable */
+  washing_day?: number | null;
+  /** @nullable */
+  cleaning_day?: number | null;
   /** @nullable */
   last_possible_ordering_day?: number | null;
   readonly order_id?: string;

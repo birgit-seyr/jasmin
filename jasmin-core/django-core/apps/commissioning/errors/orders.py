@@ -68,6 +68,22 @@ class OrderNotFound(NotFoundError):
     code = "order.not_found"
 
 
+class OrderDayMissing(BadRequestError):
+    """A new order would start without one of its work days: the day was sent
+    empty, and the delivery day's order defaults (``OrdersDeliveryDay``) hold
+    none to fill it. ``context`` names the day, so the frontend can say which
+    one (``errors.order.day_missing_<field>``)."""
+
+    code = "order.day_missing"
+
+    def __init__(self, *, field: str, day_number: int) -> None:
+        super().__init__(
+            f"The order has no {field}, and no default {field} is set for "
+            f"delivery day {day_number}.",
+            details={"context": field, "day_number": day_number},
+        )
+
+
 class OrderContentNotFound(NotFoundError):
     code = "order_content.not_found"
 

@@ -25,10 +25,7 @@ from ..models import (
     InvoiceResellerContent,
 )
 from ..utils.iso_week_utils import coerce_document_date
-from .delivery_note_invoices import (
-    billed_invoices_by_delivery_note,
-    current_invoices_by_delivery_note,
-)
+from .delivery_note_invoices import current_invoices_by_delivery_note
 from .email_dispatch import load_pdf_attachments, send_document_email
 from .finalize_utils import finalize_children
 
@@ -321,11 +318,9 @@ class InvoiceService:
         DeliveryNoteReseller.objects.select_for_update().get(pk=delivery_note.pk)
 
         # Matches via BOTH the article-line and crate-line provenance links, so
-        # a crate-only DN can't be double-billed. A cancelled invoice doesn't
-        # count: its storno frees the DN for a new invoice.
-        existing_invoice = billed_invoices_by_delivery_note([delivery_note.pk]).get(
-            delivery_note.pk
-        )
+        # a crate-only DN can't be double-billed. A cancelled invoice counts
+        # too: a storno is final and doesn't free the DN for a new invoice.
+        existing_invoice = InvoiceService.get_invoice_for_delivery_note(delivery_note)
 
         if existing_invoice:
             raise ConflictError(
@@ -654,15 +649,15 @@ class InvoiceService:
     ) -> None:
         """Lock the source delivery notes (deterministic pk order to avoid
         deadlocks) so concurrent summary-invoice runs over the same DNs
-        serialize, then refuse to bill a DN an invoice that isn't cancelled
-        already holds — together this prevents double-billing."""
+        serialize, then refuse to bill a DN any invoice already holds, a
+        cancelled one included — together this prevents double-billing."""
         delivery_note_pks = [delivery_note.pk for delivery_note in delivery_notes]
         list(
             DeliveryNoteReseller.objects.select_for_update()
             .filter(pk__in=delivery_note_pks)
             .order_by("pk")
         )
-        billed = billed_invoices_by_delivery_note(delivery_note_pks)
+        billed = current_invoices_by_delivery_note(delivery_note_pks)
         if billed:
             existing = billed[min(billed)]
             raise ConflictError(

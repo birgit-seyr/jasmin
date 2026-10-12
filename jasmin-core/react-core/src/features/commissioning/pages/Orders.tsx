@@ -29,6 +29,10 @@ import {
 } from "@features/commissioning/hooks/useOrdersData";
 import { refuseRepeatedCrateType } from "@features/commissioning/hooks/useDocumentCrateTable";
 import { OrderDaySelectors } from "@features/commissioning/selectors/OrderDaySelectors";
+import {
+  missingOrderDays,
+  orderDayConfigs,
+} from "@features/commissioning/utils/orderDays";
 import { OrderInfoPanel } from "@features/commissioning/components/OrderInfoPanel";
 
 export default function Orders() {
@@ -215,21 +219,6 @@ export default function Orders() {
     ],
   );
 
-  // Editing must follow the ORDER's finalized flag (what the backend actually
-  // gates on — see FinalizedProtectedMixin), NOT the presence of a delivery
-  // note / invoice number. Keying off the DN number let deleting a not-yet-
-  // finalized delivery note re-enable cells whose saves then fail server-side,
-  // and also (mis)treated a directly-finalized order with no DN as editable.
-  const canModify = isOffice && !orderState.isOrderFinalized;
-  const canModifyPermissions = useMemo(
-    () => gatedByPermission(canModify),
-    [canModify],
-  );
-  const canModifyOnlyEditPermissions = useMemo(
-    () => gatedByPermissionOnlyEdit(canModify),
-    [canModify],
-  );
-
   const handleDayChange = useCallback(
     (field: keyof OrderDays, val: number | null) => {
       setOrderDays((prev) => ({ ...prev, [field]: val }));
@@ -237,30 +226,26 @@ export default function Orders() {
     [setOrderDays],
   );
 
-  const dayConfigs = useMemo(
-    () => [
-      {
-        label: t("commissioning.harvest_day_label"),
-        field: "harvesting_day" as const,
-        defaultField: "default_harvesting_day" as const,
-      },
-      {
-        label: t("commissioning.washing_day_label"),
-        field: "washing_day" as const,
-        defaultField: "default_washing_day" as const,
-      },
-      {
-        label: t("commissioning.cleaning_day_label"),
-        field: "cleaning_day" as const,
-        defaultField: "default_cleaning_day" as const,
-      },
-      {
-        label: t("commissioning.commissioning_day_label"),
-        field: "packing_day" as const,
-        defaultField: "default_packing_day" as const,
-      },
-    ],
-    [t],
+  const dayConfigs = useMemo(() => orderDayConfigs(t), [t]);
+
+  // Editing must follow the ORDER's finalized flag (what the backend actually
+  // gates on — see FinalizedProtectedMixin), NOT the presence of a delivery
+  // note / invoice number. Keying off the DN number let deleting a not-yet-
+  // finalized delivery note re-enable cells whose saves then fail server-side,
+  // and also (mis)treated a directly-finalized order with no DN as editable.
+  // Any save of a new order starts it, which needs every one of its days.
+  const orderDaysMissing =
+    selectedReseller != null &&
+    missingOrderDays(dayConfigs, orderDays, orderState.orderId).length > 0;
+  const canModify =
+    isOffice && !orderState.isOrderFinalized && !orderDaysMissing;
+  const canModifyPermissions = useMemo(
+    () => gatedByPermission(canModify),
+    [canModify],
+  );
+  const canModifyOnlyEditPermissions = useMemo(
+    () => gatedByPermissionOnlyEdit(canModify),
+    [canModify],
   );
 
   const tabItems = useMemo(
@@ -500,6 +485,7 @@ export default function Orders() {
           oddDefaults={oddDefaults}
           orderId={orderState.orderId}
           onDayChange={handleDayChange}
+          loading={loading}
         />
       )}
 

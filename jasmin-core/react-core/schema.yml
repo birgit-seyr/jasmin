@@ -33507,15 +33507,19 @@ components:
         harvesting_day:
           type: integer
           writeOnly: true
+          nullable: true
         packing_day:
           type: integer
           writeOnly: true
+          nullable: true
         washing_day:
           type: integer
           writeOnly: true
+          nullable: true
         cleaning_day:
           type: integer
           writeOnly: true
+          nullable: true
         last_possible_ordering_day:
           type: integer
           writeOnly: true

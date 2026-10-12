@@ -1,16 +1,16 @@
-"""The invoice to show for each delivery note.
+"""The invoice of each delivery note.
 
 A delivery note reaches its invoice through the provenance links of the invoice
 lines: ``InvoiceResellerContent.delivery_note_contents`` for article lines,
 ``CrateContentInvoiceReseller.crate_delivery_note_contents`` for crate lines
 (the only link a crate-only note has). A storno carries no provenance links,
-and a cancelled invoice keeps its own, so a note billed again after a storno
-reaches both invoices. The current one is the newest that isn't cancelled, else
-the newest overall — newest by document date, then creation time, then id, so
-the pick never depends on row order.
+and a cancelled invoice keeps its own, so a cancelled invoice still holds its
+notes: billing refuses a note any invoice holds, cancelled or not.
 
-A note is billed while an invoice that isn't cancelled holds it; billing
-refuses only such a note, so a cancelled invoice frees its notes for a new one.
+Billing allows one invoice per note, yet older data can link a note to several.
+The current one is then the newest that isn't cancelled, else the newest
+overall — newest by document date, then creation time, then id, so the pick
+never depends on row order.
 """
 
 from __future__ import annotations
@@ -39,7 +39,9 @@ def _current_first_rank(invoice: InvoiceReseller) -> tuple:
 def current_invoices_by_delivery_note(
     delivery_note_ids: Iterable[str],
 ) -> dict[str, InvoiceReseller]:
-    """Map each delivery note id to its current invoice, in two queries.
+    """Map each invoiced delivery note id to its current invoice, in two
+    queries, leaving out notes no invoice holds. Each invoice comes with its
+    cancelling storno (``cancelled_by_invoice``) loaded.
 
     Filtering and annotating through the same M2M path reuses one join, so
     each row is one (line, linked delivery note) pair within ``delivery_note_ids``.
@@ -77,18 +79,3 @@ def current_invoices_by_delivery_note(
             ):
                 current[delivery_note_id] = invoice
     return current
-
-
-def billed_invoices_by_delivery_note(
-    delivery_note_ids: Iterable[str],
-) -> dict[str, InvoiceReseller]:
-    """Map each billed delivery note id to the invoice that isn't cancelled
-    holding it, leaving out notes no such invoice holds. By the current-first
-    rule a note's current invoice is uncancelled exactly when any is."""
-    return {
-        delivery_note_id: invoice
-        for delivery_note_id, invoice in current_invoices_by_delivery_note(
-            delivery_note_ids
-        ).items()
-        if invoice.cancelled_by_invoice_id is None
-    }

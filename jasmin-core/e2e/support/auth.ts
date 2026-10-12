@@ -13,6 +13,9 @@ import {
   BASE_URL,
   PERSONA_PASSWORD,
   PERSONAS,
+  PLATFORM_URL,
+  SUPER_ADMIN_EMAIL,
+  SUPER_ADMIN_STORAGE_STATE,
   storageStatePath,
   type Persona,
 } from "./env";
@@ -20,6 +23,8 @@ import { t } from "./i18n";
 
 const LOGIN_PATH = "/api/auth/login/";
 const REFRESH_PATH = "/api/auth/refresh/";
+const SUPER_ADMIN_LOGIN_PATH = "/api/super-admin/auth/login/";
+const SUPER_ADMIN_REFRESH_PATH = "/api/super-admin/auth/refresh/";
 
 /** The account menu every signed-in layout (office, member, customer) shows. */
 export function accountMenu(page: Page): Locator {
@@ -32,13 +37,22 @@ export function signInButton(page: Page): Locator {
 
 /** Logs a persona in through the login form and waits for the signed-in app. */
 export async function logInThroughUi(page: Page, persona: Persona): Promise<void> {
+  await logInWithPassword(page, PERSONAS[persona], PERSONA_PASSWORD);
+}
+
+/** Logs ``email`` in through the login form and waits for the signed-in app. */
+export async function logInWithPassword(
+  page: Page,
+  email: string,
+  password: string,
+): Promise<void> {
   await page.goto("/login");
   await page
     .getByRole("textbox", { name: t("auth.login_card.email") })
-    .fill(PERSONAS[persona]);
+    .fill(email);
   await page
     .getByLabel(t("auth.login_card.password"), { exact: true })
-    .fill(PERSONA_PASSWORD);
+    .fill(password);
   const loginResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith(LOGIN_PATH) &&
@@ -46,13 +60,32 @@ export async function logInThroughUi(page: Page, persona: Persona): Promise<void
   );
   await signInButton(page).click();
   const response = await loginResponse;
-  expect(response.status(), `login as ${persona}`).toBe(200);
+  expect(response.status(), `login as ${email}`).toBe(200);
   const body = (await response.json()) as { requires_2fa?: boolean };
   expect(
     body.requires_2fa,
-    `${persona} has two-factor auth; run seed_e2e again to remove it`,
+    `${email} has two-factor auth; run seed_e2e again to remove it`,
   ).toBeFalsy();
   await expect(accountMenu(page)).toBeVisible();
+}
+
+/**
+ * Logs the platform super-admin in through the platform's login form. The page
+ * is English-only and its labels aren't tied to the inputs, so the fields are
+ * found by their placeholders.
+ */
+export async function logInAsSuperAdminThroughUi(page: Page): Promise<void> {
+  await page.goto(`${PLATFORM_URL}/`);
+  await page.getByPlaceholder("admin@platform.com").fill(SUPER_ADMIN_EMAIL);
+  await page.getByPlaceholder("••••••••").fill(PERSONA_PASSWORD);
+  const loginResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(SUPER_ADMIN_LOGIN_PATH) &&
+      response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Login to Platform" }).click();
+  expect((await loginResponse).status(), "super-admin login").toBe(200);
+  await expect(page.getByRole("heading", { name: "All Tenants" })).toBeVisible();
 }
 
 /**
@@ -97,73 +130,130 @@ function readSavedState(file: string): SavedState | undefined {
   return JSON.parse(readFileSync(file, "utf8")) as SavedState;
 }
 
-async function logInThroughApi(
-  api: APIRequestContext,
-  persona: Persona,
-): Promise<void> {
-  const response = await api.post(LOGIN_PATH, {
-    data: { email: PERSONAS[persona], password: PERSONA_PASSWORD },
-  });
-  expect(response.status(), `API login as ${persona}`).toBe(200);
-  const body = (await response.json()) as { requires_2fa?: boolean };
-  expect(body.requires_2fa, `${persona} has two-factor auth`).toBeFalsy();
+/** One login realm: where its refresh cookie lives and how to get a new one. */
+interface Session {
+  file: string;
+  baseURL: string;
+  refreshPath: string;
+  cookieName: string;
+  logIn: (api: APIRequestContext) => Promise<void>;
 }
 
+function personaSession(persona: Persona): Session {
+  return {
+    file: storageStatePath(persona),
+    baseURL: BASE_URL,
+    refreshPath: REFRESH_PATH,
+    cookieName: "refresh_token",
+    logIn: async (api) => {
+      const response = await api.post(LOGIN_PATH, {
+        data: { email: PERSONAS[persona], password: PERSONA_PASSWORD },
+      });
+      expect(response.status(), `API login as ${persona}`).toBe(200);
+      const body = (await response.json()) as { requires_2fa?: boolean };
+      expect(body.requires_2fa, `${persona} has two-factor auth`).toBeFalsy();
+    },
+  };
+}
+
+// The super-admin login is throttled to 10 an hour per IP, so a broken chain
+// costs one of them; the setup project spends one more per run.
+const SUPER_ADMIN_SESSION: Session = {
+  file: SUPER_ADMIN_STORAGE_STATE,
+  baseURL: PLATFORM_URL,
+  refreshPath: SUPER_ADMIN_REFRESH_PATH,
+  cookieName: "sa_refresh_token",
+  logIn: async (api) => {
+    const response = await api.post(SUPER_ADMIN_LOGIN_PATH, {
+      data: { email: SUPER_ADMIN_EMAIL, password: PERSONA_PASSWORD },
+    });
+    expect(response.status(), "API login as the super-admin").toBe(200);
+  },
+};
+
 /**
- * Hands a test a refresh cookie that is still valid.
+ * Hands a test a refresh cookie that is still valid, and the access token the
+ * refresh behind it returned.
  *
  * Refresh tokens rotate and the old one is blacklisted on every refresh, so a
  * saved cookie is good for exactly one refresh. The page's silent refresh
  * spends it, and the context fixture below writes the rotated one back after
  * each test. When that chain broke (a test logged out, or ended mid-refresh),
- * this logs the persona in again over the API.
+ * this logs in again over the API.
  */
-async function freshStorageState(persona: Persona): Promise<string> {
-  const file = storageStatePath(persona);
-  const saved = readSavedState(file);
+async function refreshSavedSession(
+  session: Session,
+): Promise<{ file: string; access: string }> {
+  const saved = readSavedState(session.file);
   const api = await request.newContext({
-    baseURL: BASE_URL,
+    baseURL: session.baseURL,
     storageState: saved ? { cookies: saved.cookies, origins: [] } : undefined,
   });
   try {
-    const refreshed = saved ? (await api.post(REFRESH_PATH)).ok() : false;
-    if (!refreshed) await logInThroughApi(api, persona);
+    let refresh = saved ? await api.post(session.refreshPath) : undefined;
+    if (!refresh?.ok()) {
+      await session.logIn(api);
+      refresh = await api.post(session.refreshPath);
+      expect(refresh.status(), "refresh after an API login").toBe(200);
+    }
+    const { access } = (await refresh.json()) as { access: string };
     const { cookies } = await api.storageState();
-    mkdirSync(path.dirname(file), { recursive: true });
+    mkdirSync(path.dirname(session.file), { recursive: true });
     writeFileSync(
-      file,
+      session.file,
       JSON.stringify({ cookies, origins: saved?.origins ?? [] }, null, 2),
     );
+    return { file: session.file, access };
   } finally {
     await api.dispose();
   }
-  return file;
 }
 
-function hasRefreshCookie(state: SavedState): boolean {
+/**
+ * An access token for ``persona``, for API calls a test makes as someone
+ * other than its own persona. It keeps the persona's saved session going.
+ */
+export async function accessTokenFor(persona: Persona): Promise<string> {
+  return (await refreshSavedSession(personaSession(persona))).access;
+}
+
+function hasRefreshCookie(state: SavedState, cookieName: string): boolean {
   return state.cookies.some(
-    (cookie) => cookie.name === "refresh_token" && cookie.value !== "",
+    (cookie) => cookie.name === cookieName && cookie.value !== "",
   );
 }
 
 interface SessionFixtures {
   /** The persona a test runs as; unset, the test starts logged out. */
   persona: Persona | undefined;
+  /** Whether the test runs as the platform super-admin instead. */
+  superAdmin: boolean;
+}
+
+function sessionOf(
+  persona: Persona | undefined,
+  superAdmin: boolean,
+): Session | undefined {
+  if (superAdmin) return SUPER_ADMIN_SESSION;
+  return persona ? personaSession(persona) : undefined;
 }
 
 export const test = base.extend<SessionFixtures>({
   persona: [undefined, { option: true }],
+  superAdmin: [false, { option: true }],
 
-  storageState: async ({ persona, storageState }, use) => {
-    await use(persona ? await freshStorageState(persona) : storageState);
+  storageState: async ({ persona, superAdmin, storageState }, use) => {
+    const session = sessionOf(persona, superAdmin);
+    await use(session ? (await refreshSavedSession(session)).file : storageState);
   },
 
-  context: async ({ context, persona }, use) => {
+  context: async ({ context, persona, superAdmin }, use) => {
     await use(context);
-    if (!persona) return;
+    const session = sessionOf(persona, superAdmin);
+    if (!session) return;
     const state = await context.storageState();
-    if (hasRefreshCookie(state)) {
-      writeFileSync(storageStatePath(persona), JSON.stringify(state, null, 2));
+    if (hasRefreshCookie(state, session.cookieName)) {
+      writeFileSync(session.file, JSON.stringify(state, null, 2));
     }
   },
 });

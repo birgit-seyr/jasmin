@@ -20,6 +20,7 @@ from .my_data_views import (
     MyMembershipCancelView,
     MySubscriptionSubscribeView,
 )
+from .order_overview_views import CombinedOrderOverviewView
 from .reseller_views import (
     BulkCopyOffersToNextWeekView,
     BulkCopyOffersToOfferGroupView,
@@ -31,7 +32,6 @@ from .reseller_views import (
     BulkSendInvoiceRemindersViaEmailView,
     BulkSendOffersViaEmailView,
     BulkSetToPaidDocumentsView,
-    CombinedOrderOverviewView,
     CreateOffersView,
     DaysWithOrdersView,
     SetInvoiceNoteView,

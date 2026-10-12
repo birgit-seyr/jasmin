@@ -63,24 +63,27 @@ const ResellerSelector = ({
   const resellers: Reseller[] = useMemo(() => data ?? [], [data]);
 
   const options = useMemo<SelectorOption<string | null>[]>(() => {
-    const opts: SelectorOption<string | null>[] = [];
-    if (include_null_option) {
-      opts.push({ value: null, label: t("commissioning.all_resellers") });
-    }
-    for (const r of resellers) {
-      const text = `${r.company_name ?? ""}${
-        r.first_name ? ` - ${r.first_name}` : ""
-      }${r.last_name ? ` - ${r.last_name}` : ""}`;
-      opts.push({
+    // A plain-string label is what AntD names the option by and what the
+    // search matches; the "has orders" colour rides on the option's class.
+    const resellerOptions = resellers
+      .map((r) => ({
         value: r.id!,
-        label: (
-          <div className={r.has_orders ? "with-orders" : "without-orders"}>
-            {text}
-          </div>
-        ),
-      });
-    }
-    return opts;
+        label: `${r.company_name ?? ""}${
+          r.first_name ? ` - ${r.first_name}` : ""
+        }${r.last_name ? ` - ${r.last_name}` : ""}`,
+        className: r.has_orders ? "with-orders" : "without-orders",
+      }))
+      .sort(
+        (a, b) =>
+          a.label.localeCompare(b.label, undefined, { sensitivity: "base" }) ||
+          a.value.localeCompare(b.value),
+      );
+    return include_null_option
+      ? [
+          { value: null, label: t("commissioning.all_resellers") },
+          ...resellerOptions,
+        ]
+      : resellerOptions;
   }, [resellers, include_null_option, t]);
 
   return (
@@ -102,6 +105,7 @@ const ResellerSelector = ({
       }
       preserveSelection={preserveSelection}
       emptyValue={null}
+      showSearch
     />
   );
 };

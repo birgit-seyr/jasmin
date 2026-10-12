@@ -74,7 +74,7 @@ apps/commissioning/services/offer_service.py: C901 `_convert_amount` is too comp
 apps/commissioning/services/offer_service.py: C901 `bulk_send_offers_via_email` is too complex (14 > 10)
 apps/commissioning/services/offer_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/offer_service.py: PLR0913 Too many arguments in function definition (9 > 5)
-apps/commissioning/services/order_content_service.py: C901 `create_order_with_content_and_crates` is too complex (18 > 10)
+apps/commissioning/services/order_content_service.py: C901 `create_order_with_content_and_crates` is too complex (12 > 10)
 apps/commissioning/services/order_content_service.py: C901 `update_order_content` is too complex (11 > 10)
 apps/commissioning/services/order_content_service.py: PLR0913 Too many arguments in function definition (12 > 5)
 apps/commissioning/services/packing_list_boxes_matrix_service.py: C901 `get_weekly_combination_matrix` is too complex (12 > 10)

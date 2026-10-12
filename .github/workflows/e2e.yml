@@ -30,17 +30,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Map the E2E tenant hosts to loopback
+      - name: Map the E2E tenant and platform hosts to loopback
         # Chromium resolves *.localhost itself, but the suite's API requests go
         # through Node's resolver, which reads /etc/hosts.
-        run: echo "127.0.0.1 e2e.localhost e2e-other.localhost" | sudo tee -a /etc/hosts
+        run: echo "127.0.0.1 e2e.localhost e2e-other.localhost marillen.localhost" | sudo tee -a /etc/hosts
 
-      - name: Build + start the stack (gateway, frontend, backend, postgres, redis)
-        # ``up gateway`` also starts its depends_on. Huey and MailHog stay down
-        # until a flow sends mail or runs a background job. The dev compose is
-        # self-contained (every var has a ${VAR:-default}), so no .env file.
+      - name: Build + start the stack (gateway, frontend, backend, postgres, redis, mailhog)
+        # ``up gateway`` also starts its depends_on. MailHog catches the mail
+        # the flows read (the invitation goes out in the request, not through
+        # Huey), so Huey stays down. The dev compose is self-contained (every
+        # var has a ${VAR:-default}), so no .env file.
         working-directory: .
-        run: $COMPOSE up -d --build gateway
+        run: $COMPOSE up -d --build gateway mailhog
 
       - name: Wait for the backend and the frontend
         # Fresh-DB migrations and the dev-tenant seed run before runserver.

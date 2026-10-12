@@ -243,7 +243,12 @@
   },
   "order": {
     "not_found": "Order not found.",
-    "already_finalized": "This order is already finalized and can no longer be changed."
+    "already_finalized": "This order is already finalized and can no longer be changed.",
+    "day_missing": "This order is missing a day, and no default is set for this delivery day. Pick the harvest, washing, cleaning and commissioning days. The default order days are set under Configuration → Delivery days.",
+    "day_missing_harvesting_day": "This order has no harvest day, and no default harvest day is set for this delivery day. Pick a harvest day. The default order days are set under Configuration → Delivery days.",
+    "day_missing_washing_day": "This order has no washing day, and no default washing day is set for this delivery day. Pick a washing day. The default order days are set under Configuration → Delivery days.",
+    "day_missing_cleaning_day": "This order has no cleaning day, and no default cleaning day is set for this delivery day. Pick a cleaning day. The default order days are set under Configuration → Delivery days.",
+    "day_missing_packing_day": "This order has no commissioning day, and no default commissioning day is set for this delivery day. Pick a commissioning day. The default order days are set under Configuration → Delivery days."
   },
   "order_content": {
     "not_found": "Order line not found.",

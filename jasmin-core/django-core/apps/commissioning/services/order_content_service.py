@@ -36,6 +36,7 @@ from ..models import (
 from ..utils.iso_week_utils import date_from_order
 from ..utils.tax_rate_utils import resolve_article_tax_rate, resolve_crate_tax_rate
 from .delivery_note_invoices import current_invoices_by_delivery_note
+from .order_days import apply_order_days
 from .snapshot_service import SnapshotService
 
 
@@ -504,38 +505,7 @@ class OrderContentService:
             defaults={"created_by": kwargs.pop("created_by", None)},
         )
 
-        # Populate day_number fields from kwargs or OrdersDeliveryDay defaults
-        day_fields = [
-            "harvesting_day",
-            "packing_day",
-            "washing_day",
-            "cleaning_day",
-            "last_possible_ordering_day",
-        ]
-        if created:
-            orders_delivery_day = OrdersDeliveryDay.objects.filter(
-                day_number=day_number
-            ).first()
-            for field in day_fields:
-                value = kwargs.pop(field, None)
-                if value is None and orders_delivery_day:
-                    # OrdersDeliveryDay carries a ``default_<field>``
-                    # column for every entry in ``day_fields``; no
-                    # safety default — a typo in ``day_fields`` should
-                    # crash here rather than silently fall through
-                    # with ``None``.
-                    value = getattr(orders_delivery_day, f"default_{field}")
-                setattr(order, field, value)
-            order.save()
-        else:
-            updated = False
-            for field in day_fields:
-                value = kwargs.pop(field, None)
-                if value is not None and getattr(order, field) != value:
-                    setattr(order, field, value)
-                    updated = True
-            if updated:
-                order.save()
+        apply_order_days(order, created=created, day_number=day_number, sent=kwargs)
 
         # tax_rate is NOT NULL on OrderableItem — resolve from the canonical
         # chain (offer/share_article pricing → tenant default → hardcoded)

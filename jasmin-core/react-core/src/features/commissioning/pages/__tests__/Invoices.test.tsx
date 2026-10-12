@@ -119,7 +119,13 @@ vi.mock("@features/commissioning/modals", () => ({
 }));
 
 vi.mock("@features/commissioning/pdfs", () => ({
-  InvoicePDFButtons: () => <button>invoice-pdf</button>,
+  InvoicePDFButtons: ({
+    invoiceId,
+    buttonText,
+  }: {
+    invoiceId: string;
+    buttonText: string;
+  }) => <button data-invoice-id={invoiceId}>{buttonText}</button>,
 }));
 
 vi.mock("@shared/ui/JobProgressDrawer", () => ({
@@ -220,6 +226,7 @@ vi.mock("@shared/tables", async () => {
     }) => {
       const rows = initialData ?? [];
       const actionsCol = columns?.find((c) => c.key === "actions");
+      const invoiceNumberCol = columns?.find((c) => c.key === "invoice_number");
       return (
         <div data-testid="editable-table">
           <button
@@ -239,6 +246,11 @@ vi.mock("@shared/tables", async () => {
           {rows[0] && actionsCol?.render && (
             <div data-testid="row-actions">
               {actionsCol.render(undefined, rows[0])}
+            </div>
+          )}
+          {rows[0] && invoiceNumberCol?.render && (
+            <div data-testid="row-invoice-number">
+              {invoiceNumberCol.render(rows[0].invoice_number, rows[0])}
             </div>
           )}
         </div>
@@ -267,6 +279,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     invoice_date: "2026-05-21",
     invoice_number: "RE-2026-001",
     invoice_storno_id: null,
+    invoice_storno_number: null,
     // delivery_note_id is REQUIRED — the page's filteredData useMemo
     // drops rows where this is null, so with a null id the table never
     // sees the row.
@@ -461,14 +474,38 @@ describe("storno flow", () => {
     expect(within(rowActions).queryByText("commissioning.create_storno")).not.toBeInTheDocument();
   });
 
-  it("offers a new invoice once the invoice is cancelled", () => {
+  it("shows a cancelled invoice with its cancellation tag and PDF but offers no new invoice", () => {
     ordersOverviewHookMock.mockReturnValue({
-      data: [makeRow({ invoice_cancelled_by: "u-99" })],
+      data: [
+        makeRow({
+          invoice_cancelled_by: "st-1",
+          invoice_storno_id: "st-1",
+          invoice_storno_number: "ST-2026-001",
+        }),
+      ],
       refetch: vi.fn(),
     });
     renderPage();
     const rowActions = screen.getByTestId("row-actions");
-    expect(within(rowActions).getByText("commissioning.create_invoice")).toBeInTheDocument();
+    const stornoPdf = within(rowActions).getByRole("button", {
+      name: "commissioning.storno_pdf ST-2026-001",
+    });
+    expect(stornoPdf).toHaveAttribute("data-invoice-id", "st-1");
+    // A storno is final: the delivery note isn't invoiced again.
+    expect(within(rowActions).queryByText("commissioning.create_invoice")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("row-invoice-number")).getByText("commissioning.storno_short ST-2026-001"),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no cancellation PDF for an invoice never cancelled", () => {
+    renderPage();
+    expect(
+      within(screen.getByTestId("row-actions")).queryByRole("button", {
+        name: /commissioning\.storno_pdf/,
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("row-invoice-number")).toHaveTextContent(/^commissioning\.finalizedRE-2026-001$/);
   });
 
   it("offers no new invoice while the invoice stands", () => {

@@ -308,6 +308,10 @@ class OfferSerializer(serializers.ModelSerializer):
         read_only_fields = FINALIZATION_READONLY_FIELDS
 
 
+def _order_day_field() -> serializers.IntegerField:
+    return serializers.IntegerField(write_only=True, required=False, allow_null=True)
+
+
 class OrderContentSerializer(
     LinePricingFieldsMixin, NameFieldMixin, serializers.ModelSerializer
 ):
@@ -317,18 +321,13 @@ class OrderContentSerializer(
     reseller = serializers.PrimaryKeyRelatedField(
         queryset=Reseller.objects.all(), write_only=True
     )
-    harvesting_day = serializers.IntegerField(write_only=True, required=False)
-    packing_day = serializers.IntegerField(write_only=True, required=False)
-    washing_day = serializers.IntegerField(write_only=True, required=False)
-    cleaning_day = serializers.IntegerField(write_only=True, required=False)
-    # ``last_possible_ordering_day`` may genuinely be ``null`` on the wire
-    # (resellers without a hard deadline). The other three day fields
-    # must always carry an integer if present — the model's
-    # ``null=True`` exists for legacy/migration rows, not as a valid
-    # write-time input.
-    last_possible_ordering_day = serializers.IntegerField(
-        write_only=True, required=False, allow_null=True
-    )
+    # An empty work day of a new order takes the delivery day's order default,
+    # or the service refuses it (``order.day_missing``); the deadline may stay empty.
+    harvesting_day = _order_day_field()
+    packing_day = _order_day_field()
+    washing_day = _order_day_field()
+    cleaning_day = _order_day_field()
+    last_possible_ordering_day = _order_day_field()
     NAME_FIELDS = ["share_article_name"]
     order_id = serializers.CharField(read_only=True)
     order_number = serializers.CharField(read_only=True)
@@ -1046,50 +1045,6 @@ class BulkSetToPaidResultRowSerializer(serializers.Serializer):
     success = serializers.BooleanField()
     # "paid" path only; serialized via Invoice.paid_at.isoformat().
     paid_at = serializers.DateTimeField(required=False, allow_null=True)
-
-
-# --- Combined Order Overview ---
-
-
-class CombinedOrderOverviewSerializer(serializers.Serializer):
-    """Full response shape for the combined order overview."""
-
-    # Order
-    id = serializers.CharField()
-    order_number = serializers.CharField()
-    order_date = serializers.DateField(allow_null=True)
-    order_is_finalized = serializers.BooleanField()
-    sum_netto = serializers.CharField(allow_null=True)
-    # Reseller
-    reseller_id = serializers.CharField(allow_null=True)
-    reseller_name = serializers.CharField(allow_null=True)
-    # Delivery note
-    has_delivery_note = serializers.BooleanField()
-    delivery_note_id = serializers.CharField(allow_null=True)
-    delivery_note_number = serializers.CharField(allow_null=True)
-    delivery_note_prefix = serializers.CharField(allow_null=True)
-    delivery_note_date = serializers.DateField(allow_null=True)
-    delivery_note_is_finalized = serializers.BooleanField()
-    delivery_note_has_been_sent_to_reseller = serializers.BooleanField()
-    delivery_note_has_been_sent_to_reseller_at = serializers.DateTimeField(
-        allow_null=True
-    )
-    # Invoice
-    has_invoice = serializers.BooleanField()
-    invoice_id = serializers.CharField(allow_null=True)
-    invoice_number = serializers.CharField(allow_null=True)
-    invoice_date = serializers.DateField(allow_null=True)
-    has_finalized_invoice = serializers.BooleanField()
-    invoice_finalized_at = serializers.DateTimeField(allow_null=True)
-    invoice_has_been_sent_to_reseller = serializers.BooleanField()
-    invoice_has_been_sent_to_reseller_at = serializers.DateTimeField(allow_null=True)
-    invoice_has_been_sent_to_accounting = serializers.BooleanField()
-    invoice_has_been_sent_to_accounting_at = serializers.DateTimeField(allow_null=True)
-    has_been_paid = serializers.BooleanField(allow_null=True)
-    note = serializers.CharField(allow_null=True)
-    invoice_cancelled_by = serializers.CharField(allow_null=True)
-    invoice_storno_id = serializers.CharField(allow_null=True)
-    invoice_storno_number = serializers.CharField(allow_null=True)
 
 
 # --- Copy Offers ---

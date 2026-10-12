@@ -14,11 +14,28 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_tenants.utils import schema_context
 
 from apps.commissioning.management.commands.seed_e2e_commissioning import (
+    MEMBER_PERSONA_EMAIL,
+    SHARE_ARTICLE_NAME,
     SHARE_TYPE_NAME,
 )
-from apps.commissioning.models import DeliveryStationDay, ShareType
-from apps.shared.tenants.management.commands.seed_e2e import E2E_TENANTS
-from apps.shared.tenants.models import Domain, Tenant, TenantSettings
+from apps.commissioning.models import (
+    DeliveryStationDay,
+    Member,
+    ShareArticle,
+    ShareType,
+    Subscription,
+)
+from apps.shared.super_admin.models import SuperAdmin
+from apps.shared.tenants.management.commands.seed_e2e import (
+    E2E_SUPER_ADMIN_EMAIL,
+    E2E_TENANTS,
+)
+from apps.shared.tenants.models import (
+    Domain,
+    Tenant,
+    TenantEmailConfig,
+    TenantSettings,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -74,6 +91,32 @@ def test_seeds_english_personas_without_two_factor_and_is_idempotent(debug_on):
     assert current.min_number_coop_shares == 0
     with schema_context(E2E_TENANTS[1].schema):
         assert not ShareType.objects.exists()
+
+
+def test_seeds_mail_csv_format_member_plan_and_super_admin(debug_on):
+    _seed()
+    _seed()
+
+    first, other = E2E_TENANTS
+    tenant = Tenant.objects.get(schema_name=first.schema)
+    assert tenant.csv_format == "de"
+    config = TenantEmailConfig.get_active_for_schema(first.schema)
+    assert config is not None
+    assert config.has_smtp_configured
+    assert TenantEmailConfig.get_active_for_schema(other.schema) is None
+    with schema_context(first.schema):
+        member = Member.objects.get(email=MEMBER_PERSONA_EMAIL)
+        assert member.admin_confirmed
+        assert member.entry_date is not None
+        assert (
+            Subscription.objects.filter(
+                member_id=member.pk, admin_confirmed=True
+            ).count()
+            == 1
+        )
+        assert ShareArticle.objects.filter(name=SHARE_ARTICLE_NAME).count() == 1
+    super_admin = SuperAdmin.objects.get(email=E2E_SUPER_ADMIN_EMAIL)
+    assert super_admin.is_active
 
 
 def test_reset_recreates_only_the_e2e_tenants(debug_on, _tenant_schema):

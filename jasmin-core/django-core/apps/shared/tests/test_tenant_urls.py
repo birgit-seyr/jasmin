@@ -80,6 +80,26 @@ class TestFrontendBaseUrl:
         with schema_context(tenant.schema_name):
             assert frontend_base_url() == "http://testserver"
 
+    def test_debug_links_to_the_dev_gateway_port(self, tenant, settings):
+        settings.DEBUG = True
+        settings.FRONTEND_BASE_URL = "http://localhost:3000"
+        with schema_context(tenant.schema_name):
+            assert frontend_base_url() == "http://testserver:3000"
+
+    def test_debug_keeps_a_domains_own_port(self, tenant, settings):
+        settings.DEBUG = True
+        settings.FRONTEND_BASE_URL = "http://localhost:3000"
+        Domain.objects.filter(tenant=tenant, domain="testserver").update(
+            domain="testserver:8080"
+        )
+        with schema_context(tenant.schema_name):
+            assert frontend_base_url() == "http://testserver:8080"
+
+    def test_production_links_carry_no_port(self, tenant, settings):
+        settings.FRONTEND_BASE_URL = "https://farm.example:8443"
+        with schema_context(tenant.schema_name):
+            assert frontend_base_url() == "https://testserver"
+
 
 class TestOfficeReviewUrl:
     def test_renewal_digest_links_to_the_tenants_domain(self, tenant):

@@ -79,7 +79,7 @@ export default function ExportCsvDateRangeModal({
           filename += opt.filenameSuffix;
         }
       }
-      downloadCsvBlob(csvData as BlobPart, filename);
+      await downloadCsvBlob(csvData as BlobPart, filename);
       onClose();
     } catch (error) {
       // A plain call, not a mutation: the app-wide mutation toast never sees it.

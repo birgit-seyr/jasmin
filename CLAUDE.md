@@ -619,6 +619,12 @@ their incompleteness is a deliberate, deferred gap (they degrade to `de` via
 `fallbackLng`). Keep `de` complete (mandatory) and add `en` alongside it; only
 `de` must never miss a key.
 
+**German copy never uses the formal "Sie/Ihr".** Prefer a passive or impersonal
+phrasing ("Für diese Seite fehlt die Berechtigung.", "Bitte erneut versuchen.");
+where addressing the reader is unavoidable — the registration wizard, the
+privacy texts about the reader's own data — use "du". A "sie" that means "they"
+or "it" is not address.
+
 **English copy follows one house style.** Sentence case for all UI chrome —
 titles, buttons, labels, menu entries, column headers — while names keep their
 own capitals ("SEPA Direct Debit", day and month names). American spelling,
@@ -1091,6 +1097,14 @@ README holds the details; the rules:
 - The stack runs on the real clock: compute weeks and dates at run time.
 - Every test creates the rows it changes, with a unique run id.
 - `workers: 1`. A flaky test is fixed or removed within the week.
+- Mail-reading flows use `support/mailhog.ts` with a per-run address. The
+  super-admin login is throttled to 10 an hour per IP, so the setup project
+  logs in once per run (`test.use({ superAdmin: true })` reuses it); the
+  README has the Redis command that resets the throttle — never
+  `cache.clear()`.
+- The dev `backend` reloads on code changes, the `huey` container doesn't:
+  restart it (`docker compose -f docker-compose.dev.yml restart huey`) after
+  pulling backend changes.
 
 ### Linting & code quality
 
@@ -1203,7 +1217,7 @@ their schemas themselves. In production, run them in the backend container
 | `rotate_field_encryption` | prod | Re-encrypts every encrypted field with the first key in `FIELD_ENCRYPTION_KEY` — step 3 of the key rotation its docstring describes. `--dry-run`, `--schema`. |
 | `run_periodic_tasks_now` | dev, QA | Runs every Huey periodic task once, in-process (`--only`, `--skip`). Nothing stops it in production, where it does at once what the schedule would. |
 | `seed_dev_tenant` | dev | Creates or refreshes the `test` tenant at `test.localhost` with an admin and the persona logins (`make dev-seed`). |
-| `seed_e2e` | dev | Creates or refreshes the E2E suite's `e2e` and `e2e_other` tenants (`e2e.localhost`, `e2e-other.localhost`) with the persona logins, and in `e2e` the share type, day and station the office flows book into (`seed_e2e_commissioning`). `--reset` drops and recreates those two tenants only. `make e2e` runs it. |
+| `seed_e2e` | dev | Creates or refreshes the E2E suite's `e2e` and `e2e_other` tenants (`e2e.localhost`, `e2e-other.localhost`) with the persona logins; in `e2e` the commissioning data the flows use (`seed_e2e_commissioning`: share type, day, station, order-day defaults, a share article, a confirmed subscription for the member persona), SMTP to MailHog and the `de` CSV format; and the platform super-admin `e2e-superadmin@example.com`. `--reset` drops and recreates those two tenants only. `make e2e` runs it. |
 | `seed_test_users` | dev | Creates or resets the `test-*@example.com` persona logins, password `Test-Test-2026`. |
 | `seed_user_status_demo` | dev | Seeds members and resellers in every account status, for the status-button demos (`--schema`, `--clean`). |
 

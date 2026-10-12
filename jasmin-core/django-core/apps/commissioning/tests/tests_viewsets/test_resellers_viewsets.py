@@ -33,6 +33,7 @@ from apps.commissioning.tests.factories import (
     OfferGroupFactory,
     OrderContentFactory,
     OrderFactory,
+    OrdersDeliveryDayFactory,
     ResellerFactory,
     ShareArticleFactory,
 )
@@ -650,6 +651,60 @@ class TestOrderContentViewSet:
         assert resp.status_code == status.HTTP_200_OK, resp.data
         order_content = OrderContent.objects.get(offer=offer)
         assert order_content.tax_rate is not None
+
+    def _article_line_with_empty_days(self, reseller, share_article):
+        """An article line as the Orders page sends it for a new order whose
+        day selectors are empty."""
+        return {
+            "share_article": str(share_article.id),
+            "reseller": str(reseller.id),
+            "year": 2026,
+            "delivery_week": 15,
+            "day_number": 3,
+            "amount": "12",
+            "price_per_unit": "2.5",
+            "unit": "KG",
+            "size": "M",
+            "harvesting_day": None,
+            "packing_day": None,
+            "washing_day": None,
+            "cleaning_day": None,
+        }
+
+    def test_create_with_empty_days_and_no_defaults_names_the_missing_day(
+        self, api_client, tenant
+    ):
+        reseller = ResellerFactory()
+        body = self._article_line_with_empty_days(reseller, ShareArticleFactory())
+
+        resp = api_client.post(self.URL, body, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST, resp.data
+        assert resp.data["code"] == "order.day_missing"
+        assert resp.data["details"] == {"context": "harvesting_day", "day_number": 3}
+        assert not Order.objects.filter(reseller=reseller).exists()
+
+    def test_create_with_empty_days_takes_the_order_defaults(self, api_client, tenant):
+        OrdersDeliveryDayFactory(
+            day_number=3,
+            default_harvesting_day=1,
+            default_packing_day=3,
+            default_washing_day=2,
+            default_cleaning_day=2,
+        )
+        reseller = ResellerFactory()
+        body = self._article_line_with_empty_days(reseller, ShareArticleFactory())
+
+        resp = api_client.post(self.URL, body, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        order = Order.objects.get(reseller=reseller)
+        assert (
+            order.harvesting_day,
+            order.packing_day,
+            order.washing_day,
+            order.cleaning_day,
+        ) == (1, 3, 2, 2)
 
     # The Orders page (``useOrdersData`` + ``useOrderColumns`` custom saves)
     # sends the whole edited row: EditableTable seeds the form with every key

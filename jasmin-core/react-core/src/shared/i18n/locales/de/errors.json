@@ -243,7 +243,12 @@
   },
   "order": {
     "not_found": "Bestellung nicht gefunden.",
-    "already_finalized": "Diese Bestellung ist bereits finalisiert und kann nicht mehr geändert werden."
+    "already_finalized": "Diese Bestellung ist bereits finalisiert und kann nicht mehr geändert werden.",
+    "day_missing": "Für diese Bestellung fehlt ein Tag, und für diesen Liefertag ist kein Standard hinterlegt. Bitte Ernte-, Wasch-, Putz- und Kommissionierungstag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
+    "day_missing_harvesting_day": "Für diese Bestellung fehlt der Erntetag, und für diesen Liefertag ist kein Standard-Erntetag hinterlegt. Bitte einen Erntetag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
+    "day_missing_washing_day": "Für diese Bestellung fehlt der Waschtag, und für diesen Liefertag ist kein Standard-Waschtag hinterlegt. Bitte einen Waschtag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
+    "day_missing_cleaning_day": "Für diese Bestellung fehlt der Putztag, und für diesen Liefertag ist kein Standard-Putztag hinterlegt. Bitte einen Putztag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
+    "day_missing_packing_day": "Für diese Bestellung fehlt der Kommissionierungstag, und für diesen Liefertag ist kein Standard-Kommissionierungstag hinterlegt. Bitte einen Kommissionierungstag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt."
   },
   "order_content": {
     "not_found": "Bestellposition nicht gefunden.",

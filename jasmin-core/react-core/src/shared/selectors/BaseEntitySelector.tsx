@@ -6,6 +6,8 @@ import type { DefaultOptionType } from "antd/es/select";
 export interface SelectorOption<V> {
   value: V;
   label: ReactNode;
+  /** Class on the option in the open list. */
+  className?: string;
 }
 
 export interface BaseEntitySelectorProps<V> {
@@ -125,6 +127,7 @@ export default function BaseEntitySelector<V extends string | number | null>({
       options.map((option) => ({
         value: toSelectValue(option.value),
         label: option.label,
+        className: option.className,
       })),
     [options],
   );
