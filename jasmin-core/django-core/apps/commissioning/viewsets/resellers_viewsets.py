@@ -39,12 +39,8 @@ from ..errors import (
     AccountingEmailMissing,
     DocumentNotFinalized,
     DocumentPdfMissing,
-    InvalidUploadedDocument,
     OfferGroupCannotDeleteDefault,
     OrderContentItemChangeForbidden,
-    OrderContentOfferNotInOfferGroup,
-    OrderContentOfferRequired,
-    RequiredFieldMissing,
     ResellerEmailMissing,
     ResellerInvoiceEmailDisabled,
     ResellerNotFound,
@@ -112,7 +108,14 @@ from ..services import (
     OrderContentService,
     ResellerAndDeliveryStationService,
 )
+from ..services.customer_order_policy import (
+    assert_customer_line_write_allowed,
+    assert_customer_orderable_offer,
+    drop_customer_order_days,
+)
+from ..services.einvoice_upload import validate_finalized_pdf_upload
 from ..services.order_content_service import AMOUNT_NOT_SENT
+from ..services.tier_price import set_customer_line_price
 from ..utils import get_contact_annotations
 from ..utils.lookup import get_or_404
 from ..utils.optional_filters import apply_optional_filters
@@ -133,152 +136,6 @@ _BOOL_RESELLER_PARAMS = [
         ("is_donation_recipient", "Filter by donation recipient flag"),
     ]
 ]
-
-# Legit ``upload_pdf`` traffic is the frontend's own @react-pdf output
-# (a real invoice is well under 2 MB), but the endpoint accepts arbitrary
-# bytes from any authenticated client — so check the content, not just
-# the filename, and cap the size. The stored file is emailed to resellers
-# and accounting, which makes "malware named invoice.pdf" a real concern.
-_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
-
-
-def _validate_uploaded_document(uploaded_file, *, kind: str) -> str | None:
-    """Magic-byte + size check for upload_pdf payloads.
-
-    ``kind`` is ``"pdf"`` or ``"xml"``. Returns an error message for the
-    400 response, or ``None`` when the file passes.
-    """
-    if uploaded_file.size > _MAX_UPLOAD_BYTES:
-        return (
-            f"{uploaded_file.name} exceeds the "
-            f"{_MAX_UPLOAD_BYTES // (1024 * 1024)} MB upload limit"
-        )
-    head = uploaded_file.read(64)
-    uploaded_file.seek(0)
-    if kind == "pdf" and not head.startswith(b"%PDF-"):
-        return "file content is not a PDF"
-    if kind == "xml":
-        # Tolerate a UTF-8 BOM and leading whitespace; any XML document
-        # (e-invoice XRechnung/ZUGFeRD included) then starts with ``<``.
-        stripped = head.removeprefix(b"\xef\xbb\xbf").lstrip()
-        if not stripped.startswith(b"<"):
-            return "xml_file content is not XML"
-    return None
-
-
-def _verify_einvoice_xml_matches(obj: InvoiceReseller, uploaded_xml) -> str | None:
-    """Cross-check that an uploaded e-invoice XML actually describes THIS
-    finalized document, so a wrong or hand-edited e-invoice can't be stored
-    and emailed in its place (the magic-byte check alone only proves it is
-    *some* XML).
-
-    Deliberately conservative: it only HARD-FAILS on an unambiguous mismatch
-    of the document number or the grand total, or on a body ``defusedxml``
-    refuses to parse. A missing element, a merely malformed body, or a
-    credit-note sign flip is tolerated (returns ``None``) so a legitimate
-    upload is never blocked by a format quirk.
-    """
-    from decimal import Decimal, InvalidOperation
-
-    import defusedxml.ElementTree as ET
-    from defusedxml.common import DefusedXmlException
-
-    number = obj.number
-    sum_brutto: Decimal | None
-    try:
-        sum_brutto = obj.sum_brutto
-    except (AttributeError, TypeError):
-        sum_brutto = None
-    if number is None and sum_brutto is None:
-        return None
-
-    try:
-        raw = uploaded_xml.read()
-        uploaded_xml.seek(0)
-        root = ET.fromstring(raw)
-    except (ET.ParseError, ValueError, TypeError) as exc:
-        # A body defusedxml refuses outright (hostile DTD / entity definition,
-        # raised as a DefusedXmlException — itself a ValueError, so this tuple
-        # catches it) is refused: nothing expands in this process, but a
-        # tolerated upload would be stored on the document, emailed to the
-        # reseller and accounting, and handed to the factur-x converter.
-        # Anything else is merely malformed past the magic-byte check and stays
-        # tolerated, so a format quirk never blocks a legitimate upload.
-        return (
-            "uploaded e-invoice XML could not be parsed safely"
-            if isinstance(exc, DefusedXmlException)
-            else None
-        )
-
-    def local(tag: str) -> str:
-        return tag.rsplit("}", 1)[-1]
-
-    doc_id = None
-    grand_total = None
-    for element in root.iter():
-        name = local(element.tag)
-        if name == "ExchangedDocument" and doc_id is None:
-            for child in element.iter():
-                if local(child.tag) == "ID" and (child.text or "").strip():
-                    doc_id = child.text.strip()
-                    break
-        elif name == "GrandTotalAmount" and (element.text or "").strip():
-            grand_total = element.text.strip()
-
-    # Number: compare the trailing segment after the last "-" (the XML id is
-    # ``<prefix>-<number>``; the prefix itself may carry dashes / a year).
-    if number is not None and doc_id:
-        xml_number = doc_id.rsplit("-", 1)[-1].strip()
-        if xml_number and xml_number != str(number):
-            return "uploaded e-invoice number does not match this document"
-
-    # Total: compare magnitudes (a storno credit note is positive in the XML
-    # but negative on the record), 1-cent tolerance.
-    if sum_brutto is not None and grand_total:
-        try:
-            if abs(abs(Decimal(grand_total)) - abs(Decimal(sum_brutto))) > Decimal(
-                "0.01"
-            ):
-                return "uploaded e-invoice total does not match this document"
-        except (InvalidOperation, ValueError, TypeError):
-            pass
-
-    return None
-
-
-def validate_finalized_pdf_upload(
-    obj, request, *, doc_label: str, allow_xml: bool = False
-):
-    """Shared pre-checks for the reseller ``upload_pdf`` actions.
-
-    The document must be finalized, a ``file`` (``.pdf``, passing the
-    magic-byte check) must be present, and — when ``allow_xml`` — an optional
-    ``xml_file`` (``.xml``) is validated too. Raises the matching typed error on
-    failure; on success returns ``(uploaded_file, uploaded_xml)`` where
-    ``uploaded_xml`` is ``None`` unless ``allow_xml`` and one was sent.
-    """
-    if not obj.is_finalized:
-        raise DocumentNotFinalized(
-            f"{doc_label} must be finalized before uploading PDF."
-        )
-    uploaded_file = request.FILES.get("file")
-    if not uploaded_file:
-        raise RequiredFieldMissing("No file provided.", field="file")
-    if not uploaded_file.name.lower().endswith(".pdf"):
-        raise InvalidUploadedDocument("file must be a .pdf", field="file")
-    uploaded_xml = request.FILES.get("xml_file") if allow_xml else None
-    if uploaded_xml and not uploaded_xml.name.lower().endswith(".xml"):
-        raise InvalidUploadedDocument("xml_file must be a .xml", field="xml_file")
-    content_error = _validate_uploaded_document(uploaded_file, kind="pdf")
-    if content_error is None and uploaded_xml:
-        content_error = _validate_uploaded_document(uploaded_xml, kind="xml")
-    if content_error:
-        raise InvalidUploadedDocument(content_error)
-    if uploaded_xml:
-        mismatch = _verify_einvoice_xml_matches(obj, uploaded_xml)
-        if mismatch:
-            raise InvalidUploadedDocument(mismatch, field="xml_file")
-    return uploaded_file, uploaded_xml
 
 
 def _embed_facturx_or_fallback(uploaded_file, uploaded_xml, *, invoice_pk):
@@ -332,15 +189,12 @@ def _embed_facturx_or_fallback(uploaded_file, uploaded_xml, *, invoice_pk):
 # future is office-only by default until explicitly listed here.
 _CUSTOMER_EDITABLE_RESELLER_FIELDS = frozenset({"name_for_member_pages"})
 
-# Pricing + finalization fields on an OrderContent that a customer must NEVER
-# set on their own order — price is resolved server-side from the offer/article
-# canonical chain. Without this guard a reseller-customer could PATCH their own
-# order to price_per_unit=0.01 / rabatt=100 and self-underbill straight into the
-# delivery note + invoice (their row is ownership-scoped, but the serializer is
-# ``fields = "__all__"`` with no field-level privilege guard).
-_ORDER_CONTENT_OFFICE_ONLY_FIELDS = frozenset(
-    {"price_per_unit", "rabatt", "tax_rate", "is_finalized"}
-)
+# Order-line fields a customer must NEVER set: with rabatt=100 they could
+# self-underbill their own order straight into the delivery note + invoice (the
+# row is ownership-scoped, but the serializer is ``fields = "__all__"``). Their
+# price is the server's too, but a sent one is replaced rather than refused
+# (``OrderContentViewSet._apply_customer_pricing``).
+_ORDER_CONTENT_OFFICE_ONLY_FIELDS = frozenset({"rabatt", "tax_rate", "is_finalized"})
 
 
 def uninvoiced_orders_of_outer_reseller(year: int | None = None) -> QuerySet[Order]:
@@ -809,10 +663,8 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # linked reseller.
         reseller = serializer.validated_data["reseller"]
         enforce_own_reseller(request, reseller.pk)
-        self._reject_office_only_pricing(request, serializer.validated_data)
-        self._require_own_offer_group_offer(
-            request, serializer.validated_data, reseller
-        )
+        self._restrict_customer_new_line(request, serializer.validated_data, reseller)
+        self._apply_customer_pricing(request, serializer.validated_data, None)
 
         result = OrderContentService.create_order_with_content_and_crates(
             created_by=auth_user(request),
@@ -836,8 +688,8 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
-        self._reject_office_only_pricing(request, validated_data)
         self._reject_customer_item_change(request, instance, validated_data)
+        self._apply_customer_pricing(request, validated_data, instance)
 
         result = OrderContentService.update_order_content(
             order_content_id=order_content_id,
@@ -849,25 +701,15 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return Response(result)
 
     @staticmethod
-    def _require_own_offer_group_offer(
+    def _restrict_customer_new_line(
         request: Request, validated_data: dict, reseller: Reseller
     ) -> None:
-        """Non-privileged (customer) callers may only order an offer of their
-        own reseller's offer group — the offers the customer order page lists.
-        A free ``share_article`` line has no offer, so it would bypass both the
-        stock check and that offer set; it stays office-only. Privileged roles
-        bypass.
+        """Non-privileged (customer) callers may only order an offer their
+        order page lists, and never set the order's days. Privileged roles bypass.
         """
-        if is_privileged(request):
-            return
-        offer = validated_data.get("offer")
-        if offer is None or validated_data.get("share_article") is not None:
-            raise OrderContentOfferRequired("Customers may only order offers.")
-        offer_group_id = reseller.offer_group_id
-        if offer_group_id is None or offer.offer_group_id != offer_group_id:
-            raise OrderContentOfferNotInOfferGroup(
-                "This offer is not part of your offer group."
-            )
+        if not is_privileged(request):
+            assert_customer_orderable_offer(validated_data, reseller)
+            drop_customer_order_days(validated_data)
 
     @staticmethod
     def _reject_customer_item_change(
@@ -875,7 +717,7 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     ) -> None:
         """A non-privileged (customer) caller may edit their own line but never
         re-point it at another offer or article: its stock was reserved on the
-        current offer, and the offer-group check ran against that offer at
+        current offer, and the orderable-offer check ran against that offer at
         create. Re-sending the current value is not a change. Privileged roles
         bypass.
         """
@@ -895,18 +737,20 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 )
 
     @staticmethod
-    def _reject_office_only_pricing(request: Request, validated_data: dict) -> None:
-        """Non-privileged (customer) callers may not set price/rabatt/tax_rate/
-        is_finalized on an order content — those are resolved server-side.
-        Office/staff bypass. Mirrors ResellerViewSet's office_only_fields guard.
+    def _apply_customer_pricing(
+        request: Request, validated_data: dict, instance: OrderContent | None
+    ) -> None:
+        """Non-privileged (customer) callers may not set rabatt/tax_rate/
+        is_finalized or make a write ``assert_customer_line_write_allowed``
+        refuses, and the server prices their line (``set_customer_line_price``)
+        whatever price they send. Office/staff bypass and keep their price.
         """
         if is_privileged(request):
             return
-        offending = _ORDER_CONTENT_OFFICE_ONLY_FIELDS & set(validated_data)
-        if offending:
-            raise ForbiddenError(
-                "Only office staff may set order pricing fields.",
-            )
+        if _ORDER_CONTENT_OFFICE_ONLY_FIELDS & set(validated_data):
+            raise ForbiddenError("Only office staff may set order pricing fields.")
+        assert_customer_line_write_allowed(validated_data, instance)
+        set_customer_line_price(validated_data, instance)
 
     @extend_schema(
         description="Delete order content (and its parent order if empty).",
@@ -1097,8 +941,10 @@ class OfferGroupViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
 
 class CrateOrderContentViewSet(RolePermissionsMixin, viewsets.ViewSet):
+    # A customer reads their own crate lines but never writes them: create and
+    # update take the line's price and rabatt from the request body.
     read_permission = IsStaffOrCustomer
-    write_permission = IsOfficeOrCustomer
+    write_permission = IsOffice
     serializer_class = CrateOrderContentSerializer
 
     @extend_schema(
@@ -1343,7 +1189,7 @@ class InvoiceResellerViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def upload_pdf(self, request: Request, pk: str | None = None) -> Response:
         invoice = self.get_object()
         uploaded_file, uploaded_xml = validate_finalized_pdf_upload(
-            invoice, request, doc_label="Invoice", allow_xml=True
+            invoice, request.FILES, doc_label="Invoice", allow_xml=True
         )
 
         # When an XML companion is present, post-process the (visual, non-PDF/A)
@@ -1633,7 +1479,7 @@ class DeliveryNoteResellerViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     def upload_pdf(self, request: Request, pk: str | None = None) -> Response:
         delivery_note = self.get_object()
         uploaded_file, _ = validate_finalized_pdf_upload(
-            delivery_note, request, doc_label="Delivery note"
+            delivery_note, request.FILES, doc_label="Delivery note"
         )
         delivery_note.file = uploaded_file
         delivery_note.save(update_fields=["file"])

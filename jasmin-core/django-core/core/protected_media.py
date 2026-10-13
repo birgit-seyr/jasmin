@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import posixpath
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import quote, unquote, urlsplit
 
 from django.conf import settings
@@ -55,6 +55,14 @@ _SALT = "protected-media"
 # ``location /_protected_media/ { internal; alias /app/media/; }``
 # blocks in nginx/nginx.conf.template.
 INTERNAL_MEDIA_LOCATION = "/_protected_media/"
+
+# The files a browser may render as a document: the office previews invoice
+# PDFs in a tab, and pages show the pictures. Every other stored file — the
+# e-invoice XML, the SEPA export, share imports — the app only fetches or
+# downloads, and opened in a tab on the tenant origin an XHTML-namespaced XML
+# or an SVG would run its script there, so those go out as attachments. The
+# ``$protected_media_*`` maps in nginx/nginx.conf.template hold the same list.
+INLINE_MEDIA_SUFFIXES = frozenset({".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp"})
 
 
 def _signature_max_age() -> int:
@@ -194,15 +202,21 @@ def protected_media_view(request: HttpRequest, path: str) -> HttpResponseBase:
     if path_schema != connection.schema_name:
         return HttpResponseForbidden("Media path does not match this tenant.")
 
+    response: HttpResponseBase
     if settings.DEBUG:
         file_path = Path(settings.MEDIA_ROOT) / path
         if not file_path.is_file():
             return HttpResponseNotFound("No such media file.")
-        return FileResponse(file_path.open("rb"))
+        response = FileResponse(file_path.open("rb"))
+    else:
+        response = HttpResponse()
+        # Drop Django's default ``text/html`` so nginx derives the type
+        # from the file extension (mime.types) at the internal location.
+        del response.headers["Content-Type"]
+        response.headers["X-Accel-Redirect"] = quote(INTERNAL_MEDIA_LOCATION + path)
 
-    response = HttpResponse()
-    # Drop Django's default ``text/html`` so nginx derives the type
-    # from the file extension (mime.types) at the internal location.
-    del response.headers["Content-Type"]
-    response.headers["X-Accel-Redirect"] = quote(INTERNAL_MEDIA_LOCATION + path)
+    if PurePosixPath(path).suffix.lower() not in INLINE_MEDIA_SUFFIXES:
+        # No filename, so the name an ``<a download>`` link asks for wins. nginx
+        # carries this header across the X-Accel-Redirect.
+        response.headers["Content-Disposition"] = "attachment"
     return response

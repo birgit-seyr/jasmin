@@ -11,10 +11,18 @@
 #   4. takes an encrypted snapshot of the database before it is migrated
 #   5. brings up the CORE stack (skips glitchtip/uptime — Phase 5)
 #   6. waits for the backend to migrate + report healthy
-#   7. smoke-tests HTTPS
+#   7. prunes untagged images and build cache unused for 30 days; the release
+#      tags keep the images scripts/rollback.sh switches back to
+#   8. smoke-tests readiness over HTTPS: https://<domain>/health/ready/ answers
+#      200 only while the backend reaches the database and Redis takes writes
 #
 # Idempotent: re-run any time to rebuild + roll the stack. The cert is only
 # issued once (skipped when already present).
+#
+# Exit status: a failed readiness probe never stops the deploy. It is reported
+# with what to check next, and the script exits 1 at the very end, after every
+# step has run. Any other non-zero exit is a step that failed and stopped the
+# script there.
 #
 #   ./scripts/deploy.sh
 # =============================================================================
@@ -201,10 +209,80 @@ if [ "$healthy" -ne 1 ]; then
     log "WARN: backend not healthy yet. Tail logs with: docker compose logs -f backend"
 fi
 
-# ── 7. smoke test (best-effort) ──────────────────────────────────────────────
-# curl prints 000 itself when it gets no answer.
-code="$(curl -ksS -o /dev/null -w '%{http_code}' "https://${DOMAIN}/health/" 2>/dev/null || true)"
-log "https://${DOMAIN}/health/ -> HTTP ${code} (expect 200)"
+# ── 7. reclaim disk space ────────────────────────────────────────────────────
+# The --pull and the pull above leave each image they replace behind, untagged,
+# and every build adds to the build cache; nothing else removes either from the
+# disk Postgres, Redis and the backups share. Pruned here, once the containers
+# run the new images and no longer hold the old ones: untagged images, and build
+# cache unused for 30 days. `image prune -a` or `system prune -a` would also
+# delete the release-tagged images scripts/rollback.sh switches back to. A
+# failed prune never fails the deploy.
+log "pruning untagged images and build cache unused for 30 days"
+docker image prune -f \
+    || log "WARN: docker image prune failed — untagged images stay on disk (docker system df)"
+docker builder prune -f --filter until=720h \
+    || log "WARN: docker builder prune failed — old build cache stays on disk (docker system df)"
+
+# ── 8. readiness smoke test ──────────────────────────────────────────────────
+# /health/ready/ answers 200 only while the backend reaches the database and
+# Redis takes writes. /health/, the containers' healthcheck, stays 200 through
+# an outage of either, so "healthy" above doesn't mean "serving". A failure
+# stops nothing: it is reported here, and the script exits 1 at the very end.
+
+# Prints the HTTP code of URL $1. No answer yet (000, the gateway restarted a
+# moment ago) and 5xx are retried a few times; --max-time keeps a hung backend
+# from stalling the deploy. curl prints 000 itself when it gets no answer.
+probe() {
+    local attempt code
+    for attempt in 1 2 3 4 5 6; do
+        code="$(curl -ksS -o /dev/null --max-time 10 -w '%{http_code}' "$1" 2>/dev/null || true)"
+        code="${code:-000}"
+        case "$code" in
+            000 | 5??) ;;
+            *) break ;;
+        esac
+        [ "$attempt" -eq 6 ] || sleep 5
+    done
+    echo "$code"
+}
+
+# What a failed readiness probe means and where to look next. $1: the URL,
+# $2: the HTTP code it answered.
+warn_not_ready() {
+    local meaning
+    case "$2" in
+        503) meaning="The backend answers but can't reach the database or can't write to Redis." ;;
+        502 | 504) meaning="The gateway can't reach the backend." ;;
+        000) meaning="No answer: the gateway is down, TLS or DNS fails, or the backend hangs." ;;
+        *) meaning="The readiness probe never answers that: is this the right host and release?" ;;
+    esac
+    cat >&2 <<EOF
+
+⚠️  ==========================================================================
+⚠️  NOT READY: $1 -> HTTP $2
+⚠️  ${meaning}
+⚠️  The containers may still report healthy: their healthcheck, /health/, touches
+⚠️  neither the database nor Redis. Real requests are failing.
+⚠️  Next:
+⚠️    docker compose ps                     # postgres, redis, backend up and healthy?
+⚠️    docker compose logs --tail=200 backend
+⚠️        # "health.ready.unavailable component=..." names what failed, the
+⚠️        # traceback below it says why
+⚠️    docker compose logs --tail=100 postgres redis gateway
+⚠️    docker compose exec redis sh -c 'redis-cli -a "\$REDIS_PASSWORD" --no-auth-warning info memory'
+⚠️        # used_memory over maxmemory: Redis refuses writes
+⚠️  Check again with: curl -k $1
+⚠️  If this release is the cause: ./scripts/rollback.sh
+⚠️  ==========================================================================
+EOF
+}
+
+READY_URL="https://${DOMAIN}/health/ready/"
+ready_code="$(probe "$READY_URL")"
+log "${READY_URL} -> HTTP ${ready_code} (expect 200)"
+if [ "$ready_code" != "200" ]; then
+    warn_not_ready "$READY_URL" "$ready_code"
+fi
 
 echo ""
 echo "✅ Deploy run complete."
@@ -214,3 +292,10 @@ echo "        docker compose restart gateway"
 echo "   2. Log in at https://${ADMIN_HOST}.${DOMAIN} and create your tenants."
 echo "   3. Configure EACH tenant's own SMTP before inviting its users."
 echo "   4. Wire off-host backups (Phase 3), then run scripts/restore_drill.sh."
+
+# The readiness verdict, after every step has run.
+if [ "$ready_code" != "200" ]; then
+    echo "" >&2
+    echo "❌ The stack is up but NOT READY: ${READY_URL} answered HTTP ${ready_code} (see the warning above)." >&2
+    exit 1
+fi

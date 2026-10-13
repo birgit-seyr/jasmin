@@ -24,6 +24,7 @@ import type {
   OtherArticleRow,
 } from "@features/customer/types";
 import { DaySelector, WeekSelector } from "@shared/selectors";
+import { useRoles } from "@shared/auth";
 import { useAuth } from "@shared/contexts/AuthContext";
 import {
   useCurrency,
@@ -205,6 +206,9 @@ export default function CustomerOrderPage() {
   // Single-tier mode when the tenant hasn't configured tiers — only
   // ``price_1`` is ever picked, no quantity-based escalation.
   const finalTiers = useOfferTiers();
+  // The roles the backend takes a line's price from (office, admin,
+  // management); it prices a customer's lines itself.
+  const { isOffice, isManagement } = useRoles();
 
   // Order-level info for the summary header (outside the cards): once anything
   // is ordered every row for this reseller/week/day shares one Order, so the
@@ -235,6 +239,7 @@ export default function CustomerOrderPage() {
     selectedWeek: selectedWeek,
     selectedDay,
     finalTiers,
+    setsPrice: isOffice || isManagement,
     invalidateOrders,
   });
 

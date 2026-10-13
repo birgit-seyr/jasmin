@@ -1,18 +1,26 @@
-"""ISO-week-anchored subscription term-end computation.
+"""Subscription term ends.
 
-Backend mirror of the frontend ``computeValidUntil`` (``endOfTerm.ts``), used by
-the auto-renewal path so a renewal RE-ANCHORS its term end to an ISO WEEK rather
-than preserving the predecessor's raw timedelta. Anchoring to a week (not a fixed
-+52 weeks / +364 days) keeps the yearly restart week stable across 52- and
-53-week ISO years: a 53-week year yields a 53-delivery term instead of silently
-shifting the next term's start back by one week.
+``compute_term_valid_until`` is the backend mirror of the frontend
+``computeValidUntil`` (``endOfTerm.ts``), used by the auto-renewal path so a
+renewal RE-ANCHORS its term end to an ISO WEEK rather than preserving the
+predecessor's raw timedelta. Anchoring to a week (not a fixed +52 weeks / +364
+days) keeps the yearly restart week stable across 52- and 53-week ISO years: a
+53-week year yields a 53-delivery term instead of silently shifting the next
+term's start back by one week.
+
+``effective_term_end`` is where a term really ends once a cancellation is taken
+into account; deliveries and planned charge amounts stop there.
 """
 
 from __future__ import annotations
 
 import datetime
+from typing import TYPE_CHECKING
 
 from isoweek import Week
+
+if TYPE_CHECKING:
+    from ..models import Subscription
 
 
 def _sunday_before_iso_week(year: int, week: int) -> datetime.date:
@@ -70,3 +78,22 @@ def compute_term_valid_until(
         return _sunday_before_iso_week(iso_year + 1, iso_week)
 
     return None
+
+
+def effective_term_end(subscription: Subscription) -> datetime.date | None:
+    """The last day ``subscription`` runs: its ``valid_until``, pulled back to
+    ``cancelled_effective_at`` when that comes first. ``None`` means open-ended.
+
+    ``cancel_subscription`` truncates ``valid_until`` to the cancellation date,
+    so for it the two agree. The member exit's force-end stamps only
+    ``cancelled_effective_at`` — a renewal that hasn't started has no Sunday to
+    truncate to, and the exit date need not be a Sunday — so there
+    ``valid_until`` alone overstates the term. An end before ``valid_from``
+    leaves no day at all.
+    """
+    ends = [
+        end
+        for end in (subscription.valid_until, subscription.cancelled_effective_at)
+        if end is not None
+    ]
+    return min(ends) if ends else None

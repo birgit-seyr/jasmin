@@ -16,7 +16,7 @@ later stays blocked until someone lists it. Still sent:
 * reseller and customer documents (:data:`RESELLER_AND_CUSTOMER_SLUGS`);
 * GDPR data-subject emails, which run on legal deadlines
   (:data:`GDPR_DATA_SUBJECT_SLUGS`);
-* test sends the office makes to check its SMTP setup or a template
+* test sends that check the tenant's SMTP setup or a template
   (:attr:`EmailCategory.TEST_SEND`).
 
 ``accounts.invitation`` and ``accounts.welcome_user`` are sent both by login
@@ -45,7 +45,7 @@ class EmailCategory(StrEnum):
     # An email about a member's membership, sent by a member flow. Blocked in
     # onboarding mode, also for a slug that login flows share.
     MEMBER_LIFECYCLE = "member_lifecycle"
-    # A test the office sends to check its SMTP setup or a template. Always sent.
+    # A test send that checks the tenant's SMTP setup or a template. Always sent.
     TEST_SEND = "test_send"
 
 

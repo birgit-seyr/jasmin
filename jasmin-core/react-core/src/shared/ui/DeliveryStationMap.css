@@ -1,7 +1,7 @@
 /*
  * Styles for DeliveryStationMap. These MUST be global (not a CSS module):
- * Leaflet's ``L.divIcon`` injects raw HTML with a literal ``className``, so a
- * hashed module class name would never match the rendered marker.
+ * the element inside Leaflet's ``L.divIcon`` carries a literal ``className``,
+ * so a hashed module class name would never match the rendered marker.
  */
 
 .jasmin-station-map {

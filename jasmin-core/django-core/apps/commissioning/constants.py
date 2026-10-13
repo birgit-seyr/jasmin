@@ -79,6 +79,15 @@ def crates_should_be_on_documents() -> bool:
     return True if value is None else bool(value)
 
 
+def get_offer_price_tiers() -> list[float | None]:
+    """The tenant's offer price tiers (``used_tiers_for_offers``): quantity
+    thresholds in PU, the first one the base tier. The single tier ``[1]`` when
+    none are set, or with no tenant context, so only ``price_1`` is charged.
+    Mirrors ``resolveOfferTiers`` on the frontend."""
+    value = _resolve_tenant_setting("used_tiers_for_offers")
+    return value if isinstance(value, list) and value else [1]
+
+
 def get_min_weeks_from_creation_to_start_delivery() -> int:
     """Lead time in weeks before a subscription may start, measured from
     "now". Falls back to 0 (no lead-time enforcement) when there's no tenant

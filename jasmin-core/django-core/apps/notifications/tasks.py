@@ -214,8 +214,9 @@ def prune_old_background_jobs() -> None:
 # container when the file is missing or stale (all workers wedged / scheduler
 # dead), so orchestration restarts a consumer that "looks up" but runs nothing.
 # ``periodic_task`` (no DB) on purpose: a DB hiccup must not mask a live
-# consumer — DB liveness is the backend container's /health/ concern. This is
-# infra, not a business job, so it is intentionally NOT in run_periodic_tasks_now.
+# consumer — the database is the concern of the backend's readiness probe,
+# /health/ready/. This is infra, not a business job, so it is intentionally NOT
+# in run_periodic_tasks_now.
 _HEARTBEAT_FILE = os.environ.get("HUEY_HEARTBEAT_FILE", "/tmp/huey_heartbeat")
 
 

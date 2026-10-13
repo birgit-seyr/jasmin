@@ -359,7 +359,8 @@ def _make_stock_mock(stock_entries: dict[tuple, Decimal]):
     Build a mock for StockService.get_theoretical_current_stock.
 
     stock_entries: dict keyed by (share_article_id, unit, size) with Decimal values.
-    All entries are marked for_resellers=True.
+    Each becomes an uncounted entry marked for_resellers=True, its balance a float
+    as StockService hands it out.
     """
 
     def _mock(year, delivery_week, day_number, storage=None):
@@ -367,7 +368,8 @@ def _make_stock_mock(stock_entries: dict[tuple, Decimal]):
         for (share_article_id, unit, size), amount in stock_entries.items():
             key = (share_article_id, unit, size, None)
             result[key] = {
-                "theoretical_current_stock": amount,
+                "theoretical_current_stock": float(amount),
+                "current_stock_amount": None,
                 "for_resellers": True,
             }
         return result

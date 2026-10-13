@@ -39,6 +39,7 @@ from .additional_share_policy import (
 )
 from .capacity_reservation_service import CapacityReservationService
 from .delivery_cycle import filter_weeks_by_delivery_cycle
+from .subscription_term import effective_term_end
 from .variation_capacity_service import VariationCapacityService
 from .waiting_list_policy import assert_waiting_list_enabled
 
@@ -547,11 +548,18 @@ class SubscriptionService:
         backfill of a fresh confirm passes it, so those past weeks are
         materialised while capacity checks, reservations and pause resync keep
         the default set of current and future weeks.
+
+        The weeks end at ``effective_term_end``, not at ``valid_until``: a
+        subscription the member exit force-ended keeps its ``valid_until``, and
+        a week whose delivery day falls after ``cancelled_effective_at`` is
+        dropped — the strict "after" cut ``truncate_future_deliveries`` makes.
+        A ``cancel_subscription`` cancel truncates ``valid_until`` to that same
+        date, so for it nothing changes.
         """
         day_number = subscription.default_delivery_station_day.delivery_day.day_number
         year_weeks = SubscriptionService._get_delivery_weeks(
             subscription.valid_from,
-            subscription.valid_until,
+            effective_term_end(subscription),
             day_number,
             _delivery_cycle_of(subscription),
         )

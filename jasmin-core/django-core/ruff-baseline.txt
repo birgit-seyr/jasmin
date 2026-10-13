@@ -2,7 +2,7 @@
 # Managed by scripts/ruff_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/ruff_baseline.py freeze
-# 189 finding(s).
+# 187 finding(s).
 
 apps/accounts/backends.py: N806 Variable `UserModel` in function should be lowercase
 apps/accounts/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
@@ -156,8 +156,6 @@ apps/commissioning/views/stock_views.py: C901 `patch` is too complex (14 > 10)
 apps/commissioning/views/stock_views.py: PLR0915 Too many statements (54 > 50)
 apps/commissioning/viewsets/basics_viewsets.py: C901 `get_queryset` is too complex (11 > 10)
 apps/commissioning/viewsets/delivery_viewsets.py: C901 `_migrate_succession_children` is too complex (14 > 10)
-apps/commissioning/viewsets/resellers_viewsets.py: C901 `_verify_einvoice_xml_matches` is too complex (15 > 10)
-apps/commissioning/viewsets/resellers_viewsets.py: N817 CamelCase `ElementTree` imported as acronym `ET`
 apps/commissioning/viewsets/shares_viewsets.py: C901 `export_csv` is too complex (15 > 10)
 apps/commissioning/viewsets/shares_viewsets.py: C901 `perform_update` is too complex (11 > 10)
 apps/commissioning/viewsets/shares_viewsets.py: PLR0915 Too many statements (54 > 50)

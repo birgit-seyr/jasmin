@@ -22,6 +22,7 @@ class TenantsConfig(AppConfig):
     # Tenant-lifecycle changes are covered by the structured event log
     # instead: the super-admin's ``tenant.created`` / ``tenant.updated`` /
     # ``tenant.admin_created`` / ``user.roles_changed`` lines (``super_admin``
-    # logger) and a tenant admin's ``tenant.updated`` (``apps.shared.tenants``).
-    # In a container they go to stdout like every logger; on bare metal to
-    # auth.log and app.log respectively.
+    # logger), a tenant admin's ``tenant.updated`` (``apps.shared.tenants``)
+    # and ``email_config.updated`` (``authz``). In a container they go to
+    # stdout like every logger; on bare metal to auth.log, app.log and
+    # security.log respectively.

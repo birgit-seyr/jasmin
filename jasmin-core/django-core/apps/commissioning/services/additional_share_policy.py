@@ -13,19 +13,7 @@ from typing import Any
 
 from ..errors import AdditionalShareExceedsBase, AdditionalShareRequiresBase
 from ..models import ShareTypeVariation, Subscription
-
-
-def _effective_end(subscription: Subscription) -> datetime.date | None:
-    """The base's real coverage end: its ``valid_until``, pulled back to
-    ``cancelled_effective_at`` when the base has been cancelled — cancellation
-    leaves ``valid_until`` untouched, so the effective end is the earlier of the
-    two. ``None`` means open-ended (covers everything)."""
-    ends = [
-        end
-        for end in (subscription.valid_until, subscription.cancelled_effective_at)
-        if end is not None
-    ]
-    return min(ends) if ends else None
+from .subscription_term import effective_term_end
 
 
 def assert_additional_share_has_base(
@@ -68,7 +56,8 @@ def assert_additional_share_has_base(
 
     covering_ends: list[datetime.date] = []
     for base in candidate_bases:
-        end = _effective_end(base)
+        # A cancelled base covers only up to its cancellation's effective date.
+        end = effective_term_end(base)
         if end is None:
             # An open-ended base covers the whole add-on period.
             return

@@ -385,6 +385,9 @@ def _force_end_subscription(subscription, *, effective, now, cancelled_by) -> No
     untouched — ``TimeBoundMixin`` requires it to fall on a Sunday and the exit
     date may not be one; the ``cancelled_at`` stamp is what marks the
     subscription ended (the "active" check keys on ``cancelled_at IS NULL``).
+    The paths that build deliveries or charges from the term read its end
+    through ``subscription_term.effective_term_end``, so ``cancelled_effective_at``
+    bounds them: a later pause edit restores nothing after the exit.
     """
     from ..models import Subscription
     from .subscription_deliveries import truncate_future_deliveries

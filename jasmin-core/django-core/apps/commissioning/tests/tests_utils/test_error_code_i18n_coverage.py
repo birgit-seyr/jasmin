@@ -74,6 +74,7 @@ EXPECTED_ERRORS_MODULES = frozenset(
         "apps/gdpr/errors.py",
         "apps/notifications/errors.py",
         "apps/payments/errors.py",
+        "apps/shared/errors.py",
         "apps/shared/super_admin/errors.py",
         "apps/shared/support/errors.py",
         "apps/shared/tenants/errors.py",

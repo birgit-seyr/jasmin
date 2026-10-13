@@ -82,6 +82,36 @@ http {
         ~*application/javascript|text/css       "public, max-age=31536000, immutable";
     }
 
+    # ---- Protected media: inline, or a sandboxed download ------------------
+    # A browser may render a PDF (the office previews invoices in a tab) or a
+    # picture as a document. Every other stored file — the e-invoice XML, the
+    # SEPA export, share imports — the app only fetches or downloads, and
+    # opened in a tab on the tenant origin an XHTML-namespaced XML or an SVG
+    # would run its script there. Those get a CSP sandbox (no script, an opaque
+    # origin, no subresources) and an attachment disposition. PDFs stay
+    # unsandboxed: Chrome's PDF viewer does not load in a sandboxed document.
+    # The list is INLINE_MEDIA_SUFFIXES in core/protected_media.py, and
+    # apps/shared/tenants/tests/test_protected_media.py fails when the two
+    # differ. An empty value makes nginx skip the add_header that uses it.
+    map $uri $protected_media_csp {
+        default                             "sandbox; default-src 'none'";
+        ~*\.(?:pdf|png|jpe?g|gif|webp)$     "";
+    }
+
+    map $uri $protected_media_attachment {
+        default                             "attachment";
+        ~*\.(?:pdf|png|jpe?g|gif|webp)$     "";
+    }
+
+    # Django sends the same disposition and nginx carries it across the
+    # X-Accel-Redirect, so the gateway adds its own only when the backend sent
+    # none. Two Content-Disposition lines are invalid, and a client that joins
+    # them into "attachment, attachment" no longer reads an attachment.
+    map $upstream_http_content_disposition $protected_media_disposition {
+        ""                                  $protected_media_attachment;
+        default                             "";
+    }
+
     # ---- HTTP -> HTTPS + ACME --------------------------------------------
     server {
         listen      80 default_server;
@@ -113,12 +143,13 @@ http {
     # ------- Apex host: closed by design ---------------------------------
     # The product lives ONLY on subdomains (tenant hosts + the super-admin
     # host). The bare ${FRONTEND_DOMAIN} maps to the public schema and would
-    # otherwise serve an empty shell of the SPA. Everything 404s except
-    # /health/, which stays on the apex because the public-schema Domain row
-    # for it is what the deploy smoke test and uptime probes hit. This block
-    # is load-bearing, not cosmetic: with the apex merely REMOVED from the
-    # wildcard block below, nginx's default-server fallback would route apex
-    # requests straight back into that block.
+    # otherwise serve an empty shell of the SPA. Everything 404s except the
+    # /health/ probes, which the deploy and rollback smoke tests and the
+    # uptime monitors hit here — /health/ and /health/ready/, both through the
+    # prefix location below. This block is load-bearing, not cosmetic: with
+    # the apex merely REMOVED from the wildcard block below, nginx's
+    # default-server fallback would route apex requests straight back into
+    # that block.
     server {
         listen      443 ssl;
         listen      [::]:443 ssl;
@@ -135,6 +166,13 @@ http {
 
         include /etc/nginx/security_headers.conf;
 
+        # No limit_req here or in the other /health/ locations, unlike every
+        # other location that reaches Django: the deploy and rollback smoke
+        # tests and the uptime monitors must never get a 429, and neither probe
+        # does a request's worth of work. /health/ touches nothing, and each
+        # backend worker answers /health/ready/ from a verdict at most
+        # READY_VERDICT_SECONDS old (core/middleware.py), so a flood reaches
+        # the database and Redis at most once per worker per window.
         location /health/ {
             proxy_pass http://jasmin_backend;
             access_log off;
@@ -310,14 +348,15 @@ http {
             # with PII) — browsers may cache, shared proxies/CDNs must
             # not. ``nosniff`` pins the extension-derived MIME type so
             # a crafted upload can't be content-sniffed into HTML.
-            # (No ``Content-Disposition: attachment`` — the office
-            # previews invoice PDFs in-tab; upload content is
-            # magic-byte-validated server-side.)
             # Single authoritative Cache-Control: ``expires`` would emit
             # a second, non-``private`` Cache-Control header that naive
             # intermediaries may honour.
             add_header Cache-Control "private, max-age=2592000";
             add_header X-Content-Type-Options "nosniff";
+            # PDFs and pictures render inline; every other file is a
+            # sandboxed download (the $protected_media_* maps above).
+            add_header Content-Security-Policy $protected_media_csp always;
+            add_header Content-Disposition $protected_media_disposition;
             # Re-include the security headers: this location's own add_header
             # otherwise voids the server-level set (nginx all-or-nothing rule).
             # Critical here — these are tenant invoice PDFs (PII): without
@@ -457,14 +496,15 @@ http {
             # with PII) — browsers may cache, shared proxies/CDNs must
             # not. ``nosniff`` pins the extension-derived MIME type so
             # a crafted upload can't be content-sniffed into HTML.
-            # (No ``Content-Disposition: attachment`` — the office
-            # previews invoice PDFs in-tab; upload content is
-            # magic-byte-validated server-side.)
             # Single authoritative Cache-Control: ``expires`` would emit
             # a second, non-``private`` Cache-Control header that naive
             # intermediaries may honour.
             add_header Cache-Control "private, max-age=2592000";
             add_header X-Content-Type-Options "nosniff";
+            # PDFs and pictures render inline; every other file is a
+            # sandboxed download (the $protected_media_* maps above).
+            add_header Content-Security-Policy $protected_media_csp always;
+            add_header Content-Disposition $protected_media_disposition;
             # Re-include the security headers: this location's own add_header
             # otherwise voids the server-level set (nginx all-or-nothing rule).
             # Critical here — these are tenant invoice PDFs (PII): without

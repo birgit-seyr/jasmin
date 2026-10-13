@@ -197,6 +197,15 @@ describe("edit mode", () => {
     expect(props.onAmountChange).toHaveBeenLastCalledWith(OFFER_ID, 3);
   });
 
+  it("passes a pasted negative amount on as 0", async () => {
+    const props = makeProps({ editMode: true, record: makeRow({ id: OFFER_ID }) });
+    render(<OrderAmountCell {...props} />);
+
+    await userEvent.click(screen.getByLabelText("customer.order_amount"));
+    await userEvent.paste("-5");
+    expect(props.onAmountChange).toHaveBeenLastCalledWith(OFFER_ID, 0);
+  });
+
   it("calls onSubmit on Enter", async () => {
     const props = makeProps({ editMode: true, record: existingOrderRow() });
     render(<OrderAmountCell {...props} />);

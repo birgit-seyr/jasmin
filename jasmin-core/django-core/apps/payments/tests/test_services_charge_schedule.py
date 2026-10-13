@@ -16,8 +16,11 @@ import logging
 from decimal import Decimal
 
 import pytest
+import time_machine
+from django.utils import timezone
 
-from apps.commissioning.models import ShareDelivery
+from apps.commissioning.models import ShareDelivery, Subscription
+from apps.commissioning.services.member_cancellation import _force_end_subscription
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
     PaymentCycleFactory,
@@ -376,6 +379,98 @@ class TestSmoothedStrategy:
         assert any(
             "over-collection" in r.message for r in caplog.records
         ), "expected a SMOOTHED over-collection WARNING"
+
+    def test_no_period_after_a_member_exit_is_billed(
+        self, tenant, tenant_settings, subscription, caplog
+    ):
+        """The member exit force-ends a subscription through
+        ``cancelled_effective_at`` and keeps ``valid_until``, so the monthly
+        periods still run to December. The term total is split over the
+        periods up to the exit; the ones after it bill 0."""
+        tenant_settings.billing_strategy = TenantSettings.BILLING_STRATEGY_SMOOTHED
+        tenant_settings.save()
+        # 12 deliveries × 10€ = 120€, the last on 2026-03-25 (ISO week 13).
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 14)]
+        )
+        exit_date = datetime.date(2026, 3, 31)
+
+        # Stamps the cancellation, drops the deliveries after the exit (none
+        # here) and re-plans the charges.
+        payments_logger = logging.getLogger("apps.payments.services")
+        payments_logger.addHandler(caplog.handler)
+        try:
+            _force_end_subscription(
+                subscription, effective=exit_date, now=timezone.now(), cancelled_by=None
+            )
+        finally:
+            payments_logger.removeHandler(caplog.handler)
+
+        charges = list(
+            ChargeSchedule.objects.filter(subscription=subscription).order_by(
+                "period_start"
+            )
+        )
+        assert len(charges) == 12
+        # The periods from 01-05, 02-05 and 03-05 share the 120€.
+        by_exit = [c.expected_amount for c in charges if c.period_start <= exit_date]
+        assert by_exit == [Decimal("40.00")] * 3
+        after_exit = {c.expected_amount for c in charges if c.period_start > exit_date}
+        assert after_exit == {Decimal("0.00")}
+        # Everything owed found a period, so nothing is reported as unbilled.
+        assert not any("under-collection" in r.getMessage() for r in caplog.records)
+
+    def test_rest_owed_at_a_backdated_exit_is_logged_not_billed_after_it(
+        self, tenant, tenant_settings, subscription, caplog
+    ):
+        """A backdated member exit can come after every period up to it was
+        issued, while the boxes delivered before it are still partly unpaid.
+        No period after the exit may bill them, so those stay at 0 and the
+        amount owed is logged as an error, to be billed out-of-band."""
+        tenant_settings.billing_strategy = TenantSettings.BILLING_STRATEGY_SMOOTHED
+        tenant_settings.save()
+        # 24 deliveries × 10€ = 240€, the last on 2026-06-17 (ISO week 25):
+        # 20€ in each of the twelve monthly periods.
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 26)]
+        )
+        ChargeScheduleService.regenerate_for_subscription(subscription)
+        charges = list(
+            ChargeSchedule.objects.filter(subscription=subscription).order_by(
+                "period_start"
+            )
+        )
+        # The six periods from 01-05 to 06-05 are issued: 120€ of the 240€.
+        for charge in charges[:6]:
+            charge.status = ChargeStatus.ISSUED
+            charge.save(allow_immutable_change=True)
+        exit_date = datetime.date(2026, 6, 30)
+
+        payments_logger = logging.getLogger("apps.payments.services")
+        payments_logger.addHandler(caplog.handler)
+        try:
+            _force_end_subscription(
+                subscription, effective=exit_date, now=timezone.now(), cancelled_by=None
+            )
+        finally:
+            payments_logger.removeHandler(caplog.handler)
+
+        after_exit = ChargeSchedule.objects.filter(
+            subscription=subscription, period_start__gt=exit_date
+        )
+        assert after_exit.count() == 6
+        assert {c.expected_amount for c in after_exit} == {Decimal("0.00")}
+        issued = ChargeSchedule.objects.filter(
+            subscription=subscription, status=ChargeStatus.ISSUED
+        )
+        assert sum(c.expected_amount for c in issued) == Decimal("120.00")
+        # The other 120€ is owed for boxes delivered before the exit.
+        assert any(
+            "under-collection" in message
+            and str(subscription.pk) in message
+            and "120.00" in message
+            for message in (r.getMessage() for r in caplog.records)
+        ), "expected the unbilled 120€ to be logged as a SMOOTHED under-collection"
 
 
 # ---------------------------------------------------------------------------
@@ -741,6 +836,236 @@ class TestRegenerateProtectsBundledCharges:
             subscription=subscription,
             status=ChargeStatus.PLANNED,
             period_start__gt=valid_until,
+        ).exists()
+
+    def test_bundled_charge_after_a_member_exit_is_unbundled(
+        self, tenant, tenant_settings, subscription
+    ):
+        """The member exit ends the term through ``cancelled_effective_at``
+        and keeps ``valid_until``. A charge for a period after the exit that
+        already sits in a DRAFT run must leave the run, or its export would
+        debit the departed member for deliveries that no longer exist."""
+        # Weekly deliveries from January to June, billed EXACT per month.
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 27)]
+        )
+        ChargeScheduleService.regenerate_for_subscription(subscription)
+        # The period from 2026-05-05.
+        after_exit = list(
+            ChargeSchedule.objects.filter(subscription=subscription).order_by(
+                "period_start"
+            )
+        )[4]
+        assert after_exit.expected_amount > Decimal("0.00")
+        run = self._bundle(after_exit)
+        exit_date = datetime.date(2026, 3, 31)
+
+        _force_end_subscription(
+            subscription, effective=exit_date, now=timezone.now(), cancelled_by=None
+        )
+
+        assert not ChargeSchedule.objects.filter(billing_run=run).exists()
+        assert not ChargeSchedule.objects.filter(
+            subscription=subscription,
+            period_start__gt=exit_date,
+            expected_amount__gt=Decimal("0.00"),
+        ).exists()
+
+
+@pytest.mark.django_db
+class TestBackdatedMemberExit:
+    """``cancel_subscription`` refuses an exit before the next Sunday, so a
+    backdated member exit force-ends the subscription: it stamps
+    ``cancelled_effective_at`` and keeps ``valid_until``. The charges must stop
+    at the exit all the same, also one a DRAFT run holds."""
+
+    _bundle = TestRegenerateProtectsBundledCharges._bundle
+
+    @pytest.fixture(autouse=True)
+    def _frozen_today(self):
+        """Pin "today" to Monday 2026-07-06, after every exit below. Autouse, so
+        it is in place before ``tenant_settings`` stamps its ``valid_from`` from
+        the clock; settings stamped from the real clock would not be in force
+        on the pinned day."""
+        with time_machine.travel(datetime.datetime(2026, 7, 6, 12, 0), tick=False):
+            yield
+
+    def test_exact_charge_of_the_period_holding_the_exit_is_repriced(
+        self, tenant, tenant_settings, subscription
+    ):
+        """The period from 2026-06-05 holds four deliveries, 40€, and its charge
+        sits in a DRAFT run. The exit drops the three after it, so the charge
+        leaves the run and comes back at the one delivery left, 10€."""
+        # Weekly deliveries to 2026-07-01 (ISO week 27), billed EXACT per month.
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 28)]
+        )
+        ChargeScheduleService.regenerate_for_subscription(subscription)
+        june_start = datetime.date(2026, 6, 5)
+        bundled = ChargeSchedule.objects.get(
+            subscription=subscription, period_start=june_start
+        )
+        assert bundled.expected_amount == Decimal("40.00")
+        run = self._bundle(bundled)
+
+        _force_end_subscription(
+            subscription,
+            effective=datetime.date(2026, 6, 14),
+            now=timezone.now(),
+            cancelled_by=None,
+        )
+
+        assert not ChargeSchedule.objects.filter(billing_run=run).exists()
+        repriced = ChargeSchedule.objects.get(
+            subscription=subscription, period_start=june_start
+        )
+        assert repriced.status == ChargeStatus.PLANNED
+        assert repriced.expected_amount == Decimal("10.00")
+
+    @pytest.mark.parametrize(
+        ("strategy", "june_amount"),
+        [
+            # The one delivery up to the exit, on 2026-06-10.
+            (TenantSettings.BILLING_STRATEGY_EXACT, Decimal("10.00")),
+            # The 23 deliveries up to the exit, 230€, over the six periods
+            # starting by it; the one from 2026-06-05 is the last of them.
+            (TenantSettings.BILLING_STRATEGY_SMOOTHED, Decimal("38.33")),
+        ],
+    )
+    def test_repriced_charge_bundled_again_stays_in_its_run(
+        self, tenant, tenant_settings, subscription, strategy, june_amount
+    ):
+        """The charge of the period holding the exit ends on the exit, as the
+        last period of a cancelled term ends on its cut. Once a DRAFT run bundles
+        it, later regenerates keep it there; taking it out again would let the
+        run export without it and leave it unbilled."""
+        tenant_settings.billing_strategy = strategy
+        tenant_settings.save()
+        # Confirmed, so the office's "regenerate" over every subscription takes
+        # this one in.
+        Subscription.objects.filter(pk=subscription.pk).update(admin_confirmed=True)
+        # Weekly deliveries to 2026-07-01 (ISO week 27).
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 28)]
+        )
+        exit_date = datetime.date(2026, 6, 14)
+        _force_end_subscription(
+            subscription, effective=exit_date, now=timezone.now(), cancelled_by=None
+        )
+        repriced = ChargeSchedule.objects.get(
+            subscription=subscription, period_start=datetime.date(2026, 6, 5)
+        )
+        assert repriced.expected_amount == june_amount
+        run = self._bundle(repriced)
+
+        ChargeScheduleService.regenerate_for_subscription(subscription)
+        ChargeScheduleService.regenerate_all()
+
+        still_bundled = ChargeSchedule.objects.get(billing_run=run)
+        assert still_bundled.pk == repriced.pk
+        assert still_bundled.expected_amount == june_amount
+        assert still_bundled.period_end == exit_date
+
+    def test_smoothed_charge_of_the_period_holding_the_exit_takes_the_rest_owed(
+        self, tenant, tenant_settings, subscription
+    ):
+        """Under SMOOTHED the periods up to the one from 2026-05-05 are issued and
+        the one from 2026-06-05 sits in a DRAFT run at its even share. After the
+        exit that charge leaves the run and bills what the boxes delivered up to
+        the exit still owe; no period after the exit bills anything."""
+        tenant_settings.billing_strategy = TenantSettings.BILLING_STRATEGY_SMOOTHED
+        tenant_settings.save()
+        # 51 deliveries × 10€ = 510€, Wednesdays from 2026-01-07 to 2026-12-23:
+        # 42.50€ in each of the twelve monthly periods.
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 53)]
+        )
+        ChargeScheduleService.regenerate_for_subscription(subscription)
+        charges = list(
+            ChargeSchedule.objects.filter(subscription=subscription).order_by(
+                "period_start"
+            )
+        )
+        assert {c.expected_amount for c in charges} == {Decimal("42.50")}
+        # The five periods from 01-05 to 05-05 are issued: 212.50€.
+        for charge in charges[:5]:
+            charge.status = ChargeStatus.ISSUED
+            charge.save(allow_immutable_change=True)
+        june_start = charges[5].period_start
+        run = self._bundle(charges[5])
+
+        _force_end_subscription(
+            subscription,
+            effective=datetime.date(2026, 6, 14),
+            now=timezone.now(),
+            cancelled_by=None,
+        )
+
+        assert not ChargeSchedule.objects.filter(billing_run=run).exists()
+        charges_after_exit = ChargeSchedule.objects.filter(subscription=subscription)
+        # The 23 boxes up to 2026-06-10 cost 230€, of which 212.50€ are issued.
+        june_charge = charges_after_exit.get(period_start=june_start)
+        assert june_charge.expected_amount == Decimal("17.50")
+        assert sum(c.expected_amount for c in charges_after_exit) == Decimal("230.00")
+
+    def test_exit_before_the_term_starts_leaves_nothing_to_collect(
+        self, tenant, tenant_settings, subscription
+    ):
+        """An exit before ``valid_from`` puts the effective end before the term
+        starts. Its charges are still re-planned, every one at 0 and out of its
+        DRAFT run, rather than skipped like an inverted term."""
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 14)]
+        )
+        ChargeScheduleService.regenerate_for_subscription(subscription)
+        first_charge = (
+            ChargeSchedule.objects.filter(subscription=subscription)
+            .order_by("period_start")
+            .first()
+        )
+        assert first_charge.expected_amount > Decimal("0.00")
+        run = self._bundle(first_charge)
+
+        _force_end_subscription(
+            subscription,
+            effective=datetime.date(2026, 1, 4),
+            now=timezone.now(),
+            cancelled_by=None,
+        )
+
+        assert not ChargeSchedule.objects.filter(billing_run=run).exists()
+        assert not ChargeSchedule.objects.filter(
+            subscription=subscription, expected_amount__gt=Decimal("0.00")
+        ).exists()
+
+    def test_delivery_dated_after_the_exit_is_not_billed(
+        self, tenant, tenant_settings, subscription
+    ):
+        """Billing stops at the exit even while a delivery dated after it is
+        still stored; the force-end drops them, the planner doesn't count on it.
+        Under EXACT the period holding the exit bills only the delivery before
+        it, and the periods after it plan 0."""
+        # Weekly deliveries to 2026-06-10 (ISO week 24).
+        _make_deliveries_for_subscription(
+            subscription, [(2026, w) for w in range(2, 25)]
+        )
+        exit_date = datetime.date(2026, 6, 14)
+        _force_end_subscription(
+            subscription, effective=exit_date, now=timezone.now(), cancelled_by=None
+        )
+        # 2026-06-17 in the period from 2026-06-05, 2026-07-22 in the next one.
+        _make_deliveries_for_subscription(subscription, [(2026, 25), (2026, 30)])
+
+        ChargeScheduleService.regenerate_for_subscription(subscription)
+
+        june_charge = ChargeSchedule.objects.get(
+            subscription=subscription, period_start=datetime.date(2026, 6, 5)
+        )
+        assert june_charge.expected_amount == Decimal("10.00")
+        assert not ChargeSchedule.objects.filter(
+            subscription=subscription,
+            period_start__gt=exit_date,
+            expected_amount__gt=Decimal("0.00"),
         ).exists()
 
 

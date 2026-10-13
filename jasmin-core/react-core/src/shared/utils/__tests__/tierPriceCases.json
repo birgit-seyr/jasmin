@@ -1,0 +1,238 @@
+{
+  "pick_tier_price": [
+    {
+      "case": "the base price below the second threshold",
+      "pu_count": 1,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "2.00"
+    },
+    {
+      "case": "a count just below the second threshold",
+      "pu_count": 4.999,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "2.00"
+    },
+    {
+      "case": "the second price from the second threshold on",
+      "pu_count": 5,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "a fractional count past the second threshold",
+      "pu_count": 5.5,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "the third price from the third threshold on",
+      "pu_count": 10,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.60"
+    },
+    {
+      "case": "the third price past the third threshold",
+      "pu_count": 12,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.60"
+    },
+    {
+      "case": "a higher tier without a price falls back to the next lower one",
+      "pu_count": 12,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": null },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "a higher tier priced 0 falls back to the next lower one",
+      "pu_count": 12,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "0.00" },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "without a higher price, the base price at any count",
+      "pu_count": 12,
+      "prices": { "price_1": "2.00", "price_2": "0.00", "price_3": null },
+      "tiers": [1, 5, 10],
+      "expected": "2.00"
+    },
+    {
+      "case": "a missing base price counts as 0",
+      "pu_count": 1,
+      "prices": { "price_1": null, "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "0"
+    },
+    {
+      "case": "without tiers, the base price at any count",
+      "pu_count": 100,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [],
+      "expected": "2.00"
+    },
+    {
+      "case": "a single tier never escalates",
+      "pu_count": 100,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1],
+      "expected": "2.00"
+    },
+    {
+      "case": "two tiers never reach the third price",
+      "pu_count": 100,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5],
+      "expected": "1.80"
+    },
+    {
+      "case": "a tier past the third is ignored",
+      "pu_count": 25,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10, 20],
+      "expected": "1.60"
+    },
+    {
+      "case": "the base price even below the first threshold",
+      "pu_count": 1,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [3, 5, 10],
+      "expected": "2.00"
+    },
+    {
+      "case": "the third threshold is checked first, whatever the order",
+      "pu_count": 6,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 10, 5],
+      "expected": "1.60"
+    },
+    {
+      "case": "a second tier left empty is reached by every count",
+      "pu_count": 0,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, null, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "a third tier left empty is reached by every count",
+      "pu_count": 1,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, null],
+      "expected": "1.60"
+    },
+    {
+      "case": "three tiers from 1, 3 and 5 PU: 2 PU",
+      "pu_count": 2,
+      "prices": { "price_1": "1.50", "price_2": "1.20", "price_3": "1.00" },
+      "tiers": [1, 3, 5],
+      "expected": "1.50"
+    },
+    {
+      "case": "three tiers from 1, 3 and 5 PU: 3 PU",
+      "pu_count": 3,
+      "prices": { "price_1": "1.50", "price_2": "1.20", "price_3": "1.00" },
+      "tiers": [1, 3, 5],
+      "expected": "1.20"
+    },
+    {
+      "case": "three tiers from 1, 3 and 5 PU: 4 PU",
+      "pu_count": 4,
+      "prices": { "price_1": "1.50", "price_2": "1.20", "price_3": "1.00" },
+      "tiers": [1, 3, 5],
+      "expected": "1.20"
+    },
+    {
+      "case": "three tiers from 1, 3 and 5 PU: 5 PU",
+      "pu_count": 5,
+      "prices": { "price_1": "1.50", "price_2": "1.20", "price_3": "1.00" },
+      "tiers": [1, 3, 5],
+      "expected": "1.00"
+    },
+    {
+      "case": "three tiers from 1, 3 and 5 PU: 100 PU",
+      "pu_count": 100,
+      "prices": { "price_1": "1.50", "price_2": "1.20", "price_3": "1.00" },
+      "tiers": [1, 3, 5],
+      "expected": "1.00"
+    },
+    {
+      "case": "three tiers from 1, 3 and 5 PU: 10 PU with both higher prices 0",
+      "pu_count": 10,
+      "prices": { "price_1": "1.50", "price_2": "0", "price_3": "0" },
+      "tiers": [1, 3, 5],
+      "expected": "1.50"
+    }
+  ],
+  "pick_tier_price_from_amount": [
+    {
+      "case": "the amount is converted to PU before picking",
+      "amount": "10.000",
+      "amount_per_pu": "2.000",
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "an amount just short of a threshold's worth of PU",
+      "amount": "9.998",
+      "amount_per_pu": "2.000",
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "2.00"
+    },
+    {
+      "case": "the third price with a PU size other than 1",
+      "amount": "30.000",
+      "amount_per_pu": "3.000",
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.60"
+    },
+    {
+      "case": "a fractional amount",
+      "amount": "5.5",
+      "amount_per_pu": "1.000",
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "a fractional PU size",
+      "amount": "7.500",
+      "amount_per_pu": "2.500",
+      "prices": { "price_1": "1.50", "price_2": "1.20", "price_3": "1.00" },
+      "tiers": [1, 3, 5],
+      "expected": "1.20"
+    },
+    {
+      "case": "a missing PU size counts as 1",
+      "amount": "5",
+      "amount_per_pu": null,
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "a zero PU size counts as 1",
+      "amount": "5",
+      "amount_per_pu": "0.000",
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "1.80"
+    },
+    {
+      "case": "a missing amount counts as 0",
+      "amount": null,
+      "amount_per_pu": "2.000",
+      "prices": { "price_1": "2.00", "price_2": "1.80", "price_3": "1.60" },
+      "tiers": [1, 5, 10],
+      "expected": "2.00"
+    }
+  ]
+}

@@ -71,6 +71,15 @@ push_offsite() {
 }
 
 # ── DB backup ──────────────────────────────────────────────────
+# Succeeds when the dump $1 decrypts with the current key, decompresses, and
+# ends with pg_dump's completion trailer (absent on a truncated dump).
+dump_is_complete() {
+    gpg --batch --quiet --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" "$1" 2>/dev/null \
+        | gunzip \
+        | tail -n 5 \
+        | grep -q 'PostgreSQL database dump complete'
+}
+
 # $1, optional, labels the file: "predeploy" writes
 # <db>_predeploy_<timestamp>.sql.gz.gpg. The GFS prune reads only the
 # timestamp, so a labelled dump is retained like any other.
@@ -116,10 +125,7 @@ do_backup() {
         return 1
     fi
 
-    if ! gpg --batch --quiet --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" "$FILEPATH" 2>/dev/null \
-          | gunzip \
-          | tail -n 5 \
-          | grep -q 'PostgreSQL database dump complete'; then
+    if ! dump_is_complete "$FILEPATH"; then
         rm -f "$FILEPATH"
         echo "[$(date)] ERROR: ${FILENAME} failed integrity/completion check; discarding" >&2
         return 1
@@ -150,21 +156,54 @@ ledger_sql() {
     ))::text FROM \"$1\".gdpr_deletionlog t"
 }
 
+# Prints the ledger's lines and those of the file $1, sorted and without
+# repeats.
+merged_ledger() {
+    {
+        if [ -f "$LEDGER_FILE" ]; then
+            cat "$LEDGER_FILE"
+        fi
+        cat "$1"
+    } | sort -u
+}
+
 export_gdpr_ledger() {
     rows="${LEDGER_FILE}.rows"
+    part="${LEDGER_FILE}.part"
     merged="${LEDGER_FILE}.new"
-    : > "$rows"
+    # Nothing here relies on set -e, which the callers that carry on after a
+    # failed export (export_gdpr_ledger || true) turn off. A write a full disk
+    # cut short must never replace the ledger: its copy goes off-host too, and
+    # the entries only the ledger still holds would be lost. ``true``, not
+    # ``:``: a failed redirect on that special built-in ends the whole script.
+    if ! true > "$rows"; then
+        echo "[$(date)] ERROR: GDPR ledger: cannot write ${rows}; the ledger stays as it is" >&2
+        return 1
+    fi
     schemas=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -At \
         -c "SELECT schema_name FROM public.tenants_tenant WHERE schema_name <> 'public' ORDER BY schema_name") \
         || { echo "[$(date)] ERROR: GDPR ledger: cannot list tenant schemas" >&2; rm -f "$rows"; return 1; }
     for schema in $schemas; do
-        # UTC, so a timestamp prints the same way on every run.
+        # UTC, so a timestamp prints the same way on every run. A psql that
+        # fails may have printed part of a line, so a schema joins the rows
+        # only once it has been read in full.
         if ! PGTZ=UTC psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -At \
-                -v ON_ERROR_STOP=1 -c "$(ledger_sql "$schema")" >> "$rows"; then
+                -v ON_ERROR_STOP=1 -c "$(ledger_sql "$schema")" > "$part"; then
             echo "[$(date)] WARN: GDPR ledger: could not read ${schema}.gdpr_deletionlog; its new entries wait for the next run" >&2
+        elif ! cat "$part" >> "$rows"; then
+            echo "[$(date)] ERROR: GDPR ledger: cannot write ${rows}; the ledger stays as it is" >&2
+            rm -f "$rows" "$part"
+            return 1
         fi
     done
-    { [ -f "$LEDGER_FILE" ] && cat "$LEDGER_FILE"; cat "$rows"; } | sort -u > "$merged"
+    rm -f "$part"
+    # A merge the disk cut short fails, or differs from a second one that
+    # writes nothing.
+    if ! merged_ledger "$rows" > "$merged" || ! merged_ledger "$rows" | cmp -s - "$merged"; then
+        echo "[$(date)] ERROR: GDPR ledger: cannot write the merged ledger; the ledger stays as it is" >&2
+        rm -f "$rows" "$merged"
+        return 1
+    fi
     rm -f "$rows"
     if [ -f "$LEDGER_FILE" ] && cmp -s "$merged" "$LEDGER_FILE"; then
         rm -f "$merged"
@@ -173,7 +212,11 @@ export_gdpr_ledger() {
     # 644 like the dumps: the host user reads it for the restore drill, and it
     # holds ids and hashes, no names or addresses.
     chmod 644 "$merged"
-    mv "$merged" "$LEDGER_FILE"
+    if ! mv "$merged" "$LEDGER_FILE"; then
+        echo "[$(date)] ERROR: GDPR ledger: cannot replace ${LEDGER_FILE}; it stays as it is" >&2
+        rm -f "$merged"
+        return 1
+    fi
     echo "[$(date)] GDPR deletion ledger updated: $(wc -l < "$LEDGER_FILE") entries"
     if encrypt_gpg "${LEDGER_FILE}.gpg" < "$LEDGER_FILE"; then
         chmod 644 "${LEDGER_FILE}.gpg"
@@ -184,6 +227,44 @@ export_gdpr_ledger() {
 }
 
 # ── Media backup ───────────────────────────────────────────────
+# Succeeds when the archive $1 decrypts with the current key, decompresses,
+# and lists cleanly.
+archive_is_complete() {
+    gpg --batch --quiet --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" "$1" 2>/dev/null \
+        | gunzip \
+        | tar -tf - >/dev/null 2>&1
+}
+
+# Succeeds when the backup filesystem has room for a new media archive: 1.5
+# times the size of the newest one free, or of the media tree while there is
+# none. That filesystem usually holds the database volume too, and an archive
+# that outgrows it fails only once the disk is full.
+media_space_ok() {
+    newest=""
+    for archive in "${BACKUP_DIR}/${DB_NAME}"_media_*.tar.gz.gpg; do
+        if [ -f "$archive" ]; then
+            newest="$archive"
+        fi
+    done
+    reference_kb=$(du -sk "${newest:-$MEDIA_DIR}" 2>/dev/null | cut -f1)
+    free_kb=$(df -Pk "$BACKUP_DIR" 2>/dev/null | awk 'NR == 2 { print $4 }')
+    # A malformed operand in the arithmetic below would end the whole script,
+    # even when the caller handles a failure.
+    for kb in "$reference_kb" "$free_kb"; do
+        case "$kb" in
+            '' | *[!0-9]*)
+                echo "[$(date)] WARN: cannot measure the room for a media archive on ${BACKUP_DIR}; writing it unchecked" >&2
+                return 0
+                ;;
+        esac
+    done
+    needed_kb=$((reference_kb * 3 / 2))
+    if [ "$free_kb" -lt "$needed_kb" ]; then
+        echo "[$(date)] ERROR: ${free_kb} KiB free on ${BACKUP_DIR}, a media archive needs about ${needed_kb} KiB; not writing one" >&2
+        return 1
+    fi
+}
+
 do_media_backup() {
     # Media contains PII (invoice PDFs etc.) → encrypt with the same AES256 key.
     # Skipped when the media dir is absent or empty (nothing to protect yet).
@@ -191,6 +272,7 @@ do_media_backup() {
         echo "[$(date)] No media at ${MEDIA_DIR}; skipping media backup"
         return 0
     fi
+    media_space_ok || return 1
 
     TIMESTAMP=$(date +%Y%m%d_%H%M%S)
     FILENAME="${DB_NAME}_media_${TIMESTAMP}.tar.gz.gpg"
@@ -209,10 +291,7 @@ do_media_backup() {
     # readability for the unprivileged restore drill.
     chmod 644 "$FILEPATH"
 
-    # Verify the archive decrypts, decompresses, and lists cleanly.
-    if ! gpg --batch --quiet --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" "$FILEPATH" 2>/dev/null \
-          | gunzip \
-          | tar -tf - >/dev/null 2>&1; then
+    if ! archive_is_complete "$FILEPATH"; then
         rm -f "$FILEPATH"
         echo "[$(date)] ERROR: ${FILENAME} failed integrity check; discarding" >&2
         return 1
@@ -221,6 +300,40 @@ do_media_backup() {
     SIZE=$(du -h "$FILEPATH" | cut -f1)
     echo "[$(date)] Media backup complete + verified: ${FILENAME} (${SIZE})"
     push_offsite "$FILEPATH"
+}
+
+# ── Scheduled startup ──────────────────────────────────────────
+# After a host reboot the Docker daemon starts the containers on its own,
+# without compose's depends_on, so the database may still be starting. Fails
+# once it has not accepted connections for about a minute.
+wait_for_db() {
+    attempts=0
+    until pg_isready -q -t 2 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME"; do
+        attempts=$((attempts + 1))
+        if [ "$attempts" -ge 30 ]; then
+            return 1
+        fi
+        sleep 2
+    done
+}
+
+# Prints a backup in BACKUP_DIR that matches the name pattern $1, was written
+# in the last 20 hours and passes the check $2; fails when there is none. The
+# check decrypts it with the current key, so a file a killed run left behind
+# does not count, and neither does one encrypted with a key that has since
+# been rotated: a container started with a new key backs up with it at once.
+recent_backup() {
+    while IFS= read -r candidate; do
+        [ -n "$candidate" ] || continue
+        if "$2" "$candidate" </dev/null; then
+            echo "$candidate"
+            return 0
+        fi
+        echo "[$(date)] WARN: $(basename "$candidate") fails verification (truncated, or encrypted with another key); not counting it as a recent backup" >&2
+    done <<EOF
+$(find "$BACKUP_DIR" -maxdepth 1 -type f -name "$1" -mmin -1200)
+EOF
+    return 1
 }
 
 # ── Entrypoint ─────────────────────────────────────────────────
@@ -261,10 +374,29 @@ case "${1:-scheduled}" in
         do_backup predeploy
         ;;
     scheduled)
-        # Run one backup on startup, then schedule via cron
-        do_backup
-        do_media_backup
+        # One backup on startup, then cron. No startup step may end the
+        # script: the restart policy would rerun it in a loop, a full dump on
+        # every pass, and crond, with the nightly backup and the ledger export,
+        # would never start. The scheduled run retries a failed step instead.
+        wait_for_db \
+            || echo "[$(date)] WARN: ${DB_HOST}:${DB_PORT} still refuses connections; trying the startup backup anyway" >&2
+        ok=1
+        # A restart or a deploy adds no copy of what a backup from the last 20
+        # hours already holds; a deploy's predeploy dump counts as one.
+        if recent=$(recent_backup "${DB_NAME}_*.sql.gz.gpg" dump_is_complete); then
+            echo "[$(date)] $(basename "$recent") is recent and verifies; no startup DB dump"
+        else
+            do_backup || ok=0
+        fi
+        if recent=$(recent_backup "${DB_NAME}_media_*.tar.gz.gpg" archive_is_complete); then
+            echo "[$(date)] $(basename "$recent") is recent and verifies; no startup media archive"
+        else
+            do_media_backup || ok=0
+        fi
         export_gdpr_ledger || true
+        if [ "$ok" -eq 0 ]; then
+            echo "[$(date)] ERROR: startup backup FAILED (see above); starting cron anyway, the run at '${SCHEDULE}' tries again" >&2
+        fi
         echo "${SCHEDULE} ${SELF} now >> /var/log/backup.log 2>&1" > /etc/crontabs/root
         # The ledger every 10 minutes, so an erasure reaches it (and its
         # off-host copy) long before the next nightly backup.

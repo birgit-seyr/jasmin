@@ -51,6 +51,10 @@ interface ZUGFeRDInput {
 
 function escapeXml(str: string): string {
   return str
+    // Drop what XML 1.0 forbids even escaped — the C0 controls but tab, line
+    // feed and carriage return, U+FFFE / U+FFFF and unpaired surrogates. The
+    // document would not parse, and the upload refuses an e-invoice that doesn't.
+    .replace(/[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")

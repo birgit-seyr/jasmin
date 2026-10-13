@@ -114,11 +114,17 @@ MATRIX: list[tuple[str, str, str, str]] = [
     ("/api/notifications/email-templates/", "get", "office", "deny"),
     ("/api/notifications/email-templates/", "get", "management", "deny"),
     ("/api/notifications/email-templates/", "get", "admin", "ok"),
-    # ------- Crate contents (StaffOrCustomer read, OfficeOrCustomer write) -------
+    # ------- Crate contents (StaffOrCustomer read, Office write) -------
     # "4xx": the list needs query params the harness does not send.
     ("/api/commissioning/crate_contents/", "get", "customer", "4xx"),
     ("/api/commissioning/crate_contents/", "get", "staff", "4xx"),
     ("/api/commissioning/crate_contents/", "get", "member", "deny"),
+    # A crate line write carries its price and rabatt, so a customer reads their
+    # own lines but never writes them. Office "4xx": the empty body is refused
+    # after the permission layer let it through.
+    ("/api/commissioning/crate_contents/", "post", "customer", "deny"),
+    ("/api/commissioning/crate_contents/", "post", "staff", "deny"),
+    ("/api/commissioning/crate_contents/", "post", "office", "4xx"),
     # ------- Read-only GET @actions declared in ``read_actions`` -------
     # A custom @action takes ``write_permission`` unless the viewset names it
     # in ``read_actions``. These all sit on viewsets whose read gate is

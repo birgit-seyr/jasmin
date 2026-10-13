@@ -47,6 +47,8 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+# The "authz" logger routes to the security log.
+_security_log = logging.getLogger("authz")
 
 # Mapping: year-based setting field → (model import path, document type label)
 YEAR_BASED_SETTING_TO_MODEL: dict[str, tuple[str, str]] = {
@@ -669,10 +671,13 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
     Manage the tenant's email sending configuration.
     Credentials are write-only — submitted once, encrypted at rest, never returned.
 
-    Office-only on both read and write: SMTP credentials are sensitive
-    even when individual password fields are encrypted, and the ``test/``
-    @action sends an email to any caller-supplied address (spam vector
-    if open to every authenticated tenant user).
+    Office may read it: office pages disable invitations and waiting-list
+    offers while the tenant has no SMTP host of its own. Only an admin may
+    change it or send through it (``save/``, ``test/``). Whoever controls the
+    SMTP server reads every message sent through it, the password-reset links
+    of admin accounts included, and receives the stored SMTP password when
+    Django logs in — an office account able to repoint the host could take
+    over an admin account.
 
     The config is a per-tenant singleton, so the surface is deliberately
     collection-level only: ``list`` (returns THE config object, not an
@@ -683,7 +688,7 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
     """
 
     read_permission = IsOffice
-    write_permission = IsOffice
+    write_permission = IsAdmin
 
     serializer_class = TenantEmailConfigSerializer
 
@@ -752,28 +757,48 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
         partial = request.method == "PATCH"
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        self._enforce_step_up_for_sensitive_changes(request, instance, serializer)
+        changed_fields = self._changed_fields(instance, serializer.validated_data)
+        self._enforce_step_up_for_sensitive_changes(request, changed_fields)
         serializer.save()
+        if changed_fields:
+            # The config lives in the public schema, out of django-auditlog's
+            # reach, so this line is the only trail of who changed it: the
+            # field names, never their values. WARNING, because the security
+            # log takes nothing below it.
+            _security_log.warning(
+                "email_config.updated actor=%s tenant=%s ip=%s fields=%s",
+                auth_user(request).id,
+                request_tenant(request).schema_name,
+                client_ip(request),
+                ",".join(changed_fields),
+            )
         return Response(serializer.data)
 
+    @staticmethod
+    def _changed_fields(
+        instance: TenantEmailConfig, validated_data: dict[str, Any]
+    ) -> tuple[str, ...]:
+        """The sorted names of the fields a save changes. The password is
+        write-only, so the form never echoes it back: a non-blank one always
+        counts as a change, and a blank one leaves the stored one as it is."""
+        return tuple(
+            sorted(
+                field
+                for field, value in validated_data.items()
+                if (
+                    bool(value)
+                    if field == "smtp_password"
+                    else value != getattr(instance, field)
+                )
+            )
+        )
+
     def _enforce_step_up_for_sensitive_changes(
-        self, request: Request, instance: TenantEmailConfig, serializer: Any
+        self, request: Request, changed_fields: tuple[str, ...]
     ) -> None:
         """Require fresh step-up auth when the save changes where mail goes
-        (``_STEP_UP_SENSITIVE_FIELDS``). A non-blank password always counts
-        as a change, since the stored one can't be compared; a blank one
-        leaves it as it is."""
-        changed = [
-            field
-            for field, value in serializer.validated_data.items()
-            if field in self._STEP_UP_SENSITIVE_FIELDS
-            and (
-                bool(value)
-                if field == "smtp_password"
-                else value != getattr(instance, field)
-            )
-        ]
-        if changed:
+        (``_STEP_UP_SENSITIVE_FIELDS``)."""
+        if not set(changed_fields).isdisjoint(self._STEP_UP_SENSITIVE_FIELDS):
             from apps.accounts.permissions import RequiresStepUp
 
             # Raises StepUpRequired (``auth.step_up_required``) when the token
@@ -834,14 +859,14 @@ class TenantEmailConfigViewSet(RolePermissionsMixin, viewsets.GenericViewSet):
                 "from-address before sending a test."
             )
 
-        # A compromised office account must not be able to use the
-        # tenant's SMTP as a spam relay: test sends only go to the
-        # requesting user's own email or the tenant's contact address.
-        # ``from_email`` / ``reply_to_email`` are deliberately NOT in
-        # this set — they are writable by the same office role via
-        # ``save_config``, so allowing them would reduce the lock to
-        # a two-request bypass (PATCH reply_to, then POST test).
-        # ``tenant.email`` requires IsAdmin to change, so it stays.
+        # A hijacked session must not be able to use the tenant's SMTP as
+        # a spam relay: test sends only go to the requesting user's own
+        # email or the tenant's contact address. ``from_email`` /
+        # ``reply_to_email`` are deliberately NOT in this set — the same
+        # caller rewrites them via ``save_config``, so allowing them would
+        # reduce the lock to a two-request bypass (PATCH reply_to, then
+        # POST test). The contact address is the tenant's published one,
+        # on its documents and legal notice, not a field of this config.
         allowed_recipients = {
             address.strip().lower()
             for address in (

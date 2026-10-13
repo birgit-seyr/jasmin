@@ -5,11 +5,17 @@ request through when it carries a valid, unexpired ``?st=`` capability
 token. The storage backend mints those tokens in ``.url()``, so the two
 halves are tested together here: what the storage signs, the view must
 accept — and nothing else.
+
+Only PDFs and pictures may render in the browser; every other file goes out
+as an attachment, and the gateway adds a CSP sandbox to it. The view and the
+nginx configs each keep that list, so the last class holds them together.
 """
 
 from __future__ import annotations
 
-from urllib.parse import parse_qs, unquote, urlsplit
+import re
+from pathlib import Path
+from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 import pytest
 import time_machine
@@ -25,6 +31,32 @@ from core.protected_media import (
 )
 
 pytestmark = pytest.mark.django_db
+
+# This file lives at apps/shared/tenants/tests/<file>, so django-core is four
+# up and the repo root two above that.
+DJANGO_CORE = Path(__file__).resolve().parents[4]
+NGINX_DIR = DJANGO_CORE.parent.parent / "nginx"
+
+INLINE_MEDIA = [
+    "invoicesresellers/RE-2026-001.pdf",
+    "consents/privacy-v3.PDF",
+    "logos/logo.png",
+    "share_pictures/carrots.jpg",
+    "avatars/me.JPEG",
+    "share_pictures/beans.gif",
+    "share_pictures/kale.webp",
+    "share_pictures/tomato.xml.png",
+]
+ATTACHMENT_MEDIA = [
+    "invoicesresellers/RE-2026-001.xml",
+    "billing_runs/billing_run_12.xml",
+    "share_imports/2026/10/shares.csv",
+    "logos/logo.svg",
+    "share_pictures/page.html",
+    "share_pictures/page.xhtml",
+    "invoicesresellers/RE-2026-001.pdf.xml",
+    "share_imports/README",
+]
 
 
 class TestMediaToken:
@@ -148,6 +180,28 @@ class TestProtectedMediaView:
         # the type from the file extension at the internal location.
         assert "Content-Type" not in response.headers
 
+    @override_settings(DEBUG=False)
+    @pytest.mark.parametrize("name", INLINE_MEDIA)
+    def test_pdfs_and_pictures_are_left_to_render_inline(self, tenant, name):
+        path = f"test_tenants/{name}"
+        response = self._get(path, token=sign_media_path(path))
+        assert response.status_code == 200
+        assert "Content-Disposition" not in response.headers
+
+    @override_settings(DEBUG=False)
+    @pytest.mark.parametrize("name", ATTACHMENT_MEDIA)
+    def test_other_files_are_handed_off_as_attachments(self, tenant, name):
+        # Opened in a tab, an XHTML-namespaced XML or an SVG would run script
+        # on the tenant origin. nginx carries the header across the redirect;
+        # without a filename, the name an ``<a download>`` link asks for wins.
+        path = f"test_tenants/{name}"
+        response = self._get(path, token=sign_media_path(path))
+        assert response.status_code == 200
+        assert response.headers["X-Accel-Redirect"] == quote(
+            "/_protected_media/" + path
+        )
+        assert response.headers["Content-Disposition"] == "attachment"
+
     def test_debug_streams_the_file_directly(self, tenant, tmp_path, settings):
         settings.DEBUG = True
         settings.MEDIA_ROOT = tmp_path
@@ -159,6 +213,22 @@ class TestProtectedMediaView:
         response = self._get(path, token=sign_media_path(path))
         assert response.status_code == 200
         assert b"".join(response.streaming_content) == b"%PDF-1.7 test"
+        assert response.headers["Content-Disposition"].startswith("inline")
+
+    def test_debug_streams_other_files_as_attachments(self, tenant, tmp_path, settings):
+        settings.DEBUG = True
+        settings.MEDIA_ROOT = tmp_path
+        (tmp_path / "test_tenants").mkdir()
+        file_path = tmp_path / "test_tenants" / "RE-2026-001.xml"
+        file_path.write_bytes(b"<Invoice/>")
+
+        path = "test_tenants/RE-2026-001.xml"
+        response = self._get(path, token=sign_media_path(path))
+        assert response.status_code == 200
+        assert b"".join(response.streaming_content) == b"<Invoice/>"
+        # Replaces FileResponse's own ``inline; filename="..."``.
+        assert response.headers["Content-Disposition"] == "attachment"
+        response.close()
 
     def test_debug_missing_file_is_404(self, tenant, tmp_path, settings):
         settings.DEBUG = True
@@ -166,3 +236,109 @@ class TestProtectedMediaView:
         path = "test_tenants/gone.pdf"
         response = self._get(path, token=sign_media_path(path))
         assert response.status_code == 404
+
+
+_COMMENT = re.compile(r"#.*$", re.MULTILINE)
+_MAP_ENTRY = re.compile(r'^\s*(\S+)\s+("[^"]*"|\S+)\s*;\s*$', re.MULTILINE)
+
+
+def _nginx_config(name: str) -> str:
+    """``nginx/<name>`` without its comments."""
+    path = NGINX_DIR / name
+    if not path.is_file():
+        pytest.skip(f"nginx/{name} is not in this checkout")
+    return _COMMENT.sub("", path.read_text(encoding="utf-8"))
+
+
+def _block_bodies(config: str, opener: str) -> list[str]:
+    """The bodies of every ``<opener> { ... }`` block; none of these nest."""
+    return re.findall(opener + r"\s*\{([^{}]*)\}", config)
+
+
+def _directives(body: str) -> set[str]:
+    return {" ".join(part.split()) + ";" for part in body.split(";") if part.strip()}
+
+
+def _map(config: str, source: str, name: str) -> dict[str, str]:
+    bodies = _block_bodies(config, rf"\bmap\s+{re.escape(source)}\s+{re.escape(name)}")
+    assert len(bodies) == 1, f"expected one `map {source} {name}` block"
+    return {key: value.strip('"') for key, value in _MAP_ENTRY.findall(bodies[0])}
+
+
+def _map_value(entries: dict[str, str], value: str) -> str:
+    """What nginx resolves ``value`` to: the first matching regex, else the default."""
+    for key, result in entries.items():
+        if key.startswith("~*"):
+            matched = re.search(key[2:], value, re.IGNORECASE)
+        elif key.startswith("~"):
+            matched = re.search(key[1:], value)
+        else:
+            continue
+        if matched:
+            return result
+    return entries["default"]
+
+
+class TestGatewayMediaHeaders:
+    """nginx's half: nginx/nginx.conf.template in production, nginx.conf.local
+    in dev. nginx does not carry a CSP header across the X-Accel-Redirect, so
+    the sandbox exists only in these configs."""
+
+    PROTECTED_MEDIA_DIRECTIVES = {
+        "add_header Content-Security-Policy $protected_media_csp always;",
+        "add_header Content-Disposition $protected_media_disposition;",
+        'add_header Cache-Control "private, max-age=2592000";',
+        'add_header X-Content-Type-Options "nosniff";',
+        # A location with an add_header of its own inherits none from the server.
+        "include /etc/nginx/security_headers.conf;",
+    }
+
+    def test_every_protected_media_location_sends_the_headers(self):
+        locations = _block_bodies(
+            _nginx_config("nginx.conf.template"), r"location\s+/_protected_media/"
+        )
+        assert len(locations) == 2, "expected the tenant and the super-admin block"
+        for body in locations:
+            assert self.PROTECTED_MEDIA_DIRECTIVES <= _directives(body)
+
+    def test_the_gateway_disposition_only_stands_in_for_the_backend(self):
+        # Django sends the disposition itself, and a second header line would
+        # make the response invalid.
+        entries = _map(
+            _nginx_config("nginx.conf.template"),
+            "$upstream_http_content_disposition",
+            "$protected_media_disposition",
+        )
+        assert entries == {'""': "$protected_media_attachment", "default": ""}
+
+    def test_the_dev_gateway_sandboxes_media(self):
+        locations = _block_bodies(
+            _nginx_config("nginx.conf.local"), r"location\s+/media/"
+        )
+        assert len(locations) == 1
+        assert (
+            "add_header Content-Security-Policy $protected_media_csp always;"
+            in _directives(locations[0])
+        )
+
+    @override_settings(DEBUG=False)
+    @pytest.mark.parametrize("name", INLINE_MEDIA + ATTACHMENT_MEDIA)
+    def test_the_gateways_and_the_view_agree_on_what_renders_inline(self, tenant, name):
+        template = _nginx_config("nginx.conf.template")
+        csp = _map(template, "$uri", "$protected_media_csp")
+        attachment = _map(template, "$uri", "$protected_media_attachment")
+        dev_csp = _map(
+            _nginx_config("nginx.conf.local"), "$uri", "$protected_media_csp"
+        )
+
+        path = f"test_tenants/{name}"
+        request = RequestFactory().get("/media/" + path, {"st": sign_media_path(path)})
+        response = protected_media_view(request, path=path)
+        inline = "Content-Disposition" not in response.headers
+
+        sandbox = "" if inline else "sandbox; default-src 'none'"
+        assert _map_value(csp, f"/_protected_media/{path}") == sandbox
+        assert _map_value(dev_csp, f"/media/{path}") == sandbox
+        assert _map_value(attachment, f"/_protected_media/{path}") == (
+            "" if inline else "attachment"
+        )

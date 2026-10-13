@@ -77,7 +77,10 @@ fails, and `scripts/update.sh` cannot be used for this one update.
 1. Save the live allowlist:
    `cp nginx/super_admin_allowed_ips.conf ~/super_admin_allowed_ips.conf.live`
 2. Drop the local edit: `git checkout -- nginx/super_admin_allowed_ips.conf`
-3. Pull: `git pull --ff-only`
+3. Pull only a commit CI passed — `scripts/update.sh` asks GitHub for you,
+   this path doesn't: `git fetch origin`, find `git rev-parse origin/main` among
+   the CI runs on GitHub (Actions → CI) and check it is green, then
+   `git merge --ff-only <that sha>`.
 4. Put the saved list in the new place:
    `cp ~/super_admin_allowed_ips.conf.live nginx/super_admin_allowlist/super_admin_allowed_ips.conf`
 5. Check that its last directive is `deny all;`:
@@ -236,7 +239,10 @@ the tree already, so enabling GlitchTip is safe from that side.
    make it the default for new monitors.
 4. Create the monitors:
    - one HTTP(s) monitor per tenant host, `https://<tenant>.<domain>/`;
-   - an HTTP(s) monitor on `https://<domain>/health/` (expects 200);
+   - an HTTP(s) monitor on `https://<domain>/health/ready/` (expects 200). It
+     answers 200 only while the backend reaches the database and Redis takes
+     writes; `/health/`, the containers' liveness check, stays 200 through an
+     outage of either, so a monitor on it would miss both;
    - certificate expiry: enable "Certificate Expiry Notification" on the HTTPS
      monitors (one per certificate is enough — the wildcard covers the rest);
    - a Push monitor "backup", heartbeat interval 90000 s (25 h);
@@ -255,8 +261,8 @@ the tree already, so enabling GlitchTip is safe from that side.
    `docker compose logs --tail=50 backup` — no "heartbeat to the backup monitor
    failed" warning.
 7. Add at least one check from another machine (a free external uptime service
-   or a second VM) on `https://<domain>/health/`: Kuma runs on this VM and
-   cannot report the whole host going down.
+   or a second VM) on `https://<domain>/health/ready/`: Kuma runs on this VM
+   and cannot report the whole host going down.
 
 ### GlitchTip
 

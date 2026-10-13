@@ -240,6 +240,25 @@ describe("ZUGFeRD / EN 16931 structural conformance", () => {
     );
   });
 
+  it("drops characters XML forbids, so a name carrying one still parses", () => {
+    // The upload refuses an e-invoice that does not parse, and no escape makes
+    // a control character or U+FFFF legal XML.
+    const xml = generateZUGFeRDXML(
+      {
+        ...sampleInput,
+        invoice: { ...sampleInvoice, reseller_name: "Bio\u000BMarkt\u0000 Wien\uFFFF" },
+      },
+      sampleBankDetails,
+      sampleTenant,
+      t,
+    );
+
+    const buyer = findFirst(parse(xml), "ram:BuyerTradeParty");
+    expect(buyer!.getElementsByTagName("ram:Name")[0]?.textContent).toBe(
+      "BioMarkt Wien",
+    );
+  });
+
   it("BG-25 at least one IncludedSupplyChainTradeLineItem exists", () => {
     const lines = findAll(doc, "ram:IncludedSupplyChainTradeLineItem");
     expect(lines.length).toBeGreaterThanOrEqual(1);

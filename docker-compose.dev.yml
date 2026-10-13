@@ -192,15 +192,16 @@ services:
     # Self-hosted uptime monitor. UI on http://localhost:3001.
     # First-load asks you to set an admin username + password.
     #
-    # Two ways to point a monitor at the backend depending on where
-    # Django is running:
+    # Two ways to point a monitor at the backend's readiness probe (200 only
+    # while the database and the cache work; /health/ is liveness and stays
+    # 200 through an outage of either), depending on where Django is running:
     #
     #   - Django inside docker (full ``up``):
-    #         http://backend:8000/health/
+    #         http://backend:8000/health/ready/
     #     (resolves over the ``jasmin-dev`` docker network.)
     #
     #   - Django on the host (``poetry run runserver``):
-    #         http://host.docker.internal:8000/health/
+    #         http://host.docker.internal:8000/health/ready/
     #     ``host.docker.internal`` is Docker Desktop's built-in alias
     #     for the host machine. The ``extra_hosts`` line below adds the
     #     same mapping for native Linux (Docker Desktop already

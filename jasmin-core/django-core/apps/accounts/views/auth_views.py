@@ -37,6 +37,7 @@ from apps.shared.auth_cookies import (
 )
 from apps.shared.deferred_email import schedule_deferred_email
 from apps.shared.request_utils import auth_user, client_ip, request_tenant
+from apps.shared.same_origin import require_same_origin
 from core.serializers import ErrorResponseSerializer
 from core.throttling import set_throttle_scope
 
@@ -126,6 +127,7 @@ logger = logging.getLogger("authentication")
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@require_same_origin
 def user_login_view(request):
     serializer = LoginRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -223,6 +225,7 @@ set_throttle_scope(user_login_view, "login")
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@require_same_origin
 def user_token_refresh_view(request):
     refresh_token = get_tenant_refresh_token(request)
     if not refresh_token:
@@ -263,6 +266,7 @@ def user_token_refresh_view(request):
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@require_same_origin
 def user_logout_view(request):
     refresh_token = get_tenant_refresh_token(request)
     response = Response(
@@ -289,6 +293,7 @@ def user_logout_view(request):
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@require_same_origin
 def user_logout_all_view(request):
     revoke_all_sessions(request.user)
     response = Response(

@@ -8,6 +8,8 @@
  *   - edit-mode enter / cancel (cancel discards pending edits)
  *   - bulk save routing: POST for a new offer, PATCH (no ``unit``) for an
  *     existing order, both in one batch
+ *   - only the office's saves carry a price; the server prices a
+ *     customer's lines itself
  *   - finalized / untouched rows are skipped
  *   - success clears state + leaves edit mode; a failure keeps edit mode
  *     and the typed amounts so the reseller can retry
@@ -103,6 +105,8 @@ function makeParams(
     selectedWeek: 20,
     selectedDay: 3,
     finalTiers: [1, 3, 5],
+    // A customer: the server prices their lines.
+    setsPrice: false,
     invalidateOrders: vi.fn(),
     ...overrides,
   };
@@ -188,7 +192,7 @@ describe("edit mode", () => {
 // ── handleSaveAll — routing ─────────────────────────────────────────────────
 
 describe("handleSaveAll — create + update routing", () => {
-  it("POSTs the full create payload for a not-yet-ordered offer", async () => {
+  it("POSTs a customer's new line without a price", async () => {
     const params = makeParams();
     const { result } = renderHook(() => useCustomerOrderMutations(params));
 
@@ -199,7 +203,9 @@ describe("handleSaveAll — create + update routing", () => {
 
     expect(createMock).toHaveBeenCalledTimes(1);
     expect(updateMock).not.toHaveBeenCalled();
-    expect(createMock).toHaveBeenCalledWith({
+    const [payload] = createMock.mock.calls[0];
+    expect(payload).not.toHaveProperty("price_per_unit");
+    expect(payload).toEqual({
       offer: OFFER_ID,
       year: 2026,
       delivery_week: 20,
@@ -207,13 +213,33 @@ describe("handleSaveAll — create + update routing", () => {
       reseller: RESELLER_ID,
       // 3 (input) * 2 (amount_per_pu) = 6.000
       amount: "6.000",
+      unit: "kg",
+    });
+  });
+
+  it("POSTs the office's new line at its tier price", async () => {
+    const params = makeParams({ setsPrice: true });
+    const { result } = renderHook(() => useCustomerOrderMutations(params));
+
+    act(() => result.current.handleAmountChange(OFFER_ID, 3));
+    await act(async () => {
+      await result.current.handleSaveAll([offer]);
+    });
+
+    expect(createMock).toHaveBeenCalledWith({
+      offer: OFFER_ID,
+      year: 2026,
+      delivery_week: 20,
+      day_number: 3,
+      reseller: RESELLER_ID,
+      amount: "6.000",
       // tier-2 hit at amount=3 → price_2 = 1.20
       price_per_unit: "1.2",
       unit: "kg",
     });
   });
 
-  it("PATCHes an existing order WITHOUT a 'unit' field (server falls back to share_article.unit)", async () => {
+  it("PATCHes a customer's existing line with only its amount (no 'unit', no price)", async () => {
     const params = makeParams();
     const { result } = renderHook(() => useCustomerOrderMutations(params));
 
@@ -226,9 +252,25 @@ describe("handleSaveAll — create + update routing", () => {
     expect(createMock).not.toHaveBeenCalled();
     const [orderId, payload] = updateMock.mock.calls[0];
     expect(orderId).toBe(ORDER_CONTENT_ID);
-    expect(payload).not.toHaveProperty("unit");
     expect(payload).toEqual({
       amount: "12.000", // 6 * amount_per_pu(2)
+    });
+  });
+
+  it("PATCHes the office's existing line with its amount and tier price", async () => {
+    const params = makeParams({ setsPrice: true });
+    const { result } = renderHook(() => useCustomerOrderMutations(params));
+
+    act(() => result.current.handleAmountChange(OFFER_ID, 6));
+    await act(async () => {
+      await result.current.handleSaveAll([orderedRow]);
+    });
+
+    const [orderId, payload] = updateMock.mock.calls[0];
+    expect(orderId).toBe(ORDER_CONTENT_ID);
+    expect(payload).not.toHaveProperty("unit");
+    expect(payload).toEqual({
+      amount: "12.000",
       price_per_unit: "1", // tier-3 hit at amount=6
     });
   });

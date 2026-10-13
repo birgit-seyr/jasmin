@@ -44,7 +44,12 @@ import RichTextEditorModal from "../RichTextEditorModal";
 
 function renderEditor(
   onSave: (content: string) => void | Promise<void>,
-  props: { maxCharacters?: number } = {},
+  props: {
+    value?: string;
+    maxLines?: number;
+    maxCharacters?: number;
+    maxCharsPerLine?: number;
+  } = {},
 ) {
   const onClose = vi.fn();
   render(
@@ -66,6 +71,28 @@ async function replaceText(text: string) {
   await userEvent.clear(editor);
   await userEvent.type(editor, text);
 }
+
+// Quill's semantic HTML, which the editor saves: every space is an &nbsp;.
+const FOOTER_COLUMN_HTML =
+  "<p>Farm&nbsp;Example</p><p>Main&nbsp;Street&nbsp;1</p><p>12345&nbsp;Town</p>";
+const INSTRUCTIONS_HTML =
+  "<h2>Pick-up</h2>" +
+  "<p>Collect&nbsp;at&nbsp;the&nbsp;<strong>barn</strong>.</p>" +
+  "<p><br></p>" +
+  "<ul><li>Bring&nbsp;a&nbsp;bag</li><li>Ring&nbsp;the&nbsp;<em>bell</em></li></ul>" +
+  '<p><a href="https://example.org/map" rel="noopener noreferrer" target="_blank">Map</a>' +
+  '&nbsp;and&nbsp;<span style="color: rgb(230, 0, 0);">hours</span></p>';
+// The HTML of Quill's editing surface: plain spaces, and a list item carries
+// its type and Quill's marker span.
+const EDITING_SURFACE_HTML =
+  "<p>Collect at the barn.</p><p><br></p>" +
+  '<ol><li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>Bring a bag</li>' +
+  '<li data-list="ordered"><span class="ql-ui" contenteditable="false"></span>Ring the bell</li></ol>' +
+  "<p>Thanks!</p>";
+
+// Stored HTML comes in through the API as free text, so anything may be in it.
+const HOSTILE_HTML =
+  '<p>Hi&nbsp;there<img src="x" onerror="window.alert(1)"><stored-html-probe></stored-html-probe></p>';
 
 describe("RichTextEditorModal", () => {
   it("opens with the stored text", () => {
@@ -147,5 +174,71 @@ describe("RichTextEditorModal", () => {
     await replaceText("Far too long for the box.");
 
     expect(saveButton()).toBeDisabled();
+  });
+
+  // A line ends at a paragraph or a break, so a heading or a list counts
+  // towards the line that follows it.
+  it.each([
+    ["a footer column", FOOTER_COLUMN_HTML, 3, 35, 13],
+    ["formatted instructions", INSTRUCTIONS_HTML, 2, 64, 37],
+    ["the editing surface's HTML", EDITING_SURFACE_HTML, 2, 51, 31],
+  ])(
+    "counts the lines, characters and longest line of %s",
+    (_label, value, lines, characters, longestLine) => {
+      renderEditor(vi.fn(), {
+        value,
+        maxLines: 10,
+        maxCharacters: 500,
+        maxCharsPerLine: 100,
+      });
+
+      expect(
+        screen.getByText(`common.lines: ${lines} / 10`),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(`common.characters: ${characters} / 500`),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(`common.longest_line: ${longestLine} / 100`),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("measures stored HTML without running anything in it", () => {
+    const constructed = vi.fn();
+    customElements.define(
+      "stored-html-probe",
+      class extends HTMLElement {
+        constructor() {
+          super();
+          constructed();
+        }
+      },
+    );
+
+    renderEditor(vi.fn(), { value: HOSTILE_HTML, maxCharacters: 100 });
+
+    expect(screen.getByText("common.characters: 8 / 100")).toBeInTheDocument();
+    expect(constructed).not.toHaveBeenCalled();
+  });
+
+  it("never writes stored HTML into an element of the page", () => {
+    const setInnerHtml = vi.spyOn(Element.prototype, "innerHTML", "set");
+
+    renderEditor(vi.fn(), { value: HOSTILE_HTML, maxCharacters: 100 });
+
+    expect(screen.getByText("common.characters: 8 / 100")).toBeInTheDocument();
+    // AntD writes its CSS into the page's <style> elements this way.
+    const pageWritesOfStoredHtml = setInnerHtml.mock.calls.filter(
+      ([html], call) => {
+        const element = setInnerHtml.mock.contexts[call];
+        return (
+          html.includes("Hi&nbsp;there") &&
+          element instanceof Element &&
+          element.ownerDocument === document
+        );
+      },
+    );
+    expect(pageWritesOfStoredHtml).toEqual([]);
   });
 });

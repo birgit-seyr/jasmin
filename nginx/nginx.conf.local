@@ -42,6 +42,14 @@ http {
         ''      close;
     }
 
+    # Media other than PDFs and pictures gets a CSP sandbox, as on the
+    # production gateway (nginx.conf.template). Django sends the matching
+    # attachment disposition itself.
+    map $uri $protected_media_csp {
+        default                             "sandbox; default-src 'none'";
+        ~*\.(?:pdf|png|jpe?g|gif|webp)$     "";
+    }
+
     server {
         listen      80 default_server;
         server_name _;
@@ -86,6 +94,7 @@ http {
             proxy_pass http://jasmin_backend;
             proxy_set_header Host $http_host;
             access_log off;
+            add_header Content-Security-Policy $protected_media_csp always;
         }
 
         # ------- Vite dev server (SPA + HMR) ------------------------------

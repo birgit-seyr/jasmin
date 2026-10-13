@@ -41,9 +41,15 @@ function markerIcon(marker: DeliveryStationMapMarker): L.DivIcon {
   if (marker.selected) classes.push("jasmin-station-marker--selected");
   if (marker.disabled) classes.push("jasmin-station-marker--disabled");
   const size = marker.selected ? 24 : 20;
+  // An element, never an HTML string: Leaflet writes a string ``html`` into
+  // ``innerHTML``, and the label is a contact's name, which stays plain text
+  // only as a DOM property.
+  const markerElement = document.createElement("div");
+  markerElement.className = classes.join(" ");
+  markerElement.title = marker.label;
   return L.divIcon({
     className: "",
-    html: `<div class="${classes.join(" ")}" title="${marker.label}"></div>`,
+    html: markerElement,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -(size / 2) - 2],

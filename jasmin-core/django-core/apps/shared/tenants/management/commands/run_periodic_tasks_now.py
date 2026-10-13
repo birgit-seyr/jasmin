@@ -65,6 +65,7 @@ TASK_REGISTRY: dict[str, list[str]] = {
         "weekly_tenant_health_report",
         "prune_old_backups",
         "alert_on_stale_backups",
+        "alert_on_low_disk_space",
         "prune_old_action_rate_log",
     ],
     "apps.shared.super_admin.tasks": [

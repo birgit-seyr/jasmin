@@ -26,6 +26,7 @@ from apps.commissioning.models import (
 )
 from apps.commissioning.models.choices import PaymentCycleOptions
 from apps.commissioning.services.consent_service import ConsentService
+from apps.commissioning.services.subscription_term import effective_term_end
 from apps.commissioning.utils.iso_week_utils import share_delivery_date
 from apps.shared.money import round_money as _money
 from apps.shared.tenants.models import RateLimitedAction, Tenant, TenantSettings
@@ -236,10 +237,12 @@ class ChargeScheduleService:
         if billing is None:
             billing = _BillingConfig.for_tenant(tenant)
         cycle_choice = subscription.payment_cycle.choice
+        # The charges stop at the effective end, never past ``valid_until``: the
+        # member exit's force-end stamps ``cancelled_effective_at`` and keeps
+        # ``valid_until``.
+        term_end = min(valid_until, effective_term_end(subscription) or valid_until)
 
-        ChargeScheduleService._lock_and_unbundle_stale_planned(
-            subscription, valid_until
-        )
+        ChargeScheduleService._lock_and_unbundle_stale_planned(subscription, term_end)
 
         locked, locked_total, failed_periods = (
             ChargeScheduleService._resolve_locked_periods(subscription)
@@ -255,22 +258,29 @@ class ChargeScheduleService:
             billing_run__isnull=True,
         ).delete()
 
-        periods = list(
-            _iter_cycle_periods(subscription.valid_from, valid_until, cycle_choice)
-        )
+        # The periods run to ``valid_until`` and plan 0 after ``term_end``, so an
+        # exit before ``valid_from`` re-plans its rows instead of taking the
+        # inverted-term return above. The period holding ``term_end`` ends on it,
+        # as a truncated ``valid_until`` ends it: the unbundle above takes a row
+        # running past ``term_end`` out of every DRAFT run that bundles it.
+        periods = [
+            (
+                _Period(period.start, term_end)
+                if period.start <= term_end < period.end
+                else period
+            )
+            for period in _iter_cycle_periods(
+                subscription.valid_from, valid_until, cycle_choice
+            )
+        ]
 
         delivery_dates = ChargeScheduleService._billable_delivery_dates(
-            subscription, deliveries, valid_until, billing
+            subscription, deliveries, term_end, billing
         )
 
-        # SMOOTHED splits only the REMAINING term total (the recomputed total
-        # minus what the locked ISSUED/PAID/... rows already collected) across
-        # ONLY the still-unlocked periods, assigned by position among them.
-        # Splitting the FULL total across ALL periods (locked included) would
-        # double-count the locked amounts and break the sum==total invariant
-        # whenever any charge has already left PLANNED (over- or
-        # under-collecting the difference).
-        smoothed_unlocked: list[Decimal] = []
+        # SMOOTHED splits only the REMAINING total over the unlocked periods; the
+        # FULL total over ALL periods would double-count what locked rows hold.
+        smoothed_unlocked: dict[date, Decimal] = {}
         if billing.strategy == TenantSettings.BILLING_STRATEGY_SMOOTHED:
             smoothed_unlocked = ChargeScheduleService._smoothed_unlocked_amounts(
                 subscription, delivery_dates, periods, locked, locked_total
@@ -292,12 +302,12 @@ class ChargeScheduleService:
     # ------------------------------------------------------------------ #
     @staticmethod
     def _lock_and_unbundle_stale_planned(
-        subscription: Subscription, valid_until: date
+        subscription: Subscription, term_end: date
     ) -> None:
         """Lock this subscription's PLANNED rows and unbundle stale DRAFT rows.
 
-        Side-effecting only: takes the row lock and issues the two unbundle
-        updates. Must run before the snapshot/delete/recreate below.
+        Side-effecting only: takes the row lock and issues the unbundle update.
+        Must run before the snapshot/delete/recreate below.
         """
         # Serialize against ``BillingRunService.create_run`` on THIS
         # subscription's PLANNED charge rows before we snapshot/delete/recreate
@@ -318,36 +328,15 @@ class ChargeScheduleService:
             .values_list("pk", flat=True)
         )
 
-        # A cancellation can truncate ``valid_until`` below a PLANNED row an
-        # operator already bundled into a DRAFT run for a now-removed future
-        # period. That row sits OUTSIDE the regenerated term, so the loop below
-        # never reconciles it, and the "keep bundled rows" lock would
-        # otherwise let it reach export and SEPA-debit a cancelled period.
-        # Unbundle DRAFT-bundled PLANNED rows whose period starts after the
-        # (possibly truncated) term so the delete below drops them. Only DRAFT
-        # runs + PLANNED rows are touched — ISSUED / exported charges are never
-        # unbundled.
+        # A PLANNED row already in a DRAFT run whose period runs past ``term_end`` —
+        # starting after it, or straddling it — is held by the "keep bundled rows"
+        # lock at its stored amount and would SEPA-debit deliveries after the end.
+        # Unbundle it so the delete below drops it and the loop re-plans its period
+        # from the deliveries up to the end. ISSUED / exported charges stay untouched.
         ChargeSchedule.objects.filter(
             subscription=subscription,
             status=ChargeStatus.PLANNED,
-            period_start__gt=valid_until,
-            billing_run__status=BillingRunStatus.DRAFT,
-        ).update(billing_run=None)
-
-        # The cut can also land INSIDE a DRAFT-bundled period
-        # (period_start <= valid_until < period_end) — a "straddling" row. Left
-        # bundled it stays locked at its FULL, un-prorated amount and would
-        # SEPA-debit both the served AND the now-cancelled portion. Unbundle it
-        # too so the delete below drops it and the loop recreates it at the
-        # clamped period [period_start, valid_until] with a prorated amount.
-        # Same DRAFT-only / PLANNED-only safety; only a truncated term leaves a
-        # bundled period straddling ``valid_until``, so otherwise this matches
-        # no row.
-        ChargeSchedule.objects.filter(
-            subscription=subscription,
-            status=ChargeStatus.PLANNED,
-            period_start__lte=valid_until,
-            period_end__gt=valid_until,
+            period_end__gt=term_end,
             billing_run__status=BillingRunStatus.DRAFT,
         ).update(billing_run=None)
 
@@ -419,13 +408,13 @@ class ChargeScheduleService:
     def _billable_delivery_dates(
         subscription: Subscription,
         deliveries: list[ShareDelivery] | None,
-        valid_until: date,
+        term_end: date,
         billing: _BillingConfig,
     ) -> list[date]:
         """Resolve the billable delivery dates for this subscription's term.
 
         Pre-fetches deliveries when the bulk path didn't supply them, applies
-        the joker + opt-in filters, then clamps to the enumerated term.
+        the joker + opt-in filters, then clamps to ``[valid_from, term_end]``.
         """
         # Pre-fetch all relevant deliveries once (the bulk path supplies them).
         if deliveries is None:
@@ -442,19 +431,18 @@ class ChargeScheduleService:
         # above because it's gated on the ``bills_joker_deliveries`` setting).
         deliveries = [d for d in deliveries if d.is_opted_in_for_delivery]
 
-        # Clamp to the enumerated term so EXACT and SMOOTHED bill the SAME
-        # set. Both consume ``delivery_dates`` — EXACT counts dates inside each
-        # period, SMOOTHED counts ``len(...)``. A date OUTSIDE [valid_from,
-        # valid_until] (e.g. a stray delivery past a truncated end) falls in no
-        # period (EXACT drops it) yet still inflates the SMOOTHED total. Filtering
-        # to the term makes ``len`` equal the sum of the per-period counts (the
-        # periods partition the term), so the two strategies agree.
+        # Clamp so EXACT and SMOOTHED bill the SAME set, none of it after the
+        # effective end. EXACT counts the dates inside each period, SMOOTHED counts
+        # ``len(...)``: a stray delivery past a truncated ``valid_until`` falls in no
+        # period yet inflates the SMOOTHED total, and one past a member exit can fall
+        # in a period after it, which EXACT would bill. The periods cover
+        # ``[valid_from, term_end]``, so ``len`` equals the sum of their counts.
         return [
             d
             for d in (
                 share_delivery_date(share_delivery) for share_delivery in deliveries
             )
-            if d and subscription.valid_from <= d <= valid_until
+            if d and subscription.valid_from <= d <= term_end
         ]
 
     @staticmethod
@@ -464,11 +452,11 @@ class ChargeScheduleService:
         periods: list[_Period],
         locked: set[date],
         locked_total: Decimal,
-    ) -> list[Decimal]:
-        """SMOOTHED per-period amounts for the still-unlocked periods.
+    ) -> dict[date, Decimal]:
+        """SMOOTHED amounts for the still-unlocked periods, by period start.
 
         Splits the REMAINING term total (recomputed total minus ``locked_total``)
-        across only the unlocked periods, by position among them.
+        over those starting by ``effective_term_end``, so none after a member exit.
         """
         term_total = ChargeScheduleService._term_total(subscription, delivery_dates)
         remaining = term_total - locked_total
@@ -494,8 +482,18 @@ class ChargeScheduleService:
                 locked_total - term_total,
             )
             remaining = Decimal("0.00")
-        n_unlocked = sum(1 for period in periods if period.start not in locked)
-        return ChargeScheduleService._largest_remainder_split(remaining, n_unlocked)
+        end = effective_term_end(subscription) or date.max
+        unlocked = [period.start for period in periods if period.start not in locked]
+        billed = [start for start in unlocked if start <= end]
+        if remaining > Decimal("0.00") and not billed:
+            logger.error(
+                "subscription %s SMOOTHED under-collection: %s owed but every period "
+                "up to the term end is locked; bill it out-of-band",
+                subscription.pk,
+                remaining,
+            )
+        split = ChargeScheduleService._largest_remainder_split(remaining, len(billed))
+        return dict(zip(billed, split, strict=True))
 
     @staticmethod
     def _persist_planned_periods(
@@ -506,16 +504,15 @@ class ChargeScheduleService:
         delivery_dates: list[date],
         locked: set[date],
         failed_periods: set[date],
-        smoothed_unlocked: list[Decimal],
+        smoothed_unlocked: dict[date, Decimal],
     ) -> int:
         """Create a PLANNED row per still-unlocked period; return total count.
 
         Locked periods are skipped (but counted); unlocked periods get their
-        SMOOTHED (by position among unlocked) or EXACT amount and a fresh row.
+        SMOOTHED (0 after the effective term end) or EXACT amount and a fresh row.
         """
         member = subscription.member
         created_count = 0
-        unlocked_index = 0
 
         for period in periods:
             if period.start in locked:
@@ -541,8 +538,7 @@ class ChargeScheduleService:
                 continue
 
             if billing.strategy == TenantSettings.BILLING_STRATEGY_SMOOTHED:
-                amount = smoothed_unlocked[unlocked_index]
-                unlocked_index += 1
+                amount = smoothed_unlocked.get(period.start, Decimal("0.00"))
             else:
                 amount = ChargeScheduleService._exact_amount_for_period(
                     subscription, delivery_dates, period

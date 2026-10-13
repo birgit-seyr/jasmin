@@ -55,6 +55,7 @@ export default function OrderAmountCell({
   // Edit mode: the whole column is inputs. Seed with the current ordered PU
   // amount (empty for a not-yet-ordered offer); a pending edit wins. A row the
   // last save rejected for stock goes red with a tiny ceiling tag until edited.
+  // An order takes no negative amount: a pasted one counts as 0.
   if (editMode) {
     const seeded = ordered != null ? Math.round(ordered) : "";
     const value = offerId in orderAmounts ? orderAmounts[offerId] || "" : seeded;
@@ -62,7 +63,9 @@ export default function OrderAmountCell({
       <Input
         value={value}
         status={stockError ? "error" : undefined}
-        onChange={(e) => onAmountChange(offerId, Number(e.target.value) || 0)}
+        onChange={(e) =>
+          onAmountChange(offerId, Math.max(0, Number(e.target.value) || 0))
+        }
         onPressEnter={onSubmit}
         disabled={saving}
         style={{ width: "80px" }}

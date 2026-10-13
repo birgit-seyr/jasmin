@@ -43,7 +43,8 @@ test("a member edits their own contact details, sees their payment plan, and nob
   );
   await profile.getByRole("button", { name: t("common.save"), exact: true }).click();
   expect((await saved).status()).toBe(200);
-  await expect(page.getByText(t("profile.saved"))).toBeVisible();
+  // The toast itself has no role; its text is mirrored into the status live region.
+  await expect(page.getByRole("status").filter({ hasText: t("profile.saved") })).toBeVisible();
 
   // Stored, not just kept in the form: a reload reads it back.
   await page.reload();

@@ -183,6 +183,32 @@ def _resolve_template(
     return default_subject, html, text, slug
 
 
+def _comparable_smtp_host(host: str | None) -> str:
+    """``host`` for comparing with another host name: without surrounding
+    whitespace or the trailing dot of a fully qualified name, and in lower
+    case, as DNS ignores case. A non-ASCII host becomes ``""``, since
+    lower-casing turns some non-ASCII letters (the Kelvin sign) into ASCII
+    ones."""
+    host = host or ""
+    if not host.isascii():
+        return ""
+    return host.strip().lower().removesuffix(".")
+
+
+def _is_platform_smtp_server(host: str | None, port: int | None) -> bool:
+    """Whether a tenant's SMTP ``host`` and ``port`` are the platform's own
+    ``EMAIL_HOST`` and ``EMAIL_PORT``. A missing port counts as ``EMAIL_PORT``,
+    the port Django's backend connects to when given none."""
+    from django.conf import settings
+
+    platform_host = _comparable_smtp_host(settings.EMAIL_HOST)
+    return (
+        bool(platform_host)
+        and _comparable_smtp_host(host) == platform_host
+        and (port or settings.EMAIL_PORT) == settings.EMAIL_PORT
+    )
+
+
 class EmailService:
     """Service for sending emails in multi-tenant environment.
 
@@ -708,7 +734,7 @@ class EmailService:
 
         # Authoritative SSRF guard: re-check the tenant-supplied host at
         # send time. Write-time validation trusts a DNS resolution the
-        # office user controls, and a stored config may predate that
+        # tenant controls, and a stored config may predate that
         # validation. A ``ValueError`` here is caught by ``send_email``'s
         # except block, so a blocked host fails gracefully (logged, send
         # returns False) exactly like an unreachable host, on every send path.
@@ -718,12 +744,29 @@ class EmailService:
                 f"otherwise disallowed address; refusing to connect."
             )
 
+        # Django's backend replaces a ``None`` username or password with the
+        # platform's ``EMAIL_HOST_USER`` / ``EMAIL_HOST_PASSWORD``, and the
+        # tenant chooses the host it logs in to. Only the platform's own SMTP
+        # server may receive them: there, a username or password the config
+        # does not store is the platform's. Any other host gets an empty one,
+        # never ``None``, and Django logs in only when both are non-empty, so
+        # such a config sends without a login.
+        username = backend_settings["EMAIL_HOST_USER"]
+        password = backend_settings["EMAIL_HOST_PASSWORD"]
+        if _is_platform_smtp_server(
+            backend_settings["EMAIL_HOST"], backend_settings["EMAIL_PORT"]
+        ):
+            if username is None:
+                username = settings.EMAIL_HOST_USER
+            if password is None:
+                password = settings.EMAIL_HOST_PASSWORD
+
         return get_connection(
             backend=backend_settings["EMAIL_BACKEND"],
             host=backend_settings["EMAIL_HOST"],
             port=backend_settings["EMAIL_PORT"],
-            username=backend_settings["EMAIL_HOST_USER"],
-            password=backend_settings["EMAIL_HOST_PASSWORD"],
+            username=username or "",
+            password=password or "",
             use_tls=backend_settings["EMAIL_USE_TLS"],
             use_ssl=backend_settings["EMAIL_USE_SSL"],
             # Cap the connect/handshake so a slow/unreachable host can't

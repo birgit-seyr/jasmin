@@ -1,17 +1,25 @@
 """Project-wide, app-independent middlewares: ``Cache-Control: no-store``
-on API responses, the ``/health/`` answer ahead of tenant resolution, and
-the request id (with the log filter that stamps it on every record). Add
-other generic middlewares here.
+on API responses, the ``/health/`` and ``/health/ready/`` probes answered
+ahead of tenant resolution, and the request id (with the log filter that
+stamps it on every record). Add other generic middlewares here.
 """
 
 from __future__ import annotations
 
 import logging
+import threading
+import time
 import uuid
 from collections.abc import Callable
 from contextvars import ContextVar
 
+from django.core.cache import cache
+from django.db import DEFAULT_DB_ALIAS, connections
 from django.http import HttpRequest, HttpResponse, JsonResponse
+
+# The project-wide error log that LOGGING configures, shared with
+# core.exception_handler.
+logger = logging.getLogger("jasmin.errors")
 
 # Header read on inbound (when an upstream sets one) and written on outbound.
 # Keeping it standard makes it easy to correlate across services / proxies.
@@ -79,31 +87,193 @@ class ApiNoStoreCacheControlMiddleware:
         return response
 
 
+# Bounds each database step of the readiness probe, so a database that hangs
+# fails the probe instead of hanging it. libpq takes connect_timeout in whole
+# seconds.
+READY_DATABASE_TIMEOUT_SECONDS = 3
+# The probe key only has to outlive its own write and read.
+READY_CACHE_KEY_TTL_SECONDS = 10
+# How long a process answers the readiness probe from one check. The probe is
+# public and unthrottled; this window keeps a flood of it from opening a
+# database connection and writing to Redis on every request.
+READY_VERDICT_SECONDS = 2
+# How long a probe waits while another thread of its process runs the check.
+# Twice the database timeout covers that check's connect and its statement; a
+# check still running after that is hung, so the probe answers 503 rather than
+# queue behind it.
+READY_CHECK_WAIT_SECONDS = 2 * READY_DATABASE_TIMEOUT_SECONDS
+
+
+def _database_answers() -> bool:
+    """Run ``SELECT 1`` on a connection of the probe's own, closed right after.
+
+    Not the request's connection: its limits are sized for real queries and
+    would let a hung database hold the probe for most of a minute. The probe's
+    ``statement_timeout`` follows the configured options, and the last ``-c``
+    wins.
+    """
+    probe = connections.create_connection(DEFAULT_DB_ALIAS)
+    options = probe.settings_dict["OPTIONS"]
+    statement_timeout = f"-c statement_timeout={READY_DATABASE_TIMEOUT_SECONDS * 1000}"
+    probe.settings_dict = {
+        **probe.settings_dict,
+        "OPTIONS": {
+            **options,
+            "connect_timeout": READY_DATABASE_TIMEOUT_SECONDS,
+            "options": f"{options.get('options', '')} {statement_timeout}".strip(),
+        },
+    }
+    try:
+        with probe.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            return cursor.fetchone() == (1,)
+    finally:
+        probe.close()
+
+
+def _cache_takes_writes() -> bool:
+    """Write a probe key through the configured cache and read it back.
+
+    A write, not a PING: at its ``noeviction`` memory cap Redis keeps answering
+    PING while it refuses every write. Each probe writes a key of its own, so
+    two probes at once never read each other's value, and the key expires by
+    itself.
+    """
+    token = uuid.uuid4().hex
+    key = f"health:ready:{token}"
+    cache.set(key, token, timeout=READY_CACHE_KEY_TTL_SECONDS)
+    return cache.get(key) == token
+
+
+def _component_ready(component: str, check: Callable[[], bool]) -> bool:
+    """Run one readiness check, logging at warning level when it fails."""
+    try:
+        if check():
+            return True
+        logger.warning(
+            "health.ready.unavailable component=%s reason=unexpected_result", component
+        )
+    except Exception:
+        # Whatever the check raises, the component is not ready: the probe
+        # answers 503, never 500.
+        logger.warning(
+            "health.ready.unavailable component=%s", component, exc_info=True
+        )
+    return False
+
+
+class _ReadinessVerdict:
+    """The readiness verdict of one process, reused for READY_VERDICT_SECONDS.
+
+    However often the probe is called, each gunicorn worker runs the checks at
+    most once per window. One thread checks at a time: a probe that arrives
+    during a check waits for its verdict instead of starting another one.
+    """
+
+    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._checked_at: float | None = None
+        self._ready = False
+        # The component the running check is on, for the log line of a probe
+        # that stops waiting for it.
+        self._checking: str | None = None
+
+    def current(self) -> bool:
+        if not self._lock.acquire(timeout=READY_CHECK_WAIT_SECONDS):
+            logger.warning(
+                "health.ready.unavailable component=%s reason=check_still_running",
+                self._checking or "unknown",
+            )
+            return False
+        try:
+            if (
+                self._checked_at is None
+                or self._clock() - self._checked_at >= READY_VERDICT_SECONDS
+            ):
+                self._ready = self._check()
+                # Timed from the end of the check, so even a slow one is
+                # followed by a whole window without a check.
+                self._checked_at = self._clock()
+            return self._ready
+        finally:
+            self._lock.release()
+
+    def _check(self) -> bool:
+        """Run every check, so the log names each component that failed."""
+        ready = True
+        try:
+            for component, check in (
+                ("database", _database_answers),
+                ("cache", _cache_takes_writes),
+            ):
+                self._checking = component
+                ready = _component_ready(component, check) and ready
+        finally:
+            self._checking = None
+        return ready
+
+
+_readiness_verdict = _ReadinessVerdict()
+
+
+def _readiness_response() -> JsonResponse:
+    """200 while the database answers and the cache takes writes, else 503.
+
+    The body never names a failed component: the probe is public.
+    """
+    if _readiness_verdict.current():
+        response = JsonResponse({"status": "ok"})
+    else:
+        response = JsonResponse({"status": "unavailable"}, status=503)
+    # The answer is about now; no cache on the way may keep it.
+    response["Cache-Control"] = "no-store"
+    return response
+
+
 class HealthCheckMiddleware:
-    """Answer ``GET /health/`` with 200 BEFORE tenant resolution.
+    """Answer the ``/health/`` probes BEFORE tenant resolution.
 
-    Liveness probes — the Docker HEALTHCHECK (``curl localhost:8000/health/``),
-    the gateway nginx healthcheck (``wget 127.0.0.1/health/``), and the uptime
-    monitor — reach the backend on hosts that map to NO tenant (``localhost``,
-    ``127.0.0.1``, the ``jasmin_backend`` upstream name). Tenant resolution is
-    subdomain-only: an unrecognized host has ``TenantMainMiddleware`` raise
-    "no tenant for hostname" (HTTP 404) before any view runs, so registering a
-    ``/health/`` URL alone is never reached by those probes.
+    ``/health/`` is the liveness probe: 200 whenever the process serves
+    requests, without touching the database or Redis. The Docker HEALTHCHECK
+    (``curl localhost:8000/health/``) and the gateway nginx healthcheck
+    (``wget 127.0.0.1/health/``) use it. It must not depend on either: an
+    outage of the database or of Redis is no fault of this container, and a
+    backend marked unhealthy holds back huey, which starts only once the
+    backend is healthy.
 
-    This short-circuits ahead of the tenant middleware: a liveness probe only
-    needs to know the process is up and serving, not which tenant — so it skips
-    tenant/DB resolution entirely and works on every host. Must sit ABOVE
+    ``/health/ready/`` is the readiness probe: 200 while the database answers
+    ``SELECT 1`` and the cache takes a write, 503 otherwise. The deploy and
+    rollback smoke tests and the uptime monitors use it, because liveness stays
+    200 while every real request fails. Anyone can call it, as often as they
+    like, so a process answers it from a verdict up to
+    ``READY_VERDICT_SECONDS`` old: a flood costs what a flood of liveness
+    probes costs, not a database connection per request.
+
+    The probes reach the backend on hosts that map to NO tenant
+    (``localhost``, ``127.0.0.1``, the ``jasmin_backend`` upstream name).
+    Tenant resolution is subdomain-only: an unrecognized host has
+    ``TenantMainMiddleware`` raise "no tenant for hostname" (HTTP 404) before
+    any view runs, so a URL route for either probe would never be reached.
+
+    This short-circuits ahead of the tenant middleware: no probe concerns a
+    tenant, so both skip tenant resolution and work on every host. Only GET
+    and HEAD are probes. Must sit ABOVE
     ``django_tenants.middleware.main.TenantMainMiddleware`` in ``MIDDLEWARE``.
     """
 
     HEALTH_PATH = "/health/"
+    READY_PATH = "/health/ready/"
 
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]) -> None:
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        if request.path == self.HEALTH_PATH and request.method in ("GET", "HEAD"):
-            return JsonResponse({"status": "ok"})
+        if request.method in ("GET", "HEAD"):
+            if request.path == self.HEALTH_PATH:
+                return JsonResponse({"status": "ok"})
+            if request.path == self.READY_PATH:
+                return _readiness_response()
         return self.get_response(request)
 
 

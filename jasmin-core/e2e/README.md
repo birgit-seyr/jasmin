@@ -116,6 +116,13 @@ Step-up asks for the password only (the personas have no TOTP device);
 - **Select by role and accessible name** (`getByRole`, `getByLabel`). The
   `jsx-a11y` gate is why these exist. Add a `data-testid` only where no
   accessible name fits.
+- **Toasts: assert through the live regions.** AntD's toast has no role, and
+  `notify.*` mirrors each message into a screen-reader region at the app root,
+  so `getByText` on toast copy matches twice and fails strict mode. Use
+  `getByRole("status").filter({ hasText })` for success, info, warning and
+  loading, and `getByRole("alert").filter({ hasText })` for errors. A
+  validation error's toast is an `alert` itself as well, so that one matches
+  twice: take `.first()`.
 - **UI language: English, looked up by key.** The E2E tenants and personas are
   seeded in English and the browser runs as `en-US`. Tests read the copy from
   react-core's English locale files with `t("ns.key")` from `support/i18n.ts`,

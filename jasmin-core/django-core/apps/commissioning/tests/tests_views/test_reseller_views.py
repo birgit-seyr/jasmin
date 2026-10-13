@@ -2,26 +2,41 @@
 
 from __future__ import annotations
 
+import datetime
+from decimal import Decimal
+
 import pytest
+import time_machine
 from django.urls import reverse
+from isoweek import Week
 from rest_framework import status
 
 from apps.commissioning.models import (
     DeliveryNoteReseller,
+    Harvest,
     InvoiceReseller,
     InvoiceResellerContent,
+    Offer,
     Order,
+)
+from apps.commissioning.services.documentation_service import (
+    GenericDocumentationService,
 )
 from apps.commissioning.tests.factories import (
     DeliveryNoteContentFactory,
     DeliveryNoteResellerFactory,
+    ForecastFactory,
     InvoiceResellerFactory,
     OfferFactory,
     OfferGroupFactory,
     OrderContentFactory,
     OrderFactory,
     ResellerFactory,
+    ShareArticleFactory,
+    ShareArticleNetPriceFactory,
+    StorageFactory,
 )
+from apps.commissioning.utils.composite_id_utils import build_composite_id
 
 # ---------------------------------------------------------------------------
 # DaysWithOrdersView
@@ -688,6 +703,70 @@ class TestCreateOffersView:
         assert resp.data["success"] is False
         assert resp.data["created_count"] == 0
         assert resp.data["skipped_count"] == 0
+
+    def test_stock_set_aside_for_resellers_is_offered(self, api_client, tenant):
+        """The office counts Monday's stock on the stock page, sets it aside for
+        resellers and creates the week's offers, which carry the count."""
+        monday = Week(2026, 15).monday()
+        with time_machine.travel(
+            datetime.datetime.combine(monday, datetime.time(12, 0)), tick=False
+        ):
+            article = ShareArticleFactory(
+                is_sold_to_resellers=True,
+                default_commissioning_unit="KG",
+                default_kg_per_pu_reseller=Decimal("5.000"),
+            )
+            ShareArticleNetPriceFactory(
+                share_article=article,
+                net_price_for_orders_kg_1=Decimal("3.00"),
+                net_price_for_orders_kg_2=Decimal("2.50"),
+                net_price_for_orders_kg_3=Decimal("2.00"),
+            )
+            storage = StorageFactory(is_short_term_harvest_storage=True)
+            group = OfferGroupFactory()
+            ForecastFactory(
+                share_article=article,
+                year=2026,
+                delivery_week=15,
+                for_all_resellers=True,
+                amount=20,
+                unit="KG",
+                size="M",
+            )
+            # 30 KG harvested on the Friday before, 25 KG counted on Monday.
+            GenericDocumentationService.create_with_related_objects(
+                Harvest,
+                {
+                    "year": 2026,
+                    "delivery_week": 14,
+                    "day_number": 4,
+                    "share_article": article,
+                    "storage": storage,
+                    "unit": "KG",
+                    "size": "M",
+                    "amount": Decimal("30"),
+                    "note": "",
+                },
+            )
+            composite_id = build_composite_id(
+                str(article.id), "KG", "M", str(storage.id), 2026, 15, 0
+            )
+            count = api_client.patch(
+                reverse("current_stock_comparison_detail", args=[composite_id]),
+                {"amount": 25, "for_resellers": True},
+                format="json",
+            )
+            assert count.status_code == status.HTTP_201_CREATED
+
+            resp = api_client.post(
+                URL_CREATE_OFFERS, {"year": 2026, "delivery_week": 15}, format="json"
+            )
+
+        assert resp.status_code == status.HTTP_201_CREATED
+        assert resp.data["success"] is True
+        # (20 KG forecast + 25 KG counted) / 5 KG per packing unit
+        offer = Offer.objects.get(share_article=article, offer_group=group)
+        assert offer.amount == Decimal("9")
 
 
 # ---------------------------------------------------------------------------

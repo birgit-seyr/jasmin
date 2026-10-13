@@ -39,6 +39,7 @@ from rest_framework.response import Response
 
 from apps.shared.auth_cookies import set_tenant_refresh_cookie
 from apps.shared.request_utils import body, client_ip, request_tenant
+from apps.shared.same_origin import require_same_origin
 from core.serializers import ErrorResponseSerializer
 from core.throttling import set_throttle_scope
 
@@ -178,6 +179,7 @@ def two_factor_enroll_confirm_view(request):
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@require_same_origin
 def two_factor_verify_view(request):
     serializer = TwoFactorVerifyRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

@@ -256,7 +256,10 @@
     "insufficient_stock": "Nicht genügend Bestand verfügbar — verfügbar: {{available}}.",
     "offer_required": "Du kannst nur Angebote bestellen.",
     "offer_not_in_offer_group": "Dieses Angebot gehört nicht zu deiner Angebotsgruppe.",
-    "item_change_forbidden": "Angebot oder Artikel einer Bestellposition kann nur das Büro ändern."
+    "offer_not_finalized": "Dieses Angebot ist noch nicht freigegeben.",
+    "offer_week_mismatch": "Dieses Angebot gilt für eine andere Woche als die Bestellung.",
+    "item_change_forbidden": "Angebot oder Artikel einer Bestellposition kann nur das Büro ändern.",
+    "amount_negative": "Die bestellte Menge darf nicht negativ sein."
   },
   "orderable_item": {
     "reference_invalid": "Eine Position muss genau eine Sache enthalten: entweder ein Angebot oder einen Artikel — nicht beides und nicht nichts."
@@ -300,6 +303,7 @@
     "account_blocked": "Dieser Account ist gesperrt.",
     "self_registration_disabled": "Die Selbst-Registrierung ist für diese Organisation deaktiviert.",
     "step_up_required": "Für diese Aktion ist eine erneute Bestätigung der Identität erforderlich.",
+    "cross_origin_refused": "Die Anfrage kam nicht von dieser Website und wurde abgelehnt.",
     "two_factor": {
       "already_enrolled": "Die Zwei-Faktor-Authentifizierung (2FA) ist bereits eingerichtet.",
       "challenge_invalid": "Die 2FA-Anfrage ist ungültig oder abgelaufen — bitte erneut anmelden.",

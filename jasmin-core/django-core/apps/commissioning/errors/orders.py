@@ -91,7 +91,7 @@ class OrderContentNotFound(NotFoundError):
 class OrderContentOfferRequired(ForbiddenError):
     """A customer order line must order an offer. A free ``share_article`` line
     has no offer, so it would skip the stock check and the offer group's
-    offer set; only office staff may add one."""
+    offer set; only office staff may add one or change it."""
 
     code = "order_content.offer_required"
 
@@ -109,6 +109,30 @@ class OrderContentItemChangeForbidden(ForbiddenError):
     staff may change what a line orders."""
 
     code = "order_content.item_change_forbidden"
+
+
+class OrderContentOfferNotFinalized(ForbiddenError):
+    """A customer tried to order an offer that isn't finalized. A draft's prices
+    may still be missing or change, and the server prices a customer's line
+    from them; only office staff may order one."""
+
+    code = "order_content.offer_not_finalized"
+
+
+class OrderContentOfferWeekMismatch(ForbiddenError):
+    """A customer tried to order an offer of another year or week than the
+    order's. That offer would price the line and give it its stock; only office
+    staff may order one."""
+
+    code = "order_content.offer_week_mismatch"
+
+
+class OrderContentAmountNegative(ForbiddenError):
+    """A customer tried to set a negative amount on an order line. The line
+    would reach the delivery note and the invoice as a credit and hand its PU
+    back to the offer's stock; only office staff may set one."""
+
+    code = "order_content.amount_negative"
 
 
 class OrderableItemReferenceInvalid(BadRequestError):

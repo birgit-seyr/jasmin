@@ -82,14 +82,13 @@ if not DEBUG:
             "(mail_admins / AdminEmailHandler alerts connect to it; an empty "
             "or loopback host silently drops every ops alert)."
         )
-    # The CORS allow-regex + CSRF trusted origins for the browser auth
-    # surface are DERIVED from FRONTEND_DOMAIN. Unset, the tenant-subdomain CORS
-    # regex is never built and the app boots with a broken cross-origin auth
-    # surface — fail fast instead.
+    # The CSRF trusted origins and FRONTEND_BASE_URL (the link base for a tenant
+    # without a Domain row) are DERIVED from FRONTEND_DOMAIN. Unset, CSRF trusts
+    # no farm host and those links point nowhere — fail fast instead.
     if not os.environ.get("FRONTEND_DOMAIN", "").strip():
         raise ValueError(
-            "FRONTEND_DOMAIN must be set in production (drives the CORS "
-            "allow-regex and CSRF trusted origins for the browser auth surface)."
+            "FRONTEND_DOMAIN must be set in production (drives the CSRF trusted "
+            "origins and the base URL of links to the frontend)."
         )
     # Defense-in-depth, symmetric with the SECRET_KEY / FIELD_ENCRYPTION
     # _KEY guards above — refuse to boot on the committed dev DB password.
@@ -421,28 +420,25 @@ if DEBUG:
     ]
     FRONTEND_BASE_URL = "http://localhost:3000"
 else:
-    # Production - strict CORS, with wildcard support for tenant subdomains.
+    # Production: same-origin only, since both SPAs call relative /api/ URLs. An
+    # origin pattern covering the tenant subdomains would let a page on one host
+    # read another host's login or refresh answer: the refresh cookie is
+    # SameSite=Strict, but sibling subdomains are one site. Only the origins
+    # listed in CORS_ALLOWED_ORIGINS get an answer.
     CORS_ALLOW_ALL_ORIGINS = False
-    cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "")
-    if cors_origins:
-        CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(",")]
-    else:
-        CORS_ALLOWED_ORIGINS = []
-
-    # Allow https://<anything>.<FRONTEND_DOMAIN> (tenant subdomains), defined even
-    # with FRONTEND_DOMAIN unset. FRONTEND_BASE_URL is the link base for a tenant
-    # that resolves no Domain row (a FakeTenant in a Huey task or a command).
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip()
+        for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
     CORS_ALLOWED_ORIGIN_REGEXES = []
+
+    # FRONTEND_BASE_URL is the link base for a tenant that resolves no Domain
+    # row (a FakeTenant in a Huey task or a command).
     _frontend_domain = os.environ.get("FRONTEND_DOMAIN", "").strip()
     FRONTEND_BASE_URL = f"https://{_frontend_domain}"
     if _frontend_domain:
-        import re as _re
-
-        _escaped = _re.escape(_frontend_domain)
-        CORS_ALLOWED_ORIGIN_REGEXES = [
-            rf"^https://([a-z0-9-]+\.)?{_escaped}$",
-        ]
-        # CSRF must trust the same origins (Django 4+ requires scheme).
+        # The farm's own hosts (Django 4+ requires the scheme).
         CSRF_TRUSTED_ORIGINS = [
             f"https://{_frontend_domain}",
             f"https://*.{_frontend_domain}",
@@ -484,6 +480,10 @@ if DEBUG:
 # CSRF_TRUSTED_ORIGINS env extras) in the CORS block above. Do NOT re-read the
 # env var here — an unconditional read would overwrite that derived value with
 # an empty list whenever the (optional) env var is unset.
+
+# AUTH_ORIGIN_GUARD=False switches off the same-origin check of the refresh-cookie
+# endpoints (apps/shared/same_origin.py), should a proxy strip or alter its headers.
+AUTH_ORIGIN_GUARD = os.environ.get("AUTH_ORIGIN_GUARD", "True").lower() != "false"
 
 
 # Apps
@@ -567,11 +567,11 @@ TENANT_MODEL = "tenants.Tenant"
 TENANT_DOMAIN_MODEL = "tenants.Domain"
 
 MIDDLEWARE = [
-    # Liveness probe short-circuit. MUST be above TenantMainMiddleware: the
-    # Docker / gateway / uptime healthchecks hit /health/ on hosts that map to
-    # no tenant (localhost, 127.0.0.1, the upstream name), which the tenant
-    # middleware would 404 before any view runs. Answers /health/ with 200
-    # without tenant/DB resolution.
+    # Probe short-circuit. MUST be above TenantMainMiddleware: the healthchecks
+    # (/health/, liveness) and the smoke tests and uptime monitors
+    # (/health/ready/, database + Redis) come in on hosts that map to no tenant
+    # (localhost, 127.0.0.1, the upstream name), which the tenant middleware
+    # would 404 before any view runs.
     "core.middleware.HealthCheckMiddleware",
     # Stamps Cache-Control: no-store on every /api/ response so a shared CDN
     # (Bunny) can never cache + cross-serve a per-tenant API response. Near the
@@ -1129,12 +1129,12 @@ MEDIA_URL_SIGNATURE_BUCKET = int(
     os.environ.get("MEDIA_URL_SIGNATURE_BUCKET", str(60 * 60))
 )
 
-# Filesystem location of the pg_dump backup files. Read by the
-# ``prune_old_backups`` and ``alert_on_stale_backups`` Huey tasks in
-# apps/shared/tenants/tasks.py.
-# Default ``/backups`` matches the path inside the prod container as
-# mounted by docker-compose.yml; override via environment for dev/tests.
+# Read by the Huey tasks in apps/shared/tenants/tasks.py: where the backups live
+# (``/backups`` as docker-compose.yml mounts them; override for dev/tests), and the
+# free space, in percent of a disk, under which a warning and a critical alert go out.
 BACKUP_DIR = os.environ.get("BACKUP_DIR", "/backups")
+DISK_FREE_WARNING_PERCENT = float(os.environ.get("DISK_FREE_WARNING_PERCENT", "20"))
+DISK_FREE_CRITICAL_PERCENT = float(os.environ.get("DISK_FREE_CRITICAL_PERCENT", "10"))
 
 # How old the newest backup artifact of a kind may get before
 # ``alert_on_stale_backups`` emails the admins. Backups run daily at 02:00, so

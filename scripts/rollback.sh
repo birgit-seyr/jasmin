@@ -19,6 +19,12 @@
 # database has that the release doesn't know are listed for you to confirm —
 # additive ones are fine, a dropped or renamed column the earlier code still
 # uses is not.
+#
+# After the switch it probes https://<domain>/health/ready/, which answers 200
+# only while the backend reaches the database and Redis takes writes. A failed
+# probe stops nothing: it is reported with what to check next, and the script
+# exits 1 at the very end, after every step has run. A release older than that
+# probe only has /health/ (liveness), which is checked instead, with a note.
 # =============================================================================
 set -euo pipefail
 
@@ -193,12 +199,92 @@ docker compose up -d --no-build backend huey frontend backup
 # nginx resolves the upstreams once, at startup — see deploy.sh.
 docker compose restart gateway
 
+# ── readiness smoke test ─────────────────────────────────────────────────────
+# /health/ready/ answers 200 only while the backend reaches the database and
+# Redis takes writes; /health/, the containers' healthcheck, stays 200 through
+# an outage of either. A failure stops nothing: it is reported here, and the
+# script exits 1 at the very end.
+
+# Prints the HTTP code of URL $1. No answer yet (000, the gateway restarted a
+# moment ago) and 5xx are retried a few times; --max-time keeps a hung backend
+# from stalling the rollback. curl prints 000 itself when it gets no answer.
+probe() {
+    local attempt code
+    for attempt in 1 2 3 4 5 6; do
+        code="$(curl -ksS -o /dev/null --max-time 10 -w '%{http_code}' "$1" 2>/dev/null || true)"
+        code="${code:-000}"
+        case "$code" in
+            000 | 5??) ;;
+            *) break ;;
+        esac
+        [ "$attempt" -eq 6 ] || sleep 5
+    done
+    echo "$code"
+}
+
+# What a failed readiness probe means and where to look next. $1: the URL,
+# $2: the HTTP code it answered.
+warn_not_ready() {
+    local meaning
+    case "$2" in
+        503) meaning="The backend answers but can't reach the database or can't write to Redis." ;;
+        502 | 504) meaning="The gateway can't reach the backend." ;;
+        000) meaning="No answer: the gateway is down, TLS or DNS fails, or the backend hangs." ;;
+        *) meaning="The readiness probe never answers that: is this the right host and release?" ;;
+    esac
+    cat >&2 <<EOF
+
+⚠️  ==========================================================================
+⚠️  NOT READY: $1 -> HTTP $2
+⚠️  ${meaning}
+⚠️  The containers may still report healthy: their healthcheck, /health/, touches
+⚠️  neither the database nor Redis. Real requests are failing.
+⚠️  Next:
+⚠️    docker compose ps                     # postgres, redis, backend up and healthy?
+⚠️    docker compose logs --tail=200 backend
+⚠️        # "health.ready.unavailable component=..." names what failed, the
+⚠️        # traceback below it says why
+⚠️    docker compose logs --tail=100 postgres redis gateway
+⚠️    docker compose exec redis sh -c 'redis-cli -a "\$REDIS_PASSWORD" --no-auth-warning info memory'
+⚠️        # used_memory over maxmemory: Redis refuses writes
+⚠️  Check again with: curl -k $1
+⚠️  If ${RELEASE} itself is the cause, ./scripts/rollback.sh lists the other releases.
+⚠️  ==========================================================================
+EOF
+}
+
 DOMAIN="$(grep -E '^FRONTEND_DOMAIN=' .env | head -1 | cut -d= -f2-)"
-# curl prints 000 itself when it gets no answer.
-code="$(curl -ksS -o /dev/null -w '%{http_code}' "https://${DOMAIN}/health/" 2>/dev/null || true)"
-log "https://${DOMAIN}/health/ -> HTTP ${code} (expect 200)"
+READY_URL="https://${DOMAIN}/health/ready/"
+ready_code="$(probe "$READY_URL")"
+log "${READY_URL} -> HTTP ${ready_code} (expect 200)"
+ready=1
+if [ "$ready_code" != "200" ]; then
+    # A release older than the readiness probe answers its path like any other
+    # unknown one on the gateway's host: 400 or 404. Its liveness probe is all
+    # there is to check then.
+    live_code=""
+    case "$ready_code" in
+        400 | 404)
+            live_code="$(probe "https://${DOMAIN}/health/")"
+            log "https://${DOMAIN}/health/ -> HTTP ${live_code} (expect 200)"
+            ;;
+    esac
+    if [ "$live_code" = "200" ]; then
+        log "${RELEASE} predates /health/ready/, and /health/ leaves out the database and Redis: open a tenant's site to see it serve"
+    else
+        ready=0
+        warn_not_ready "$READY_URL" "$ready_code"
+    fi
+fi
 
 echo ""
 echo "✅ Running ${RELEASE}. The checkout is still at $(git rev-parse --short HEAD): revert"
 echo "   or fix the change, push, then ./scripts/update.sh. Until then don't re-run"
 echo "   update.sh — it would rebuild and deploy HEAD again."
+
+# The readiness verdict, after every step has run.
+if [ "$ready" -ne 1 ]; then
+    echo "" >&2
+    echo "❌ ${RELEASE} is running but NOT READY: ${READY_URL} answered HTTP ${ready_code} (see the warning above)." >&2
+    exit 1
+fi

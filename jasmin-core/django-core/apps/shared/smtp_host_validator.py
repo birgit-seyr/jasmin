@@ -1,10 +1,10 @@
 """SMTP host SSRF guard.
 
-A tenant office user can point ``TenantEmailConfig.smtp_host`` at an
+A tenant admin can point ``TenantEmailConfig.smtp_host`` at an
 arbitrary host that the backend then opens an SMTP connection to (see
 ``apps.shared.tenants.email_service.EmailService``). Left unchecked, that
 host could be an internal / loopback / link-local address — letting a
-compromised office account probe internal reachability or reach a cloud
+compromised admin account probe internal reachability or reach a cloud
 metadata endpoint (``169.254.169.254``) from the backend host (SSRF).
 
 ``smtp_host_is_blocked(host)`` resolves a candidate host and returns True
@@ -12,7 +12,7 @@ when ANY resolved IP falls in a private / loopback / link-local / reserved
 / multicast / unspecified range. It is used in two places:
 
   * write-time, in ``TenantEmailConfigSerializer.validate_smtp_host``, so
-    the office save is rejected with a clean field error before the host is
+    the save is rejected with a clean field error before the host is
     persisted, and
   * send-time, in ``EmailService._get_connection`` — the authoritative
     guard that defends the live production send paths and any
@@ -22,9 +22,9 @@ when ANY resolved IP falls in a private / loopback / link-local / reserved
     fully closed without pinning the IP, which would break TLS hostname
     verification — disproportionate for this surface.)
 
-Empty / ``None`` hosts are never blocked: ``smtp_host`` is ``blank=True``
-and an unset host means "use the platform default backend" — a trusted,
-operator-configured host, not a tenant-supplied target.
+Empty / ``None`` hosts are never blocked: ``smtp_host`` is ``blank=True``,
+and an unset host is no connection target — ``EmailService`` refuses to
+send without one rather than fall back to the platform account.
 
 The block is gated on ``settings.SMTP_ALLOW_PRIVATE_HOSTS`` (defaults to
 ``DEBUG``) so local development and tests — which legitimately send through
@@ -40,8 +40,8 @@ host over a transient DNS hiccup.
 
 Accepted residual: name resolution itself (``socket.getaddrinfo``) is not
 time-bounded by ``EMAIL_TIMEOUT`` (which only caps the SMTP connect). An
-office user could PATCH a host whose nameserver stalls and tie up a worker
-for the OS resolver timeout. The office-only permission gate keeps this
+admin could PATCH a host whose nameserver stalls and tie up a worker for
+the OS resolver timeout. The admin-only permission gate keeps this
 low-risk; bounding DNS would need a global ``setdefaulttimeout`` or a
 threaded resolver, disproportionate here.
 """
@@ -98,7 +98,7 @@ def _resolve_ips(host: str) -> list[_IpAddress]:
 def smtp_host_is_blocked(host) -> bool:
     """Return True when *host* must NOT be used as an SMTP target.
 
-    Empty / ``None`` -> False (platform default, trusted). When
+    Empty / ``None`` -> False (no target; nothing is sent). When
     ``settings.SMTP_ALLOW_PRIVATE_HOSTS`` is set -> always False
     (dev/test escape hatch). A host that resolves to at least one
     private/loopback/link-local/reserved/multicast/unspecified address

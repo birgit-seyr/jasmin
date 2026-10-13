@@ -1,6 +1,6 @@
 """Huey periodic tasks for the tenants app: ``weekly_tenant_health_report``,
-``prune_old_backups``, ``alert_on_stale_backups`` and
-``prune_old_action_rate_log``.
+``prune_old_backups``, ``alert_on_stale_backups``, ``alert_on_low_disk_space``
+and ``prune_old_action_rate_log``.
 
 Bootstrap reminder: nothing in this file runs until a Huey worker process
 starts.
@@ -11,11 +11,14 @@ from __future__ import annotations
 import datetime
 import logging
 import re
+import shutil
 from collections.abc import Iterable
 from pathlib import Path
+from typing import NamedTuple
 
 from django.apps import apps
 from django.conf import settings
+from django.core.cache import cache
 from django.core.mail import mail_admins
 from django.utils import timezone
 from django_tenants.utils import schema_context
@@ -477,6 +480,226 @@ def alert_on_stale_backups() -> dict[str, int]:
         "kinds_checked": len(BACKUP_KINDS),
         "stale": len(problems) - missing,
         "missing": missing,
+        "alerts": int(sent),
+    }
+
+
+# ---------------------------------------------------------------
+# Disk-space alerting
+# ---------------------------------------------------------------
+
+
+# How long a mail about one level on one directory holds back the next.
+_DISK_SPACE_REALERT_AFTER = datetime.timedelta(days=1)
+
+# The log level of a reading, by its alert level (``None``: enough room).
+_DISK_SPACE_LOG_LEVELS: dict[str | None, int] = {
+    None: logging.INFO,
+    "warning": logging.WARNING,
+    "critical": logging.ERROR,
+}
+
+
+class _DiskReading(NamedTuple):
+    """One directory's filesystem, as ``alert_on_low_disk_space`` measured it."""
+
+    directory: Path
+    total: int
+    free: int
+    free_percent: float
+    level: str | None
+
+
+def _disk_space_dirs() -> list[Path]:
+    """The directories whose filesystems ``alert_on_low_disk_space`` watches.
+
+    Both are mounted in the huey container (docker-compose.yml): the backups,
+    where the nightly dumps and media archives pile up, and the media volume,
+    which Docker keeps in its volume storage next to ``postgres_data`` and
+    ``redis_data``. On a single-disk host the two report the same filesystem.
+    """
+    return [_backup_dir(), Path(settings.MEDIA_ROOT)]
+
+
+def _disk_free_floors() -> tuple[float, float]:
+    """``(warning, critical)``: the free-space floors, in percent of a disk.
+
+    Settings rather than literals, like ``_backup_max_age()``, so ops can move
+    them from the environment.
+    """
+    return (
+        float(getattr(settings, "DISK_FREE_WARNING_PERCENT", 20)),
+        float(getattr(settings, "DISK_FREE_CRITICAL_PERCENT", 10)),
+    )
+
+
+def disk_space_level(
+    free_percent: float, *, warning: float, critical: float
+) -> str | None:
+    """``"critical"``, ``"warning"`` or ``None`` (enough room) for a filesystem
+    with ``free_percent`` of its size free.
+
+    Pure function, like ``stale_backup_kinds``. A floor is the first value that
+    no longer alerts: exactly 20 % free is no warning under a 20 % floor.
+    """
+    if free_percent < critical:
+        return "critical"
+    if free_percent < warning:
+        return "warning"
+    return None
+
+
+def _measure_disk_space(
+    warning: float, critical: float
+) -> tuple[list[_DiskReading], int]:
+    """Measure every watched directory: ``(readings, unreadable count)``.
+
+    A directory that can't be measured is logged and skipped, not mailed: the
+    stale-backup alert already mails about an unreadable backup directory, and
+    the app can't serve media without its volume either.
+    """
+    readings: list[_DiskReading] = []
+    unreadable = 0
+    for directory in _disk_space_dirs():
+        try:
+            usage = shutil.disk_usage(directory)
+        except OSError as exc:
+            log.warning("disk.space.unreadable dir=%s error=%s", directory, exc)
+            unreadable += 1
+            continue
+        # ``free`` is what a non-root writer can still use, which Postgres and
+        # Redis are; the blocks a filesystem reserves for root don't count.
+        free_percent = usage.free * 100 / usage.total
+        level = disk_space_level(free_percent, warning=warning, critical=critical)
+        log.log(
+            _DISK_SPACE_LOG_LEVELS[level],
+            "disk.space dir=%s level=%s free_percent=%.1f free_bytes=%s "
+            "total_bytes=%s",
+            directory,
+            level or "ok",
+            free_percent,
+            usage.free,
+            usage.total,
+        )
+        readings.append(
+            _DiskReading(directory, usage.total, usage.free, free_percent, level)
+        )
+    return readings, unreadable
+
+
+# The mark that a level was mailed for a directory is set only once the mail
+# went out, so a failed send is tried again an hour later; ``alert_operator``
+# marks before it sends, which would mute a lost alert for a day. A cache that
+# can't be read or written lets the mail through: a second mail costs less than
+# a missed one.
+def _disk_alert_key(reading: _DiskReading) -> str:
+    return f"disk-space-alert:{reading.level}:{reading.directory}"
+
+
+def _disk_alerted_recently(reading: _DiskReading) -> bool:
+    try:
+        return cache.get(_disk_alert_key(reading)) is not None
+    except Exception:
+        log.exception("disk.space.dedup_read_failed dir=%s", reading.directory)
+        return False
+
+
+def _remember_disk_alert(reading: _DiskReading) -> None:
+    try:
+        cache.set(
+            _disk_alert_key(reading),
+            True,
+            timeout=int(_DISK_SPACE_REALERT_AFTER.total_seconds()),
+        )
+    except Exception:
+        log.exception("disk.space.dedup_write_failed dir=%s", reading.directory)
+
+
+def _describe_disk_reading(reading: _DiskReading) -> str:
+    """One line per low directory for the alert email body."""
+    return (
+        f"  {reading.directory}: {reading.free_percent:.1f}% free, "
+        f"{reading.free / 2**30:.1f} of {reading.total / 2**30:.1f} GiB "
+        f"({reading.level})"
+    )
+
+
+def _mail_disk_space_alert(
+    due: list[_DiskReading], low: list[_DiskReading], warning: float, critical: float
+) -> bool:
+    """Mail the admins about the ``due`` readings, listing every ``low`` one."""
+    worst = min(due, key=lambda reading: reading.free_percent)
+    detail = "\n".join(_describe_disk_reading(reading) for reading in low)
+    return _mail_admins_safely(
+        subject=(
+            f"[Jasmin] low disk space ({worst.level}) — "
+            f"{worst.free_percent:.1f}% free on {worst.directory}"
+        ),
+        message=(
+            f"Free disk space is under its floor (warning under {warning:g}% "
+            f"free, critical under {critical:g}%):\n\n{detail}\n\n"
+            "The backups, the uploaded media and the Postgres and Redis data "
+            "share this disk unless the host was set up otherwise. A full disk "
+            "stops Postgres and Redis together, and with Redis the task queue "
+            "that runs this check.\n\n"
+            "Where the space goes, from the repo checkout on the host:\n"
+            "  df -h\n"
+            "  docker system df\n"
+            "  du -sh backups\n"
+            "  journalctl --disk-usage\n\n"
+            "Untagged images and old build cache are safe to remove, and every "
+            "deploy removes them too:\n"
+            "  docker image prune -f\n"
+            "  docker builder prune -f --filter until=720h\n"
+            "Never 'docker image prune -a' or 'docker system prune -a': they "
+            "also delete the release images scripts/rollback.sh switches back "
+            "to.\n\n"
+            "The backup prune keeps one backup a month for good, so the backup "
+            "directory grows for as long as the host runs.\n\n"
+            "This mail repeats once a day per level while the disk stays under "
+            "a floor. The huey log has every hourly reading (disk.space)."
+        ),
+        log_key="disk.space.alert_failed",
+    )
+
+
+@db_periodic_task(crontab(minute="50"), retries=1, retry_delay=300)
+def alert_on_low_disk_space() -> dict[str, int]:
+    """Mail the admins while a filling disk still has room to act.
+
+    The backups, the media volume and the Postgres and Redis data share one
+    disk on a single-host deploy, and the backup retention keeps adding to it.
+    A full disk stops Postgres and Redis together, and with Redis the Huey
+    queue this and every other alert runs on, so this has to speak up early:
+    every hour it measures the filesystems of ``_disk_space_dirs()`` and mails
+    ``settings.ADMINS`` when one has less than ``DISK_FREE_WARNING_PERCENT``
+    (default 20) percent of its size free, and again under
+    ``DISK_FREE_CRITICAL_PERCENT`` (default 10).
+
+    A level mails at most once a day per directory while the disk stays under
+    its floor, and one mail covers every directory that is due. The log line
+    each reading writes (``disk.space``) is the full record.
+
+    Runs at minute 50 of every hour, off the ``*/15`` sweep grid.
+
+    Returns ``{"dirs_checked": N, "unreadable": N, "warning": N,
+    "critical": N, "alerts": N}`` for the dev/QA runner.
+    """
+    warning, critical = _disk_free_floors()
+    readings, unreadable = _measure_disk_space(warning, critical)
+    low = [reading for reading in readings if reading.level]
+    due = [reading for reading in low if not _disk_alerted_recently(reading)]
+    sent = False
+    if due:
+        sent = _mail_disk_space_alert(due, low, warning, critical)
+        if sent:
+            for reading in due:
+                _remember_disk_alert(reading)
+    return {
+        "dirs_checked": len(readings),
+        "unreadable": unreadable,
+        "warning": sum(1 for reading in low if reading.level == "warning"),
+        "critical": sum(1 for reading in low if reading.level == "critical"),
         "alerts": int(sent),
     }
 

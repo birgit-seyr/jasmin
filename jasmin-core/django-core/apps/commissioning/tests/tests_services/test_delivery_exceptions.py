@@ -4,7 +4,7 @@ Covers the two levers:
 * the subscription generation path skips paused weeks (no ShareDelivery, hence
   no demand / billing), and
 * create/delete resync brings ALREADY-confirmed subscriptions in line (future
-  weeks only).
+  weeks only, and never past a cancellation's effective date).
 
 Plus the serializer's whole-week / non-overlap validation.
 """
@@ -12,9 +12,11 @@ Plus the serializer's whole-week / non-overlap validation.
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 
 import pytest
 import time_machine
+from django.utils import timezone
 
 from apps.commissioning.models import (
     DeliveryExceptionPeriod,
@@ -26,16 +28,26 @@ from apps.commissioning.services.delivery_exceptions import (
     paused_weeks_for_variation,
     resync_delivery_exception,
 )
+from apps.commissioning.services.member_cancellation import (
+    _force_end_subscription,
+    cancel_member_with_coop_shares,
+)
 from apps.commissioning.services.subscription_service import SubscriptionService
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
+    JasminUserFactory,
+    MemberFactory,
     SharesDeliveryDayFactory,
     ShareTypeFactory,
     ShareTypeVariationFactory,
     SubscriptionFactory,
 )
 from apps.commissioning.tests.factories.members import PaymentCycleFactory
-from apps.commissioning.utils.iso_week_utils import weeks_in_range
+from apps.commissioning.utils.iso_week_utils import share_delivery_date, weeks_in_range
+from apps.commissioning.viewsets.delivery_viewsets import DeliveryExceptionPeriodViewSet
+from apps.payments.constants import ChargeStatus
+from apps.payments.models import ChargeSchedule
+from apps.shared.tenants.models import TenantSettings
 
 # A subscription term spanning four future delivery weeks (all Mondays/Sundays
 # after today = 2026-07-01 so the "future weeks only" resync touches them all).
@@ -238,6 +250,268 @@ class TestResyncConfirmedSubscriptions:
         )
         # An unconfirmed subscription is left untouched by the resync.
         assert _delivered_weeks(subscription) == term_weeks
+
+
+# ═══════════════════════════════════════════════════════
+# Resync of cancelled subscriptions: the effective term end
+# ═══════════════════════════════════════════════════════
+
+
+def _bill_exactly(tenant) -> None:
+    """Bill every delivery in its own period (EXACT), so a delivery restored
+    after an exit shows up as a positive PLANNED charge for its period."""
+    row = TenantSettings.objects.filter(tenant=tenant, valid_until__isnull=True).first()
+    if row is None:
+        row = TenantSettings(
+            tenant=tenant, valid_from=timezone.now() - datetime.timedelta(days=365)
+        )
+    elif row.valid_from > timezone.now():
+        # The frozen clock sits before a row opened in real time; move its start
+        # back so ``get_current_settings`` sees it.
+        row.valid_from = timezone.now() - datetime.timedelta(days=365)
+    row.billing_strategy = TenantSettings.BILLING_STRATEGY_EXACT
+    row.bills_joker_deliveries = False
+    row.save()
+
+
+def _confirmed_subscription(
+    variation, station_day, member, **term_fields
+) -> Subscription:
+    """A confirmed subscription with its deliveries and charges, 10.00 per
+    delivery, billed monthly. ``term_fields`` carries ``valid_from`` /
+    ``valid_until`` and, for a renewal, ``previous_subscription``."""
+    subscription = SubscriptionFactory(
+        member=member,
+        share_type_variation=variation,
+        default_delivery_station_day=station_day,
+        quantity=1,
+        price_per_delivery=Decimal("10.00"),
+        payment_cycle=PaymentCycleFactory(choice="MONTHLY"),
+        **term_fields,
+    )
+    SubscriptionService().materialize_confirmed_subscription(subscription)
+    Subscription.objects.filter(pk=subscription.pk).update(admin_confirmed=True)
+    subscription.refresh_from_db()
+    return subscription
+
+
+def _create_pause(variation, valid_from, valid_until) -> DeliveryExceptionPeriod:
+    """Create a pause the way the office does: serializer, then perform_create."""
+    serializer = DeliveryExceptionPeriodSerializer(
+        data={
+            "share_type_variation": str(variation.id),
+            "valid_from": valid_from.isoformat(),
+            "valid_until": valid_until.isoformat(),
+        }
+    )
+    serializer.is_valid(raise_exception=True)
+    DeliveryExceptionPeriodViewSet().perform_create(serializer)
+    return serializer.instance
+
+
+def _shorten_pause(pause, valid_until) -> None:
+    serializer = DeliveryExceptionPeriodSerializer(
+        instance=pause, data={"valid_until": valid_until.isoformat()}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    DeliveryExceptionPeriodViewSet().perform_update(serializer)
+
+
+def _delivery_dates(subscription: Subscription) -> list[datetime.date]:
+    return sorted(
+        share_delivery_date(share_delivery)
+        for share_delivery in ShareDelivery.objects.filter(
+            subscription=subscription
+        ).select_related("share__delivery_day")
+    )
+
+
+def _positive_planned_charges_after(subscription, day) -> list[ChargeSchedule]:
+    """PLANNED charges with an amount to collect for a period starting after
+    ``day``. A zero-amount PLANNED row there is expected: the periods still run
+    to ``valid_until``."""
+    return list(
+        ChargeSchedule.objects.filter(
+            subscription=subscription,
+            status=ChargeStatus.PLANNED,
+            period_start__gt=day,
+            expected_amount__gt=Decimal("0.00"),
+        )
+    )
+
+
+@pytest.mark.django_db
+class TestResyncHonoursCancellation:
+    """A member exit force-ends a subscription by stamping
+    ``cancelled_effective_at`` and leaves ``valid_until`` as it was. Editing a
+    pause afterwards must restore nothing after that date — no delivery, no
+    charge — while a subscription cancelled with ``cancel_subscription`` keeps
+    its pauses suppressed and restored inside its shortened term."""
+
+    # Every week of the terms below starts after "today", so the future-weeks
+    # only resync and the past-week clamp of materialisation leave them in.
+    @pytest.fixture(autouse=True)
+    def _freeze(self):
+        with time_machine.travel(datetime.date(2026, 7, 1), tick=False):
+            yield
+
+    @pytest.fixture()
+    def station_day(self):
+        return DeliveryStationDayFactory(
+            delivery_day=SharesDeliveryDayFactory(day_number=2)  # Wednesday
+        )
+
+    @pytest.fixture()
+    def member(self):
+        # Joined long before the backdated exit below.
+        return MemberFactory(entry_date=datetime.date(2026, 1, 5))
+
+    def test_deleting_a_pause_restores_nothing_for_a_force_ended_renewal(
+        self, tenant, station_day, member
+    ):
+        _bill_exactly(tenant)
+        variation = _variation()
+        current = _confirmed_subscription(
+            variation,
+            station_day,
+            member=member,
+            valid_from=datetime.date(2026, 6, 1),
+            valid_until=datetime.date(2026, 7, 5),
+        )
+        renewal = _confirmed_subscription(
+            variation,
+            station_day,
+            member=member,
+            valid_from=_VALID_FROM,
+            valid_until=_VALID_UNTIL,
+            previous_subscription=current,
+        )
+        pause = _create_pause(variation, _PAUSE_FROM, _PAUSE_UNTIL)
+
+        # The exit falls before the renewal starts: cancel_subscription can't
+        # cancel it, so the exit force-ends it.
+        exit_date = datetime.date(2026, 7, 5)
+        cancel_member_with_coop_shares(
+            member,
+            cancelled_effective_at=exit_date,
+            cancelled_by=JasminUserFactory(),
+            force=True,
+        )
+        renewal.refresh_from_db()
+        assert renewal.cancelled_effective_at == exit_date
+        assert renewal.valid_until == _VALID_UNTIL
+        assert _delivered_weeks(renewal) == set()
+
+        DeliveryExceptionPeriodViewSet().perform_destroy(pause)
+
+        assert _delivered_weeks(renewal) == set()
+        assert _positive_planned_charges_after(renewal, exit_date) == []
+
+    def test_shortening_a_pause_restores_nothing_after_a_backdated_exit(
+        self, tenant, station_day, member
+    ):
+        _bill_exactly(tenant)
+        variation = _variation()
+        subscription = _confirmed_subscription(
+            variation,
+            station_day,
+            member=member,
+            valid_from=datetime.date(2026, 6, 1),
+            valid_until=datetime.date(2026, 8, 30),
+        )
+        pause = _create_pause(
+            variation, datetime.date(2026, 7, 20), datetime.date(2026, 8, 16)
+        )
+
+        # A backdated exit is already past the next Sunday cancel_subscription
+        # accepts, so the exit force-ends the running subscription.
+        exit_date = datetime.date(2026, 6, 24)  # a Wednesday
+        cancel_member_with_coop_shares(
+            member,
+            cancelled_effective_at=exit_date,
+            cancelled_by=JasminUserFactory(),
+            force=True,
+        )
+        subscription.refresh_from_db()
+        assert subscription.cancelled_effective_at == exit_date
+        assert subscription.valid_until == datetime.date(2026, 8, 30)
+        assert _delivered_weeks(subscription) == set()
+
+        # Weeks 32 and 33 leave the pause; the member left before both.
+        _shorten_pause(pause, datetime.date(2026, 8, 2))
+
+        assert _delivered_weeks(subscription) == set()
+        assert _positive_planned_charges_after(subscription, exit_date) == []
+
+    def test_a_cancelled_subscription_keeps_its_pauses_inside_its_term(
+        self, tenant, station_day, member
+    ):
+        _bill_exactly(tenant)
+        variation = _variation()
+        subscription = _confirmed_subscription(
+            variation,
+            station_day,
+            member=member,
+            valid_from=_VALID_FROM,
+            valid_until=datetime.date(2026, 8, 30),
+        )
+        effective_at = datetime.date(2026, 8, 16)  # the Sunday of week 33
+        SubscriptionService().cancel_subscription(
+            subscription, cancelled_by=JasminUserFactory(), effective_at=effective_at
+        )
+        subscription.refresh_from_db()
+        assert subscription.valid_until == subscription.cancelled_effective_at
+        kept = weeks_in_range(_VALID_FROM, effective_at)
+        assert _delivered_weeks(subscription) == kept
+
+        pause = _create_pause(
+            variation, datetime.date(2026, 8, 3), datetime.date(2026, 8, 30)
+        )
+        assert _delivered_weeks(subscription) == kept - {(2026, 32), (2026, 33)}
+
+        DeliveryExceptionPeriodViewSet().perform_destroy(pause)
+
+        # Weeks 32 and 33 come back; 34 and 35 lie after the cancellation.
+        assert _delivered_weeks(subscription) == kept
+        assert _positive_planned_charges_after(subscription, effective_at) == []
+
+    @pytest.mark.parametrize(
+        ("exit_date", "restored"),
+        [
+            (datetime.date(2026, 7, 21), set()),  # Tuesday before the delivery
+            (datetime.date(2026, 7, 22), {(2026, 30)}),  # the delivery day itself
+            (datetime.date(2026, 7, 23), {(2026, 30)}),  # Thursday after it
+        ],
+    )
+    def test_restore_cuts_at_a_mid_week_exit_like_the_force_end(
+        self, tenant, station_day, member, exit_date, restored
+    ):
+        _bill_exactly(tenant)
+        variation = _variation()
+        subscription = _confirmed_subscription(
+            variation,
+            station_day,
+            member=member,
+            valid_from=_VALID_FROM,
+            valid_until=datetime.date(2026, 8, 30),
+        )
+        pause = _create_pause(
+            variation, datetime.date(2026, 7, 20), datetime.date(2026, 8, 2)
+        )
+        _force_end_subscription(
+            subscription, effective=exit_date, now=timezone.now(), cancelled_by=None
+        )
+        before_exit = {(2026, 28), (2026, 29)}
+        assert _delivered_weeks(subscription) == before_exit
+
+        DeliveryExceptionPeriodViewSet().perform_destroy(pause)
+
+        # Week 30 delivers on Wednesday 2026-07-22: back only when the exit is
+        # on or after that day, the same strict "after the exit" cut the
+        # force-end applied. Week 31 (2026-07-29) never comes back.
+        assert _delivered_weeks(subscription) == before_exit | restored
+        assert max(_delivery_dates(subscription)) <= exit_date
+        assert _positive_planned_charges_after(subscription, exit_date) == []
 
 
 # ═══════════════════════════════════════════════════════

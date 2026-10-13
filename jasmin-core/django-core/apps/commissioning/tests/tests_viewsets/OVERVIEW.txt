@@ -189,15 +189,36 @@ test_crates_viewsets.py (48 tests)
   TestCrateDocumentLineSerializerLocks     2   server-owned columns of a delivery-note / invoice crate line
   TestCrateNetPriceDestroyGuard            2   active price of a crate in use → 409 + kept; unused → deleted
 
-test_customer_order_page_scoping.py (33 tests) — the customer (reseller) role sees only its own rows
+test_customer_order_page_scoping.py (81 tests) — the customer (reseller) role sees only its own rows
 ────────────────────────────────────────────────────────────────────────────────────────────────────
   TestCustomerOrderPage_ResellerScoping    9   list/retrieve/patch limited to own reseller; privileged and
                                                activation fields refused on self
   TestCustomerOrderPage_OfferScoping       1   offers of other offer groups excluded
   TestCustomerOrderPage_OrderContentScoping 6  list/retrieve/create/update/destroy scoped; price not settable
-  TestCustomerOrderPage_OrderContentOfferScoping 8 offers only from own offer group; share-article lines and
-                                               offer swaps refused; re-sending the current offer allowed
-  TestCustomerOrderPage_CrateScoping       1   crate list for another reseller forbidden
+  TestCustomerOrderPage_OrderContentOfferScoping 12 offers only from own offer group, finalized and of the
+                                               order's year and week (the office orders a draft);
+                                               share-article lines and offer swaps refused; re-sending the
+                                               current offer allowed
+  TestCustomerOrderPagePricing            16   a customer's line takes the offer's tier price for its PU
+                                               count on create and on every amount write, a sent price
+                                               dropped (200, not 403); a write without amount keeps the
+                                               price; rabatt / tax_rate / is_finalized still 403; the
+                                               delivery note carries the price; the office keeps its own
+  TestCustomerOrderPageAmounts             9   a negative amount refused on create and patch, also on a
+                                               line without offer (403, line and stock kept); 0 saved;
+                                               another amount on a line without offer refused (403
+                                               offer_required, line kept), its stored amount accepted
+                                               again, the office changes it
+  TestCustomerOrderPageOfficeLines        10   a line without offer is read-only: another unit, size,
+                                               description, sort, note, washing, cleaning or storage flag
+                                               refused (403 offer_required, line kept), its stored values
+                                               accepted again; the office changes them
+  TestCustomerOrderPageOrderDays           3   a customer's line never sets the order's days: an existing
+                                               order keeps them, a new one takes the delivery day's
+                                               defaults; the office sets them
+  TestCustomerOrderPage_CrateScoping       7   crate list for another reseller forbidden; own crate lines
+                                               can't be created, updated or deleted (403, rows kept) while
+                                               the office writes the same lines
   TestCustomerOrderPage_DocumentsScoping   3   delivery notes scoped; document creation forbidden
   TestCustomer_CannotAccessMemberEndpoints 3   members / share deliveries / abos forbidden
   TestCustomerOrderPage_OfferAnnotationScoping 2 peer amounts not requestable; omitting reseller shows own only
@@ -550,7 +571,7 @@ test_reseller_content_query_count.py (4 tests)
   TestInvoiceResellerContentQueryCount     2   list is scale-invariant; missing invoice_id refused
   TestDeliveryNoteResellerContentQueryCount 2  list is scale-invariant; missing delivery_note_id refused
 
-test_resellers_viewsets.py (114 tests)
+test_resellers_viewsets.py (117 tests)
 ──────────────────────────────────────
   TestResellerViewSet                     10   list, filter is_reseller / is_active_reseller, retrieve, IBAN never
                                                returned in plaintext, delete (delete_context required: a bare or
@@ -597,13 +618,13 @@ test_resellers_viewsets.py (114 tests)
   TestOfferResellerAndOfferGroupTogether   4   reseller + offer_group together: a matching pair returns the
                                                group's offers, a contradicting one the reseller's own group; a
                                                groupless reseller sees none
-  TestInvoiceEinvoiceXmlUpload             1   an e-invoice XML that defusedxml refuses is rejected
+  TestInvoiceEinvoiceXmlUpload             6   an e-invoice XML that is no CII invoice (DTD entity, XHTML,
+                                               malformed) or a CII invoice with a script or a stylesheet →
+                                               400 on xml_file, nothing stored; the invoice's own CII
+                                               invoice is stored
   TestResellerIbanStepUp                   9   rewriting or first setting a reseller's IBAN, on update or create,
                                                needs a fresh step-up claim; resending the stored IBAN, other
                                                edits and no or a blank IBAN prompt for nothing
-  TestVerifyEinvoiceXmlMatches             4   which uploaded e-invoice bodies block an upload: a wrong invoice
-                                               number or one defusedxml refuses; a matching body passes, a
-                                               malformed one is tolerated
 
 test_server_owned_field_locks.py (33 tests) — generic writes cannot set server-owned columns
 ────────────────────────────────────────────────────────────────────────────────────────────

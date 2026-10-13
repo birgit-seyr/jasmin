@@ -468,14 +468,17 @@ class TestSuppressedSendWithoutSmtpSetup:
 @pytest.mark.django_db
 class TestTestSendsWhileOn:
     def test_the_smtp_test_is_sent_and_verifies_the_config(
-        self, api_client, user, onboarding_mode, email_config, smtp_connection
+        self, tenant_host, onboarding_mode, email_config, smtp_connection
     ):
         email_config.is_verified = False
         email_config.save(update_fields=["is_verified"])
+        admin = JasminUserFactory(roles=["admin"])
+        client = APIClient(HTTP_HOST=tenant_host)
+        client.force_authenticate(user=admin)
 
-        resp = api_client.post(
+        resp = client.post(
             reverse("tenant_email_config-test-email"),
-            {"to_email": user.email},
+            {"to_email": admin.email},
             format="json",
         )
 

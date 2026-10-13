@@ -22,6 +22,11 @@
  *
  * Amounts and prices may be raw input text, so a decimal comma counts as
  * the decimal point.
+ *
+ * The backend prices a customer's order line with a Python port of these
+ * pickers (``apps/commissioning/services/tier_price.py``). Both are tested
+ * against ``__tests__/tierPriceCases.json``: a rule change goes into that
+ * table and both pickers.
  */
 
 import { parseDecimalInput } from "./numberFormat";

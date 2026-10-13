@@ -216,7 +216,7 @@ class OfferService:
         """
         Create offers for resellers based on:
         1. Forecasts (assigned to offer groups or marked for all)
-        2. Theoretical stock (from StockService)
+        2. Monday's reseller stock, counted or theoretical (from StockService)
         3. Share content needs
         """
         current_date = Week(year, delivery_week).monday()
@@ -361,30 +361,30 @@ class OfferService:
     def _resolve_reseller_stock_amounts(
         year: int, delivery_week: int
     ) -> dict[tuple, Decimal]:
-        """Theoretical reseller stock for the week, keyed by
-        ``(share_article_id, unit, size)``.
+        """Reseller stock on the week's Monday, keyed by
+        ``(share_article_id, unit, size)`` and summed across storages.
 
-        Picks the first delivery ``day_number`` for the calculation and keeps
-        only the entries flagged ``for_resellers``, summing across storages.
+        Only entries whose Monday INVENTORY row is flagged ``for_resellers``
+        count. As in the share planning and the stock allocation, an entry gives
+        its counted amount when it was counted, else its theoretical balance,
+        and nothing when that is negative: a deficit never shrinks the offers.
         """
         from .stock_service import StockService
 
         stock_map = StockService.get_theoretical_current_stock(
             year, delivery_week, day_number=0, storage=None
         )
-
         stock_amounts: dict[tuple, Decimal] = {}
-        for (
-            share_article_id,
-            unit,
-            size,
-            _storage_id,
-        ), stock_data in stock_map.items():
+        for (share_article_id, unit, size, _storage), stock_data in stock_map.items():
             if not stock_data.get("for_resellers", False):
                 continue
-            key = (share_article_id, unit, size)
-            amount = stock_data.get("theoretical_current_stock") or Decimal("0")
-            stock_amounts[key] = stock_amounts.get(key, Decimal("0")) + amount
+            counted = stock_data.get("current_stock_amount")
+            theoretical = stock_data.get("theoretical_current_stock") or 0
+            # StockService returns floats, shaped for the JSON stock views.
+            amount = Decimal(str(theoretical if counted is None else counted))
+            if amount > 0:
+                key = (share_article_id, unit, size)
+                stock_amounts[key] = stock_amounts.get(key, Decimal("0")) + amount
         return stock_amounts
 
     @staticmethod

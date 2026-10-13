@@ -37,6 +37,7 @@ from apps.commissioning.tests.factories import (
     ResellerFactory,
     ShareArticleFactory,
 )
+from apps.commissioning.tests.tests_services.test_einvoice_upload import cii_invoice
 
 
 # ---------------------------------------------------------------------------
@@ -1607,72 +1608,94 @@ _HOSTILE_EINVOICE_XML = (
     b"<invoice>&payload;</invoice>"
 )
 
-_MATCHING_EINVOICE_XML = (
-    b'<rsm:Invoice xmlns:rsm="urn:example">'
-    b"<rsm:ExchangedDocument><rsm:ID>RE-2026-7</rsm:ID></rsm:ExchangedDocument>"
-    b"<rsm:GrandTotalAmount>10.00</rsm:GrandTotalAmount>"
-    b"</rsm:Invoice>"
-)
-
-
-class TestVerifyEinvoiceXmlMatches:
-    """Which uploaded e-invoice bodies block an upload and which are tolerated."""
-
-    @staticmethod
-    def _verify(raw: bytes, *, number=7, sum_brutto=Decimal("10.00")):
-        from io import BytesIO
-        from types import SimpleNamespace
-
-        from apps.commissioning.viewsets.resellers_viewsets import (
-            _verify_einvoice_xml_matches,
-        )
-
-        document = SimpleNamespace(number=number, sum_brutto=sum_brutto)
-        return _verify_einvoice_xml_matches(document, BytesIO(raw))
-
-    def test_a_matching_body_passes(self):
-        assert self._verify(_MATCHING_EINVOICE_XML) is None
-
-    def test_a_wrong_number_is_reported(self):
-        raw = _MATCHING_EINVOICE_XML.replace(b"RE-2026-7", b"RE-2026-8")
-
-        assert "number" in self._verify(raw)
-
-    def test_a_malformed_body_is_tolerated(self):
-        assert self._verify(b"<invoice") is None
-
-    def test_a_body_defusedxml_refuses_blocks_the_upload(self):
-        assert self._verify(_HOSTILE_EINVOICE_XML) is not None
-
 
 @pytest.mark.django_db
 class TestInvoiceEinvoiceXmlUpload:
-    def test_an_xml_defusedxml_refuses_is_rejected(self, api_client, tenant):
+    """The invoice upload stores the e-invoice XML sent with it only when that is
+    a CII invoice and nothing a browser could run. Which bodies pass is covered
+    body by body in ``tests_services/test_einvoice_upload.py``."""
+
+    @staticmethod
+    def _upload(api_client, invoice, xml: bytes):
         from django.core.files.uploadedfile import SimpleUploadedFile
 
-        invoice = InvoiceResellerFactory(is_finalized=True)
-        url = reverse("invoices-upload-pdf", kwargs={"pk": invoice.pk})
-
-        resp = api_client.post(
-            url,
+        return api_client.post(
+            reverse("invoices-upload-pdf", kwargs={"pk": invoice.pk}),
             {
                 "file": SimpleUploadedFile(
                     "invoice.pdf", b"%PDF-1.4 minimal", content_type="application/pdf"
                 ),
                 "xml_file": SimpleUploadedFile(
-                    "invoice.xml",
-                    _HOSTILE_EINVOICE_XML,
-                    content_type="application/xml",
+                    "invoice.xml", xml, content_type="application/xml"
                 ),
             },
             format="multipart",
         )
+
+    @staticmethod
+    def _cii_invoice_of(invoice, **parts) -> bytes:
+        """A CII invoice stating ``invoice``'s number and total, so nothing but
+        ``parts`` can stand in the way of storing it."""
+        return cii_invoice(
+            document_id=f"{invoice.prefix}-{invoice.number}",
+            grand_total=f"{invoice.sum_brutto:.2f}",
+            **parts,
+        )
+
+    def _assert_refused(self, api_client, invoice, xml: bytes):
+        resp = self._upload(api_client, invoice, xml)
 
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.data["code"] == "uploaded_document.invalid"
         assert resp.data["field"] == "xml_file"
         invoice.refresh_from_db()
         assert not invoice.file
+        assert not invoice.xml_file
+
+    @pytest.mark.parametrize(
+        "xml",
+        [
+            _HOSTILE_EINVOICE_XML,
+            b'<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+            b"<script>alert(1)</script></body></html>",
+            b"<invoice",
+        ],
+        ids=["external-entity", "xhtml", "malformed"],
+    )
+    def test_an_xml_that_is_not_a_cii_invoice_is_refused(self, api_client, tenant, xml):
+        self._assert_refused(api_client, InvoiceResellerFactory(is_finalized=True), xml)
+
+    @pytest.mark.parametrize(
+        "parts",
+        [
+            {
+                "inside": '<h:script xmlns:h="http://www.w3.org/1999/xhtml">'
+                "alert(1)</h:script>"
+            },
+            {"prolog": '<?xml-stylesheet type="text/xsl" href="#x"?>\n'},
+        ],
+        ids=["script", "stylesheet"],
+    )
+    def test_a_cii_invoice_a_browser_would_run_is_refused(
+        self, api_client, tenant, parts
+    ):
+        invoice = InvoiceResellerFactory(is_finalized=True)
+
+        self._assert_refused(
+            api_client, invoice, self._cii_invoice_of(invoice, **parts)
+        )
+
+    def test_the_invoices_cii_invoice_is_stored(self, api_client, tenant):
+        invoice = InvoiceResellerFactory(is_finalized=True)
+        xml = self._cii_invoice_of(invoice)
+
+        resp = self._upload(api_client, invoice, xml)
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        invoice.refresh_from_db()
+        assert invoice.file
+        with invoice.xml_file.open("rb") as stored:
+            assert stored.read() == xml
 
 
 # ---------------------------------------------------------------------------

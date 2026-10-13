@@ -533,12 +533,30 @@ class TenantEmailConfigSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    # A test send vouches only for the connection it went through, so a new
+    # password or a change to any of these drops the verified mark until the
+    # next test send succeeds. Resending a stored value is no change: the
+    # settings page autosaves the whole form on every edit.
+    _CONNECTION_FIELDS = (
+        "smtp_host",
+        "smtp_port",
+        "smtp_username",
+        "smtp_use_tls",
+        "smtp_use_ssl",
+    )
+
     def update(self, instance, validated_data):
         smtp_password = validated_data.pop("smtp_password", None)
+        connection_changed = any(
+            field in validated_data
+            and validated_data[field] != getattr(instance, field)
+            for field in self._CONNECTION_FIELDS
+        )
 
         if smtp_password:
             instance.smtp_password = smtp_password
-            instance.is_verified = False  # reset verification on credential change
+        if smtp_password or connection_changed:
+            instance.is_verified = False
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

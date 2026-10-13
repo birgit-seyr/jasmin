@@ -66,6 +66,9 @@ x-backend-env: &backend-env
   SUPER_ADMIN_ALLOWED_IPS: ${SUPER_ADMIN_ALLOWED_IPS:-}
   TRUSTED_PROXY_COUNT: ${TRUSTED_PROXY_COUNT:-1}
   CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+  # Same-origin check on the login / refresh / logout endpoints. "False" turns
+  # it off, for a proxy that strips or alters Sec-Fetch-Site / Origin.
+  AUTH_ORIGIN_GUARD: ${AUTH_ORIGIN_GUARD:-True}
   SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
   # Secret-key rotation: verify in-flight JWTs / signed links against the old
   # key during a rotation window (see settings.py SECRET_KEY_FALLBACKS).
@@ -77,6 +80,10 @@ x-backend-env: &backend-env
   FRIENDLY_CAPTCHA_TIMEOUT_SECONDS: ${FRIENDLY_CAPTCHA_TIMEOUT_SECONDS:-5.0}
   STEP_UP_TTL_SECONDS: ${STEP_UP_TTL_SECONDS:-300}
   STEP_UP_REQUIRES_TOTP: ${STEP_UP_REQUIRES_TOTP:-False}
+  # Free space, in percent of a disk, under which huey's hourly disk check
+  # mails the admins a warning and a critical alert.
+  DISK_FREE_WARNING_PERCENT: ${DISK_FREE_WARNING_PERCENT:-20}
+  DISK_FREE_CRITICAL_PERCENT: ${DISK_FREE_CRITICAL_PERCENT:-10}
 
 # Container logs go to the host's systemd journal, so they outlive the
 # containers a deploy recreates (json-file logs are deleted with them). Age and
@@ -193,7 +200,9 @@ services:
     # mean "migrated", which gates huey below so it can't run tasks against a
     # half-migrated schema. start_period is generous to cover a long
     # multi-tenant migrate without flapping. (python is always present; the
-    # runtime image has no curl/wget.)
+    # runtime image has no curl/wget.) Liveness, not /health/ready/: an outage
+    # of the database or Redis must not mark the backend unhealthy and hold
+    # huey back. The deploy smoke test and the uptime monitors check readiness.
     healthcheck:
       test:
         [
@@ -419,9 +428,12 @@ services:
     # tunnel access keeps the Node admin UI off the internet.
     #
     # Configure monitors against the public-facing URL, NOT the
-    # internal ``backend`` service. That way Kuma is testing what an
-    # actual user would hit — TLS, gateway, backend, all the way
-    # through.  Example: ``https://${FRONTEND_DOMAIN}/health/``
+    # internal ``backend`` service, so Kuma tests what an actual user
+    # hits: TLS, gateway, backend. Point them at the readiness probe,
+    # ``https://${FRONTEND_DOMAIN}/health/ready/``, which answers 200 only
+    # while the backend also reaches the database and Redis takes writes.
+    # ``/health/`` is the containers' liveness check and stays 200 through
+    # an outage of either.
     image: louislam/uptime-kuma:1
     restart: unless-stopped
     logging: *default-logging

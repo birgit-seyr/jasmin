@@ -69,10 +69,9 @@ export default function ConfigurationEmail() {
   const queryClient = useQueryClient();
 
   // The backend only accepts test sends to the requesting user's own
-  // email or the (admin-controlled) tenant contact address — the
-  // office-writable sender / reply-to are deliberately not allowed
-  // (no spam relay via a compromised office account). Offer exactly
-  // those two.
+  // email or the tenant contact address — the sender / reply-to set on
+  // this page are deliberately not allowed (no spam relay through a
+  // hijacked session). Offer exactly those two.
   const allowedTestRecipients = useMemo(() => {
     const candidates = [
       (user as { email?: string } | null)?.email,
@@ -135,7 +134,7 @@ export default function ConfigurationEmail() {
       is_active: config.is_active,
     };
 
-    // Only send the password when the office actually typed one — an empty
+    // Only send the password when one was actually typed — an empty
     // field must never blank the stored (encrypted) credential.
     if (credentialFields.smtp_password) {
       payload.smtp_password = credentialFields.smtp_password;
@@ -175,7 +174,7 @@ export default function ConfigurationEmail() {
     [markChanged],
   );
 
-  // The port is the ONLY encryption choice the office makes — the connection
+  // The port is the ONLY encryption choice this page offers — the connection
   // security follows from it automatically (kept as two backward-compatible
   // booleans on the wire): 465 → implicit SSL, everything else → STARTTLS.
   const handlePortChange = useCallback(

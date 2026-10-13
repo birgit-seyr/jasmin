@@ -25,6 +25,7 @@ from apps.shared.auth_cookies import (
     set_super_admin_refresh_cookie,
 )
 from apps.shared.request_utils import body, client_ip
+from apps.shared.same_origin import require_same_origin
 from apps.shared.tenants.models import Tenant
 from core.serializers import ErrorResponseSerializer
 from core.throttling import set_throttle_scope
@@ -176,6 +177,7 @@ def _build_super_admin_session_response(user: SuperAdmin) -> Response:
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@require_same_origin
 def super_admin_login_view(request: Request) -> Response:
     """Authenticate super admin user and return JWT tokens."""
     email = body(request).get("email")
@@ -282,6 +284,7 @@ set_throttle_scope(super_admin_login_view, "super_admin_login")
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@require_same_origin
 def super_admin_logout_view(request: Request) -> Response:
     """Logout super admin by blacklisting the refresh token and clearing cookie.
 
@@ -341,6 +344,7 @@ def super_admin_logout_view(request: Request) -> Response:
 @api_view(["POST"])
 @authentication_classes([])
 @permission_classes([AllowAny])
+@require_same_origin
 def super_admin_token_refresh_view(request: Request) -> Response:
     """Refresh super admin JWT access token (cookie-based, with rotation)."""
     refresh_token: str | None = get_super_admin_refresh_token(request)

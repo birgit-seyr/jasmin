@@ -227,7 +227,7 @@ index 0cab459..ade266a 100755
  echo "   3. Configure EACH tenant's own SMTP before inviting its users."
  echo "   4. Wire off-host backups (Phase 3), then run scripts/restore_drill.sh."
 diff --git a/scripts/update.sh b/scripts/update.sh
-index 7f43da7..fba2062 100755
+index a9406d5..60a09a2 100755
 --- a/scripts/update.sh
 +++ b/scripts/update.sh
 @@ -10,8 +10,9 @@
@@ -239,10 +239,10 @@ index 7f43da7..fba2062 100755
 +#      (nginx/super_admin_allowlist/super_admin_allowed_ips.conf is the one
 +#      EXPECTED server-local edit — operator IPs live only on the server,
 +#      never in git)
- #   2. fetches + shows what's incoming, fast-forwards to origin/main
- #   3. hands off to deploy.sh (env validation, image build, an encrypted
- #      snapshot of the database, compose up, wait-for-healthy, smoke test) —
-@@ -34,7 +35,7 @@ cd "$REPO_ROOT"
+ #   2. fetches + shows what's incoming
+ #   3. asks GitHub whether CI (.github/workflows/ci.yml) passed for the exact
+ #      commit it is about to deploy: the tip of origin/main, or HEAD when
+@@ -67,7 +68,7 @@ cd "$REPO_ROOT"
  # server. Untracked files (.env, deploy.log, backups/*, certbots/linode.ini)
  # are fine: git pull never touches them.
  dirt="$(git status --porcelain --untracked-files=no \

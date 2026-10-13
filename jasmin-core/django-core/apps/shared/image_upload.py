@@ -1,13 +1,15 @@
 """Validate and re-encode a user-uploaded raster picture before it is stored.
 
 Media is served from the tenant origin with a Content-Type that nginx derives
-from the stored FILE EXTENSION (and ``nosniff``, no attachment disposition).
-Storing an upload under its client-chosen name therefore lets the uploader pick
-the served type: an ``.html`` or ``.svg`` "picture" — or a real PNG renamed to
-``x.html`` — would run script on the tenant origin when its signed link is
-opened. So a picture is only accepted when Pillow decodes it as one of a small
-set of browser-renderable raster formats, and what gets stored is a fresh
-re-encode in that detected format under a generated name whose extension
+from the stored FILE EXTENSION (and ``nosniff``). Only PDFs and the raster
+formats below render inline; every other file goes out as a sandboxed
+attachment (``core/protected_media.py``). Storing an upload under its
+client-chosen name therefore lets the uploader pick how it is served: an
+``.html`` or ``.svg`` "picture" would have only that sandbox between its script
+and the tenant origin, and a real PNG renamed to ``x.html`` would download
+instead of showing. So a picture is only accepted when Pillow decodes it as one
+of a small set of browser-renderable raster formats, and what gets stored is a
+fresh re-encode in that detected format under a generated name whose extension
 matches it. The client's file name and bytes never reach storage.
 
 The error class is injected by the caller so each app keeps raising its own

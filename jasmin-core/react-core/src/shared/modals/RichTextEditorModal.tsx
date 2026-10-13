@@ -1,5 +1,6 @@
 import { Alert, Button, Modal, Space } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import DOMPurify from "dompurify";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
@@ -28,11 +29,11 @@ const formats = [
   "link",
 ];
 
-const htmlToPlainText = (html: string): string => {
-  const container = document.createElement("div");
-  container.innerHTML = html;
-  return container.textContent;
-};
+// DOMParser parses into a document of its own, which has no browsing context:
+// nothing in the HTML loads or runs. An element of the page's document is not
+// inert even while detached, so an <img onerror> in it fires.
+const htmlToPlainText = (html: string): string =>
+  new DOMParser().parseFromString(html, "text/html").body.textContent;
 
 const getPlainTextLength = (html: string): number =>
   htmlToPlainText(html).length;
@@ -97,11 +98,17 @@ export default function RichTextEditorModal({
   warningCharsPerLine = null,
 }: RichTextEditorModalProps) {
   const { t } = useTranslation();
+  // Stored HTML is free text from the API, and Quill rebuilds the list items
+  // of Word markup in elements of the page's own document, where handlers in
+  // them can run. So the editor and the counters start from sanitized HTML.
+  // What Quill emits is passed back unsanitized: react-quill-new reloads the
+  // editor whenever ``value`` differs from the HTML it last emitted.
+  const storedHtml = useMemo(() => DOMPurify.sanitize(value || ""), [value]);
   // The caller (SettingsPage) gives this component a fresh React
-  // ``key`` on every open, so ``useState(value || "")`` initialises
+  // ``key`` on every open, so ``useState(storedHtml)`` initialises
   // with the value just passed in. No need for any session-tracking
   // inside the modal — the parent's key bump handles the mount story.
-  const [content, setContent] = useState(value || "");
+  const [content, setContent] = useState(storedHtml);
   const [saving, setSaving] = useState(false);
   const [validation, setValidation] = useState<ValidationState>({
     lines: 0,
@@ -188,10 +195,10 @@ export default function RichTextEditorModal({
 
   useEffect(() => {
     if (visible) {
-      setContent(value || "");
-      validateContent(value || "");
+      setContent(storedHtml);
+      validateContent(storedHtml);
     }
-  }, [visible, value, validateContent]);
+  }, [visible, storedHtml, validateContent]);
 
   const handleChange = (newContent: string) => {
     setContent(newContent);

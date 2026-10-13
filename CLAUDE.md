@@ -1168,9 +1168,18 @@ idempotent: validates `.env`, issues the wildcard cert, pulls the newest build
 of every image tag and builds, tags the build as a release (`<UTC time>-<git
 hash>`, the last five kept), snapshots the database, brings the core stack up,
 waits for backend health, migrates.
-`scripts/update.sh` is the "I pushed — now what?" wrapper around it.
+`scripts/update.sh` is the "I pushed — now what?" wrapper around it, and it
+deploys only a commit CI passed: before it fast-forwards it asks the GitHub API
+(no token — the repository is public) for the newest CI run of that commit's
+push to `main`, and anything but `success` — still running, red, cancelled, no
+run, no answer — stops it. `--skip-ci-check` (or `SKIP_CI_CHECK=1`) is the
+emergency override for a GitHub outage.
 `scripts/rollback.sh` switches back to a kept release whose migrations are a
-prefix of those the database has applied.
+prefix of those the database has applied. Both end by probing
+`https://<domain>/health/ready/`, which answers 200 only while the backend
+reaches the database and Redis takes writes — `/health/`, the containers'
+healthcheck, is liveness only and stays 200 through an outage of either. A
+failed probe stops nothing, but makes the script exit 1 at the very end.
 
 **Database backups:** the `backup` service runs them — a nightly GPG-encrypted
 `pg_dump` plus a media archive (`backups/backup.sh`), with an rclone off-host
