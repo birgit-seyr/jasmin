@@ -27,7 +27,8 @@
 #
 # Restores:
 #     Both restores run backups/restore.sh from this checkout in the backup
-#     image, the way a real restore runs: into a new database, then the swap
+#     image, the way a real restore runs: into a new database, which a
+#     throwaway app role fills (postgres/app_db_role.sh), then the swap
 #     (confirmed up front), against the sandbox only. Its /backups is a
 #     scratch directory holding just the dump, so its ledger refresh writes
 #     nowhere near the real ledger. A plain .sql is first wrapped the way
@@ -74,7 +75,11 @@
 #     The sandbox container is fully isolated (no host port, default
 #     bridge network only) and torn down at the end, with every database
 #     the restores made in it. Prod is read-only for the row-count query —
-#     no writes anywhere near it. The dump is staged and the media
+#     no writes anywhere near it. Every superuser session the drill opens
+#     looks names up in pg_catalog only and reads plain tables only, under
+#     quoted names: the app owns its database and may have put operators,
+#     functions or views there, which must not run with a superuser's
+#     rights. The dump is staged and the media
 #     archive unpacked in throwaway mktemp dirs, removed by the exit
 #     trap, and NEVER in ./backups or media_volume, which hold the real
 #     backups and the live uploads. The drill writes only its log, under
@@ -89,6 +94,12 @@ SANDBOX_USER="jasmin_sandbox"
 # Passphrase is throwaway — the container lives for ~30s and never
 # accepts a connection from outside docker exec.
 SANDBOX_PASSWORD="sandbox_$(date +%s)_$RANDOM"
+# The app's role in the sandbox: restore.sh fills its copies as it, as a real
+# restore does, and the erasure replay logs in as it, as huey does.
+SANDBOX_APP_USER="jasmin_sandbox_app"
+SANDBOX_APP_PASSWORD="sandbox_app_$(date +%s)_$RANDOM"
+# Every superuser session looks names up in pg_catalog only (see "Safety").
+CATALOG_ONLY="-c search_path=pg_catalog"
 PROD_POSTGRES_CONTAINER="${PROD_POSTGRES_CONTAINER:-$(docker compose ps -q postgres 2>/dev/null || true)}"
 OUTPUT_DIR="backups/restore-drills"
 # One file per run: a rerun on the same day keeps the earlier log.
@@ -106,6 +117,7 @@ REPLAY_FAILED=0
 # Restore state. SCRATCH_DIR is restore.sh's /backups: the dump and, while a
 # restore runs, its decrypted copy. Declared up front for the exit trap.
 RESTORE_SH="$(pwd)/backups/restore.sh"
+APP_DB_ROLE_SH="$(pwd)/postgres/app_db_role.sh"
 SCRATCH_DIR=""
 RESTORE_STATUS="not run"
 MIGRATED_STATUS="not run"
@@ -164,8 +176,8 @@ if [ -z "$PROD_POSTGRES_CONTAINER" ]; then
     exit 1
 fi
 
-if [ ! -f "$RESTORE_SH" ]; then
-    echo "ERROR: $RESTORE_SH not found. Run the drill from the repo root." >&2
+if [ ! -f "$RESTORE_SH" ] || [ ! -f "$APP_DB_ROLE_SH" ]; then
+    echo "ERROR: $RESTORE_SH or $APP_DB_ROLE_SH not found. Run the drill from the repo root." >&2
     exit 1
 fi
 
@@ -288,11 +300,14 @@ run_restore() {
         -v "${SCRATCH_DIR}:/backups" \
         -v "${DUMP_SOURCE}:/backups/${DUMP_NAME}:ro" \
         -v "${RESTORE_SH}:/drill/restore.sh:ro" \
+        -v "${APP_DB_ROLE_SH}:/usr/local/bin/app_db_role.sh:ro" \
         -e POSTGRES_HOST=127.0.0.1 \
         -e POSTGRES_PORT=5432 \
         -e POSTGRES_DB="$SANDBOX_DB" \
         -e POSTGRES_USER="$SANDBOX_USER" \
         -e POSTGRES_PASSWORD="$SANDBOX_PASSWORD" \
+        -e APP_DB_USER="$SANDBOX_APP_USER" \
+        -e APP_DB_PASSWORD="$SANDBOX_APP_PASSWORD" \
         -e BACKUP_ENCRYPTION_KEY \
         -e ALLOW_MISSING_GDPR_LEDGER=1 \
         -e CONFIRM_SWAP=1 \
@@ -302,8 +317,51 @@ run_restore() {
 
 # Prints the result of the query $2 on the sandbox database $1.
 sandbox_query() {
-    docker exec "$SANDBOX_CONTAINER" \
+    docker exec -e PGOPTIONS="$CATALOG_ONLY" "$SANDBOX_CONTAINER" \
         psql -X -At -v ON_ERROR_STOP=1 -U "$SANDBOX_USER" -d "$1" -c "$2"
+}
+
+# Prints "<schema> <TAB> <table> <TAB> <rows>" for every plain table of the
+# database $3 in the container $1, read as $2; <rows> is empty for a table
+# that went or changed. The app names the tables: format() quotes them, the
+# printed names have their control characters (a tab, a newline) turned into
+# "?" so they keep to their field, and every count is a statement of its own
+# (\gexec) that locks its table first and counts it only while it is a plain
+# table, as a view put under its name would run the app's code.
+table_rows() {
+    docker exec -i -e PGOPTIONS="$CATALOG_ONLY" "$1" \
+        psql -X -q -At -F "$(printf '\t')" -v ON_ERROR_STOP=1 -U "$2" -d "$3" <<'SQL'
+CREATE FUNCTION pg_temp.table_rows(schema_name name, table_name name) RETURNS bigint
+LANGUAGE plpgsql AS $$
+DECLARE
+    total bigint;
+BEGIN
+    EXECUTE format('LOCK TABLE %I.%I IN ACCESS SHARE MODE', schema_name, table_name);
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = schema_name AND c.relname = table_name
+          AND c.relkind IN ('r', 'p')
+    ) THEN
+        RETURN NULL;
+    END IF;
+    EXECUTE format('SELECT count(*) FROM %I.%I', schema_name, table_name) INTO total;
+    RETURN total;
+EXCEPTION WHEN undefined_table OR invalid_schema_name THEN
+    RETURN NULL;
+END
+$$;
+SELECT format('SELECT %L, %L, pg_temp.table_rows(%L, %L)',
+              regexp_replace(n.nspname, '[[:cntrl:]]', '?', 'g'),
+              regexp_replace(c.relname, '[[:cntrl:]]', '?', 'g'),
+              n.nspname, c.relname)
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE c.relkind IN ('r', 'p')
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+  AND n.nspname !~ '^pg_'
+ORDER BY n.nspname, c.relname
+\gexec
+SQL
 }
 
 # restore.sh's comparison of the restored copy with the database it replaced,
@@ -357,12 +415,7 @@ echo "Restore complete. Running row-count comparison..."
 PROD_USER="${POSTGRES_USER:-$(docker exec "$PROD_POSTGRES_CONTAINER" printenv POSTGRES_USER)}"
 PROD_DB="${POSTGRES_DB:-$(docker exec "$PROD_POSTGRES_CONTAINER" printenv POSTGRES_DB)}"
 
-# ── Enumerate tables + emit markdown row-count comparison ─────────────────
-ENUMERATE_SQL="SELECT schemaname || '.' || tablename
-               FROM pg_tables
-               WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
-               ORDER BY schemaname, tablename"
-
+# ── Row-count comparison ──────────────────────────────────────────────────
 {
     echo "## Row-count comparison"
     echo ""
@@ -373,21 +426,20 @@ ENUMERATE_SQL="SELECT schemaname || '.' || tablename
 TOTAL_TABLES=0
 LARGE_DIFFS=0
 
-while IFS= read -r qualified; do
-    [ -z "$qualified" ] && continue
-    schema="${qualified%%.*}"
-    table="${qualified#*.}"
+SANDBOX_ROWS="$(table_rows "$SANDBOX_CONTAINER" "$SANDBOX_USER" "$SANDBOX_DB")" || {
+    echo "WARNING: could not count the sandbox's rows." >&2
+    SANDBOX_ROWS=""
+}
+PROD_ROWS="$(table_rows "$PROD_POSTGRES_CONTAINER" "$PROD_USER" "$PROD_DB" 2>/dev/null)" || PROD_ROWS=""
+
+# The sandbox's tables, each with its prod count, or n/a where prod has none.
+while IFS="$(printf '\t')" read -r schema table sandbox_count prod_count; do
+    [ -z "$schema" ] && continue
     TOTAL_TABLES=$((TOTAL_TABLES + 1))
 
-    sandbox_count=$(docker exec "$SANDBOX_CONTAINER" \
-        psql -U "$SANDBOX_USER" -d "$SANDBOX_DB" -t -A \
-        -c "SELECT count(*) FROM \"$schema\".\"$table\";" 2>/dev/null || echo "ERR")
-
-    prod_count=$(docker exec "$PROD_POSTGRES_CONTAINER" \
-        psql -U "$PROD_USER" -d "$PROD_DB" -t -A \
-        -c "SELECT count(*) FROM \"$schema\".\"$table\";" 2>/dev/null || echo "n/a")
-
-    if [ "$prod_count" = "n/a" ] || [ "$prod_count" = "ERR" ] || [ "$sandbox_count" = "ERR" ]; then
+    # Digits only before the arithmetic: bash evaluates what it is given, and
+    # these come from the app's database.
+    if ! [[ "$sandbox_count" =~ ^[0-9]+$ && "$prod_count" =~ ^[0-9]+$ ]]; then
         diff="n/a"
     else
         diff=$((prod_count - sandbox_count))
@@ -405,8 +457,10 @@ while IFS= read -r qualified; do
 
     printf "| %s | %s | %s | %s | %s |\n" \
         "$schema" "$table" "$sandbox_count" "$prod_count" "$diff" >> "$OUTPUT_FILE"
-done < <(docker exec "$SANDBOX_CONTAINER" \
-    psql -U "$SANDBOX_USER" -d "$SANDBOX_DB" -t -A -c "$ENUMERATE_SQL")
+done < <(awk -F '\t' -v OFS='\t' '
+    NR == FNR { if ($3 != "") prod[$1 OFS $2] = $3; next }
+    $1 != "" { print $1, $2, ($3 == "" ? "n/a" : $3), (($1 OFS $2) in prod) ? prod[$1 OFS $2] : "n/a" }
+' <(printf '%s\n' "$PROD_ROWS") <(printf '%s\n' "$SANDBOX_ROWS"))
 
 # ── GDPR erasure replay (dry run) ──────────────────────────────────────────
 # A real restore is followed by ``replay_gdpr_deletions``, which re-applies
@@ -417,7 +471,8 @@ done < <(docker exec "$SANDBOX_CONTAINER" \
 #
 # The app container runs the live image with the live environment, but shares
 # only the sandbox's network: it reaches the sandbox database on localhost and
-# nothing of the running stack.
+# nothing of the running stack. It logs in as the sandbox's app role, as huey
+# logs in as the live one.
 LEDGER_FILE="backups/gdpr-deletion-ledger.jsonl"
 HUEY_CONTAINER="$(docker compose ps -q huey 2>/dev/null || true)"
 
@@ -455,8 +510,8 @@ else
             -e POSTGRES_HOST=127.0.0.1 \
             -e POSTGRES_PORT=5432 \
             -e POSTGRES_DB="$SANDBOX_DB" \
-            -e POSTGRES_USER="$SANDBOX_USER" \
-            -e POSTGRES_PASSWORD="$SANDBOX_PASSWORD" \
+            -e POSTGRES_USER="$SANDBOX_APP_USER" \
+            -e POSTGRES_PASSWORD="$SANDBOX_APP_PASSWORD" \
             -e SENTRY_DSN= \
             --entrypoint sh "$APP_IMAGE" \
             -c 'python manage.py migrate_schemas --noinput > /dev/null && python manage.py replay_gdpr_deletions --dry-run --ledger -' \
@@ -500,7 +555,7 @@ fi
 echo "Restoring the backup again, over a migrated copy of it..."
 MIGRATED_OUTPUT=""
 MIGRATED_DETAIL=""
-docker exec -i "$SANDBOX_CONTAINER" \
+docker exec -i -e PGOPTIONS="$CATALOG_ONLY" "$SANDBOX_CONTAINER" \
     psql -X -q -v ON_ERROR_STOP=1 -U "$SANDBOX_USER" -d "$SANDBOX_DB" <<'SQL' || true
 DO $$
 DECLARE

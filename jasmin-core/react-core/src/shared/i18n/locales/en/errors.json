@@ -279,6 +279,9 @@
     "not_found": "Storage not found.",
     "in_use": "This storage is still in use (by forecasts or documentation entries, say) and can't be deleted."
   },
+  "offer": {
+    "amount_changed": "The available amount of this offer has changed in the meantime — please reload the page and enter the amount again."
+  },
   "offer_group": {
     "not_found": "Offer group not found.",
     "cannot_delete_default": "The default offer group cannot be deleted.",

@@ -616,7 +616,8 @@ export const useEditableTable = <T extends TableRecord = TableRecord>({
     const draftRowIndex = data.findIndex((item) => item.key === -1);
     if (draftRowIndex > -1) return data[draftRowIndex];
 
-    await save(editingKey);
+    // A row whose save failed stays open with its error.
+    if (!(await save(editingKey))) return undefined;
 
     const newEntry = { key: -1 } as T;
     const newData = [newEntry, ...data];

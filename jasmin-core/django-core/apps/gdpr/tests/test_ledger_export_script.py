@@ -40,13 +40,22 @@ echo "export returned ${status}"
 exit "$status"
 """
 
-# The tenant list, then per tenant what <schema>.out holds, exiting with the
-# status in <schema>.status (0 when there is none).
+# psql reads its SQL from stdin, kept in <schema>.sql (list.sql for the tenant
+# list), and gets the schema as the variable ``schema``. It prints the tenant
+# list, then per tenant what <schema>.out holds, exiting with the status in
+# <schema>.status (0 when there is none).
 _PSQL = """bin=$(dirname "$0")
-case "$*" in
-    *"SELECT schema_name"*) echo "t1 t2"; exit 0 ;;
-esac
-schema=$(printf '%s\\n' "$*" | sed -n 's/.*FROM "\\([^"]*\\)"\\.gdpr_deletionlog.*/\\1/p')
+schema=""
+for arg in "$@"; do
+    case "$arg" in
+        schema=*) schema="${arg#schema=}" ;;
+    esac
+done
+cat > "$bin/${schema:-list}.sql"
+if [ -z "$schema" ]; then
+    printf 't1\\nt2\\n'
+    exit 0
+fi
 cat "$bin/$schema.out"
 exit "$(cat "$bin/$schema.status" 2>/dev/null || echo 0)"
 """
@@ -163,6 +172,29 @@ class TestLedgerExport:
         assert backups.encrypted.read_text() == backups.ledger.read_text()
         assert backups.pushed.read_text() == backups.ledger.read_text()
         assert backups.leftovers() == []
+
+    def test_each_table_is_locked_and_checked_before_it_is_read(
+        self, backups, ledger_section
+    ):
+        # The app writes these tables and names the schemas: a schema reaches
+        # psql as a variable it quotes, and a view put under a table's name
+        # would run the app's code.
+        result = run_export(backups, ledger_section)
+
+        assert result.returncode == 0, result.stderr
+        tenant_sql = (backups.bin / "t1.sql").read_text()
+        assert "t1" not in tenant_sql
+        assert (
+            tenant_sql.index('LOCK TABLE :"schema".gdpr_deletionlog')
+            < tenant_sql.index("relkind = 'r'")
+            < tenant_sql.index('FROM :"schema".gdpr_deletionlog t')
+        )
+        listing_sql = (backups.bin / "list.sql").read_text()
+        assert (
+            listing_sql.index("LOCK TABLE public.tenants_tenant")
+            < listing_sql.index("relkind = 'r'")
+            < listing_sql.index("SELECT schema_name FROM public.tenants_tenant")
+        )
 
     def test_an_export_with_nothing_new_writes_nothing(self, backups, ledger_section):
         backups.tenant_rows("t2", f"{SEEDED[1]}\n")

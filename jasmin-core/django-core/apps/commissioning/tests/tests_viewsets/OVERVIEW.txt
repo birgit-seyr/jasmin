@@ -1,6 +1,6 @@
 Viewset Tests Overview
 ======================
-1264 tests | 239 test classes | 44 files
+1382 tests | 236 test classes | 46 files
 Run: poetry run pytest apps/commissioning/tests/tests_viewsets/ --no-header --tb=short -q
 
 Counts are collected cases, so a parametrized method counts once per case.
@@ -456,6 +456,23 @@ test_members_viewsets.py (83 tests)
   TestConsentWithdrawalReview              4   ?consent_withdrawn=true/false narrows the list;
                                                office mark_consent_reviewed clears the flag (a no-op
                                                when unset); the member's own POST → 403, flag kept
+
+test_offer_edit.py (17 tests) — an offer edit saves only what it changes; the available amount is compare-and-set
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  TestOfferEditKeepsTheStock               8   a price edit keeps what orders took since the page loaded; an amount
+                                               edit after orders moved the stock → 409 offer.amount_changed with the
+                                               stored amount, nothing saved; an amount edit of unmoved stock is saved;
+                                               the answer keeps the list annotations; a crate is set and cleared; the
+                                               offer is read FOR UPDATE; only the changed fields are written, none for
+                                               an unchanged save
+  TestOfferEditWithoutExpectedAmount       3   without expected_amount: the stored amount goes through with the other
+                                               changes, another amount → 409 ("This page is out of date"), an edit
+                                               without an amount keeps the stock
+  TestPublishedOfferEdit                   5   a published offer's amount is corrected; any other change → 409
+                                               commissioning.already_finalized; an unchanged save → 200; a new amount
+                                               after orders moved the stock → 409 offer.amount_changed; stored text
+                                               with spaces around it counts as unchanged
+  TestOfferCreate                          1   a new offer ignores expected_amount
 
 test_offer_group_default.py (7 tests)
 ─────────────────────────────────────

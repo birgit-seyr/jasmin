@@ -56,6 +56,7 @@ import type {
   SummaryRow,
   TableRecord,
 } from "./types";
+import { useAddShortcut } from "./useAddShortcut";
 import { useEditableTable } from "./useEditableTable";
 import { useInitialDataSync, useUpdatedRows } from "./useInitialDataSync";
 import { useRowSelectionState } from "./useRowSelectionState";
@@ -720,45 +721,12 @@ const EditableTable = <T extends TableRecord = TableRecord>({
     }
   }, [isModalMode, handleModalAdd, add]);
 
-  useEffect(() => {
-    if (!keyboardAddShortcut) return;
-    if (!permissions.canAdd) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "+") return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-
-      const target = event.target as HTMLElement | null;
-      if (target) {
-        const tag = target.tagName;
-        if (
-          tag === "INPUT" ||
-          tag === "TEXTAREA" ||
-          tag === "SELECT" ||
-          target.isContentEditable
-        ) {
-          return;
-        }
-      }
-
-      // Don't fire while a modal is open or while inline-editing a row
-      if (isModalVisible) return;
-      if (editingKey !== "" && editingKey !== undefined && editingKey !== null)
-        return;
-
-      event.preventDefault();
-      handleAddClick();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    keyboardAddShortcut,
-    permissions.canAdd,
-    isModalVisible,
-    editingKey,
+  useAddShortcut(
+    Boolean(keyboardAddShortcut && permissions.canAdd),
+    isModalVisible ||
+      (editingKey !== "" && editingKey !== undefined && editingKey !== null),
     handleAddClick,
-  ]);
+  );
 
   const handleCellClick = useCallback(
     (record: T, dataIndex: string) => {
@@ -776,7 +744,10 @@ const EditableTable = <T extends TableRecord = TableRecord>({
           currentData.filter((item) => item.key !== -1),
         );
       }
-      save(editingKey as Key).then(() => {
+      save(editingKey as Key).then((saved) => {
+        // A row whose save failed stays open with its error, or a refused
+        // change would look saved; a new row that didn't save is dropped.
+        if (!saved && editingKey !== -1) return;
         edit(record);
         setClickedDataIndex(dataIndex);
       });

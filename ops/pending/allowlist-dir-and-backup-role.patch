@@ -1,8 +1,8 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index b619e7c..8e8944a 100644
+index 7f47bb2..a661b64 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
-@@ -308,7 +308,8 @@ jobs:
+@@ -314,7 +314,8 @@ jobs:
              -keyout /etc/letsencrypt/live/$FRONTEND_DOMAIN/privkey.pem \
              -out /etc/letsencrypt/live/$FRONTEND_DOMAIN/fullchain.pem \
              -subj "/CN=$FRONTEND_DOMAIN" >/dev/null 2>&1
@@ -12,25 +12,34 @@ index b619e7c..8e8944a 100644
            # Security-header snippets included by the template; the
            # gateway mounts these too, so they must be present for `nginx -t`.
            cp /work/security_headers.conf /etc/nginx/security_headers.conf
+@@ -480,7 +481,7 @@ jobs:
+         run: |
+           $COMPOSE stop backend huey
+           dump="$($COMPOSE exec -T backup sh -c 'ls -t /backups/*_predeploy_*.sql.gz.gpg | head -1')"
+-          $COMPOSE exec -T -e CONFIRM_SWAP=1 backup sh /backups/restore.sh "$dump"
++          $COMPOSE exec -T -e CONFIRM_SWAP=1 -e POSTGRES_PASSWORD backup sh /backups/restore.sh "$dump"
+           $COMPOSE exec -T postgres /docker-entrypoint-initdb.d/app_db_role.sh --check
+           $COMPOSE up -d --no-build --wait --wait-timeout 300 backend huey
+           $COMPOSE exec -T backend python manage.py shell -c "from apps.shared.tenants.models import Tenant; assert Tenant.objects.filter(schema_name='ci').exists(), 'the restored database has no ci tenant'"
 diff --git a/CLAUDE.md b/CLAUDE.md
-index 5f51db0..3904f72 100644
+index fd26c64..f51d582 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
-@@ -1139,6 +1139,9 @@ prefix of those the database has applied.
+@@ -1190,6 +1190,9 @@ failed probe stops nothing, but makes the script exit 1 at the very end.
  `pg_dump` plus a media archive (`backups/backup.sh`), with an rclone off-host
  push scaffold; deploy.sh adds a DB-only `predeploy` dump before every deploy.
  `BACKUP_ENCRYPTION_KEY` is required; compose refuses to start without it.
 +The dumps log in as a read-only role (`BACKUP_DB_USER` / `BACKUP_DB_PASSWORD`,
 +granted `pg_read_all_data`); while those are unset, compose falls back to the
-+owner and backup.sh and deploy.sh warn.
++superuser and backup.sh and deploy.sh warn.
  Don't hand-roll `pg_dump`; that skips the encrypted path. The restore procedure
  is in the header of `backups/restore.sh`.
  
 diff --git a/backups/backup.sh b/backups/backup.sh
-index eb2875e..039b73d 100644
+index 52458d9..a247a08 100644
 --- a/backups/backup.sh
 +++ b/backups/backup.sh
-@@ -25,9 +25,16 @@ SELF="/usr/local/bin/backup.sh"
+@@ -25,12 +25,19 @@ SELF="/usr/local/bin/backup.sh"
  DB_HOST="${POSTGRES_HOST:-postgres}"
  DB_PORT="${POSTGRES_PORT:-5432}"
  DB_NAME="${POSTGRES_DB}"
@@ -39,19 +48,23 @@ index eb2875e..039b73d 100644
 -export PGPASSWORD="${POSTGRES_PASSWORD}"
 +# The dumps and the ledger only read, so they log in as a read-only role
 +# (pg_read_all_data): a compromised backup container must not be able to
-+# write to or drop the database. docker-compose.yml falls back to the owner's
-+# credentials while BACKUP_DB_USER is unset in .env; POSTGRES_USER here is
-+# only the owner's name, passed so that fallback can be reported.
++# write to or drop the database. docker-compose.yml falls back to the
++# superuser's credentials while BACKUP_DB_USER is unset in .env; POSTGRES_USER
++# here is only the superuser's name, passed so that fallback can be reported.
 +DB_USER="${BACKUP_DB_USER:?BACKUP_DB_USER must be set}"
 +export PGPASSWORD="${BACKUP_DB_PASSWORD:?BACKUP_DB_PASSWORD must be set}"
 +if [ "$DB_USER" = "${POSTGRES_USER:-}" ]; then
-+    echo "[$(date)] WARN: dumping as the database owner ${DB_USER}; set BACKUP_DB_USER and BACKUP_DB_PASSWORD in .env to the read-only backup role" >&2
++    echo "[$(date)] WARN: dumping as the superuser ${DB_USER}; set BACKUP_DB_USER and BACKUP_DB_PASSWORD in .env to the read-only backup role" >&2
 +fi
+ # The app's role, when there is one, owns the database and may create schemas
+ # and functions in it. Every session here looks names up in pg_catalog only, so
+-# no operator or function the app put elsewhere runs with the superuser's rights.
++# no operator or function the app put elsewhere runs with this login's rights.
+ export PGOPTIONS="-c search_path=pg_catalog"
  
  # GDPR: encryption passphrase (required)
- BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
 diff --git a/backups/restore.sh b/backups/restore.sh
-index 428f809..23b2646 100644
+index e1e0a16..7ec5a72 100644
 --- a/backups/restore.sh
 +++ b/backups/restore.sh
 @@ -31,7 +31,9 @@ set -eu
@@ -63,56 +76,56 @@ index 428f809..23b2646 100644
 +#      docker compose exec -e POSTGRES_PASSWORD backup \
 +#          sh /backups/restore.sh /backups/<file>.sql.gz.gpg
  #      Refreshes the GDPR deletion ledger from the live database first, then
- #      restores into <db>_restore, prints its schemas and a few row counts
- #      next to the live database's, and swaps once "swap" is typed at the
-@@ -43,7 +45,10 @@ set -eu
+ #      restores into <db>_restore, as the app's database role when
+ #      APP_DB_USER is set (postgres/app_db_role.sh), prints its schemas and a
+@@ -45,7 +47,10 @@ set -eu
  #      -e TERMINATE_SESSIONS=1 ends the sessions left, such as a psql shell
  #      or the nightly pg_dump. Right before the swap the ledger is refreshed
  #      once more; if that fails after the first refresh worked, the swap
 -#      refuses too.
-+#      refuses too. The restore writes, so it runs as the database owner,
-+#      whose password the backup container does not hold:
++#      refuses too. The restore writes, so it runs as the superuser, whose
++#      password the backup container does not hold:
 +#      ``-e POSTGRES_PASSWORD`` hands it over from the shell for this one
 +#      command.
  #   3. Only when the media volume is lost or damaged: unpack the media archive
  #      taken with that backup (<db>_media_<timestamp>.tar.gz.gpg), BEFORE
  #      step 4 — the erasure replay deletes the files of everyone erased since:
-@@ -77,9 +82,10 @@ BACKUP_FILE="${1:?Usage: sh /backups/restore.sh <backup_file.sql.gz.gpg>}"
+@@ -79,9 +84,10 @@ BACKUP_FILE="${1:?Usage: sh /backups/restore.sh <backup_file.sql.gz.gpg>}"
  DB_HOST="${POSTGRES_HOST:-postgres}"
  DB_PORT="${POSTGRES_PORT:-5432}"
  DB_NAME="${POSTGRES_DB}"
 -DB_USER="${POSTGRES_USER}"
 -
 -export PGPASSWORD="${POSTGRES_PASSWORD}"
-+# The owner, not the read-only role backup.sh dumps with: the restore
-+# creates a database, fills it and renames the live one.
++# The superuser, not the read-only role backup.sh dumps with: the restore
++# creates a database and renames the live one.
 +DB_USER="${POSTGRES_USER:?POSTGRES_USER must be set}"
-+export PGPASSWORD="${POSTGRES_PASSWORD:?pass the owner password: docker compose exec -e POSTGRES_PASSWORD backup ... (see the header)}"
- BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
- 
- LEDGER_FILE="/backups/gdpr-deletion-ledger.jsonl"
++export PGPASSWORD="${POSTGRES_PASSWORD:?pass the superuser password: docker compose exec -e POSTGRES_PASSWORD backup ... (see the header)}"
+ # The app's role, when there is one, owns the database and may create schemas
+ # and functions in it. Every session here looks names up in pg_catalog only, so
+ # no operator or function the app put elsewhere runs with the superuser's rights.
 diff --git a/docker-compose.yml b/docker-compose.yml
-index 4151331..5e2cfa2 100644
+index 8ddba24..e182f00 100644
 --- a/docker-compose.yml
 +++ b/docker-compose.yml
-@@ -280,8 +280,15 @@ services:
+@@ -306,8 +306,15 @@ services:
      pids_limit: 128
      environment:
        POSTGRES_DB: ${POSTGRES_DB}
-+      # The owner's name only, without its password: backup.sh warns when it
-+      # dumps as the owner, and restore.sh restores as it with the password
++      # The superuser's name only, without its password: backup.sh warns when
++      # it dumps as the superuser, and restore.sh runs as it with the password
 +      # handed in at `docker compose exec -e POSTGRES_PASSWORD` time.
        POSTGRES_USER: ${POSTGRES_USER}
 -      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 +      # The read-only login (pg_read_all_data) the dumps and the GDPR ledger
-+      # run as. Unset in .env -> the owner's credentials, so backups keep
++      # run as. Unset in .env -> the superuser's credentials, so backups keep
 +      # running until the role exists.
 +      BACKUP_DB_USER: ${BACKUP_DB_USER:-${POSTGRES_USER}}
 +      BACKUP_DB_PASSWORD: ${BACKUP_DB_PASSWORD:-${POSTGRES_PASSWORD}}
        POSTGRES_HOST: postgres
        POSTGRES_PORT: "5432"
-       # Required — the symmetric passphrase for the *.sql.gz.gpg dumps. Compose
-@@ -355,7 +362,10 @@ services:
+       # restore.sh loads a dump as the app's role, which app_db_role.sh
+@@ -391,7 +398,10 @@ services:
        FRONTEND_PORT: "80"
      volumes:
        - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
@@ -125,10 +138,10 @@ index 4151331..5e2cfa2 100644
        - ./nginx/security_headers_admin.conf:/etc/nginx/security_headers_admin.conf:ro
        - static_volume:/app/staticfiles:ro
 diff --git a/jasmin-core/django-core/config/settings.py b/jasmin-core/django-core/config/settings.py
-index cbf921e..953fc13 100644
+index 133425c..42e665f 100644
 --- a/jasmin-core/django-core/config/settings.py
 +++ b/jasmin-core/django-core/config/settings.py
-@@ -575,7 +575,7 @@ TENANT_APPS = [
+@@ -538,7 +538,7 @@ TENANT_APPS = [
      # by TOTP — instead the super-admin host is locked down by an IP
      # allowlist enforced AT THE NGINX GATEWAY (a dedicated server block
      # in nginx/nginx.conf.template that includes
@@ -137,7 +150,7 @@ index cbf921e..953fc13 100644
      # The ``gateway`` CI job (scripts/verify_super_admin_allowlist.sh)
      # asserts the block + allowlist stay wired so this exemption can't
      # silently become single-factor-password-only. As app-layer
-@@ -793,7 +793,7 @@ AXES_CLIENT_IP_CALLABLE = "apps.shared.request_utils.client_ip"
+@@ -756,7 +756,7 @@ AXES_CLIENT_IP_CALLABLE = "apps.shared.request_utils.client_ip"
  #   SUPER_ADMIN_ALLOWED_IPS="203.0.113.42,198.51.100.0/29,2001:db8::/64"
  # UNSET / empty -> middleware is a no-op (dev, and deployments relying solely on
  # the nginx allowlist, keep working). Keep this in sync with
@@ -146,7 +159,7 @@ index cbf921e..953fc13 100644
  SUPER_ADMIN_ALLOWED_IPS = [
      entry.strip()
      for entry in os.environ.get("SUPER_ADMIN_ALLOWED_IPS", "").split(",")
-@@ -948,9 +948,9 @@ TWO_FACTOR_ENROLMENT_LIFETIME = timedelta(minutes=15)
+@@ -911,9 +911,9 @@ TWO_FACTOR_ENROLMENT_LIFETIME = timedelta(minutes=15)
  # which leaves the whole enrolment-mandate login branch unreachable.
  # Super-admin (public schema) is not eligible for this gate — its host is
  # instead IP-restricted at the nginx gateway (see the django_otp note in
@@ -160,10 +173,10 @@ index cbf921e..953fc13 100644
      _role.strip()
      for _role in os.environ.get("TWO_FACTOR_REQUIRED_ROLES", "").split(",")
 diff --git a/nginx/nginx.conf.template b/nginx/nginx.conf.template
-index b1e3689..9dca4e6 100644
+index 3d507a9..cdc431c 100644
 --- a/nginx/nginx.conf.template
 +++ b/nginx/nginx.conf.template
-@@ -343,13 +343,10 @@ http {
+@@ -382,13 +382,10 @@ http {
      # this block handles ALL traffic to ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN}
      # while tenant subdomains continue to be served by the wildcard block.
      #
@@ -181,7 +194,7 @@ index b1e3689..9dca4e6 100644
      server {
          listen      443 ssl;
          listen      [::]:443 ssl;
-@@ -357,7 +354,13 @@ http {
+@@ -396,7 +393,13 @@ http {
          server_name ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN};
  
          # IP allowlist - checked before any routing. Returns 403 for non-allowed.
@@ -196,16 +209,39 @@ index b1e3689..9dca4e6 100644
  
          ssl_certificate     /etc/letsencrypt/live/${FRONTEND_DOMAIN}/fullchain.pem;
          ssl_certificate_key /etc/letsencrypt/live/${FRONTEND_DOMAIN}/privkey.pem;
+diff --git a/nginx/super_admin_allowed_ips.conf b/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
+similarity index 71%
+rename from nginx/super_admin_allowed_ips.conf
+rename to nginx/super_admin_allowlist/super_admin_allowed_ips.conf
+index 30ebdf0..3b5630c 100644
+--- a/nginx/super_admin_allowed_ips.conf
++++ b/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
+@@ -8,12 +8,9 @@
+ # Edit this file with your current IP, then reload nginx (no rebuild needed):
+ #     docker compose exec gateway nginx -s reload
+ #
+-# CAVEAT: this file is bind-mounted into the gateway as a SINGLE FILE, so an
+-# inode-replacing edit (vim / `sed -i` / `cp`) leaves the container serving the
+-# stale content even after `nginx -s reload`. After such an edit, run
+-#     docker compose restart gateway
+-# instead (or edit in place with `>>`). The durable fix is a directory
+-# bind-mount.
++# The gateway mounts this file's DIRECTORY, so any kind of edit — in place,
++# vim, `sed -i`, `cp` — is what the reload reads. Keep the file name: the
++# gateway includes exactly this path, and nginx refuses to start without it.
+ #
+ # Find your current IP: https://ifconfig.me/ or `curl -s ifconfig.me`
+ #
 diff --git a/scripts/deploy.sh b/scripts/deploy.sh
-index 0cab459..ade266a 100755
+index e84a668..168d628 100755
 --- a/scripts/deploy.sh
 +++ b/scripts/deploy.sh
-@@ -67,6 +67,21 @@ for v in $REQUIRED; do
- done
- [ -z "$missing" ] || die "missing/empty required .env vars:$missing"
+@@ -107,6 +107,21 @@ else
+     fi
+ fi
  
-+# 1b-bis. The backup service dumps as a read-only role (BACKUP_DB_USER, granted
-+# pg_read_all_data) and falls back to the database owner while it is unset.
++# 1b-ter. The backup service dumps as a read-only role (BACKUP_DB_USER, granted
++# pg_read_all_data) and falls back to the superuser while it is unset.
 +# Half a pair would log in with the wrong password and fail every backup.
 +BACKUP_DB_USER_VALUE="$(envval BACKUP_DB_USER)"
 +BACKUP_DB_PASSWORD_VALUE="$(envval BACKUP_DB_PASSWORD)"
@@ -216,13 +252,13 @@ index 0cab459..ade266a 100755
 +    die "BACKUP_DB_PASSWORD is set but BACKUP_DB_USER is empty — set both, or neither."
 +fi
 +if [ -z "$BACKUP_DB_USER_VALUE" ] || [ "$BACKUP_DB_USER_VALUE" = "$(envval POSTGRES_USER)" ]; then
-+    log "WARN: backups dump as the database owner — create the read-only backup role and set BACKUP_DB_USER/BACKUP_DB_PASSWORD in .env"
++    log "WARN: backups dump as the database superuser — create the read-only backup role and set BACKUP_DB_USER/BACKUP_DB_PASSWORD in .env"
 +fi
 +
  PROJECT="$(envval COMPOSE_PROJECT_NAME)"
  DOMAIN="$(envval FRONTEND_DOMAIN)"
  EMAIL="$(envval EMAIL_ADMIN)"
-@@ -210,8 +225,8 @@ log "https://${DOMAIN}/health/ -> HTTP ${code} (expect 200)"
+@@ -320,8 +335,8 @@ fi
  echo ""
  echo "✅ Deploy run complete."
  echo "   Next (see the runbook, Phase 2.5+):"
@@ -233,6 +269,19 @@ index 0cab459..ade266a 100755
  echo "   2. Log in at https://${ADMIN_HOST}.${DOMAIN} and create your tenants."
  echo "   3. Configure EACH tenant's own SMTP before inviting its users."
  echo "   4. Wire off-host backups (Phase 3), then run scripts/restore_drill.sh."
+diff --git a/scripts/restore_drill.sh b/scripts/restore_drill.sh
+index d385a97..c82d4f3 100755
+--- a/scripts/restore_drill.sh
++++ b/scripts/restore_drill.sh
+@@ -308,6 +308,8 @@ run_restore() {
+         -e POSTGRES_PASSWORD="$SANDBOX_PASSWORD" \
+         -e APP_DB_USER="$SANDBOX_APP_USER" \
+         -e APP_DB_PASSWORD="$SANDBOX_APP_PASSWORD" \
++        -e BACKUP_DB_USER="$SANDBOX_USER" \
++        -e BACKUP_DB_PASSWORD="$SANDBOX_PASSWORD" \
+         -e BACKUP_ENCRYPTION_KEY \
+         -e ALLOW_MISSING_GDPR_LEDGER=1 \
+         -e CONFIRM_SWAP=1 \
 diff --git a/scripts/update.sh b/scripts/update.sh
 index a9406d5..60a09a2 100755
 --- a/scripts/update.sh
@@ -308,72 +357,3 @@ index 39bfd42..ff1f309 100755
          }
          o = gsub(/\{/, "{"); c = gsub(/\}/, "}"); depth += o - c
          if (in_server && depth <= server_base) {
-diff --git a/nginx/super_admin_allowed_ips.conf b/nginx/super_admin_allowed_ips.conf
-deleted file mode 100644
-index 30ebdf0..0000000
---- a/nginx/super_admin_allowed_ips.conf
-+++ /dev/null
-@@ -1,30 +0,0 @@
--# =============================================================================
--# Super-admin IP allowlist
--#
--# Only IPs listed here can reach https://admin.${FRONTEND_DOMAIN}.
--# Tenant subdomains (tenant1.${FRONTEND_DOMAIN}, ...) are NOT affected by
--# this file — they remain publicly reachable.
--#
--# Edit this file with your current IP, then reload nginx (no rebuild needed):
--#     docker compose exec gateway nginx -s reload
--#
--# CAVEAT: this file is bind-mounted into the gateway as a SINGLE FILE, so an
--# inode-replacing edit (vim / `sed -i` / `cp`) leaves the container serving the
--# stale content even after `nginx -s reload`. After such an edit, run
--#     docker compose restart gateway
--# instead (or edit in place with `>>`). The durable fix is a directory
--# bind-mount.
--#
--# Find your current IP: https://ifconfig.me/ or `curl -s ifconfig.me`
--#
--# Examples:
--#     allow 203.0.113.42;          # home
--#     allow 198.51.100.0/29;       # office /29
--#     allow 2001:db8::/64;         # IPv6 prefix
--#
--# IMPORTANT: leave `deny all;` as the last line.
--# =============================================================================
--
--# allow 203.0.113.42;          # <-- replace with your IP
--
--deny all;
-diff --git a/nginx/super_admin_allowlist/super_admin_allowed_ips.conf b/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
-new file mode 100644
-index 0000000..3b5630c
---- /dev/null
-+++ b/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
-@@ -0,0 +1,27 @@
-+# =============================================================================
-+# Super-admin IP allowlist
-+#
-+# Only IPs listed here can reach https://admin.${FRONTEND_DOMAIN}.
-+# Tenant subdomains (tenant1.${FRONTEND_DOMAIN}, ...) are NOT affected by
-+# this file — they remain publicly reachable.
-+#
-+# Edit this file with your current IP, then reload nginx (no rebuild needed):
-+#     docker compose exec gateway nginx -s reload
-+#
-+# The gateway mounts this file's DIRECTORY, so any kind of edit — in place,
-+# vim, `sed -i`, `cp` — is what the reload reads. Keep the file name: the
-+# gateway includes exactly this path, and nginx refuses to start without it.
-+#
-+# Find your current IP: https://ifconfig.me/ or `curl -s ifconfig.me`
-+#
-+# Examples:
-+#     allow 203.0.113.42;          # home
-+#     allow 198.51.100.0/29;       # office /29
-+#     allow 2001:db8::/64;         # IPv6 prefix
-+#
-+# IMPORTANT: leave `deny all;` as the last line.
-+# =============================================================================
-+
-+# allow 203.0.113.42;          # <-- replace with your IP
-+
-+deny all;

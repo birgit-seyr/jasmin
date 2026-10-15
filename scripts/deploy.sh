@@ -4,7 +4,8 @@
 # on the server, as the non-root user (must be in the 'docker' group).
 #
 # It:
-#   1. validates .env (exists, no CHANGE_ME left, required vars set)
+#   1. validates .env (exists, no CHANGE_ME left, required vars set) and,
+#      with APP_DB_USER set, that the app's database role owns the database
 #   2. issues the wildcard TLS cert if it isn't in the volume yet
 #   3. pulls the newest build of every image tag, builds the images and tags
 #      them as a release (scripts/rollback.sh)
@@ -73,6 +74,38 @@ for v in $REQUIRED; do
     [ -n "$(envval "$v")" ] || missing="$missing $v"
 done
 [ -z "$missing" ] || die "missing/empty required .env vars:$missing"
+
+# 1b-bis. backend and huey log in as the app's own database role (APP_DB_USER,
+# no superuser) and fall back to the superuser while it is unset. Half a pair
+# would log in with the wrong password.
+APP_DB_USER_VALUE="$(envval APP_DB_USER)"
+APP_DB_PASSWORD_VALUE="$(envval APP_DB_PASSWORD)"
+if [ -n "$APP_DB_USER_VALUE" ] && [ -z "$APP_DB_PASSWORD_VALUE" ]; then
+    die "APP_DB_USER is set but APP_DB_PASSWORD is empty — set both, or neither."
+fi
+if [ -z "$APP_DB_USER_VALUE" ] && [ -n "$APP_DB_PASSWORD_VALUE" ]; then
+    die "APP_DB_PASSWORD is set but APP_DB_USER is empty — set both, or neither."
+fi
+if [ -n "$APP_DB_USER_VALUE" ] && [ "$APP_DB_USER_VALUE" = "$(envval POSTGRES_USER)" ]; then
+    die "APP_DB_USER names the superuser POSTGRES_USER — the app's role has to be a role of its own."
+fi
+if [ -z "$APP_DB_USER_VALUE" ]; then
+    log "WARN: the app logs in as the database superuser — give it its own role as the header of postgres/app_db_role.sh describes"
+else
+    # The app can't start until its role owns the database. Checked with this
+    # checkout's script, which the running postgres container may not have
+    # mounted yet, passed as an argument: a script read from stdin that never
+    # arrived would pass as an empty one. A first deploy has no database to
+    # check, and postgres creates the role along with it.
+    pg_cid="$(docker compose ps -q postgres 2>/dev/null || true)"
+    if [ -n "$pg_cid" ] && \
+       [ "$(docker inspect -f '{{.State.Running}}' "$pg_cid" 2>/dev/null)" = "true" ]; then
+        app_db_role_script="$(cat postgres/app_db_role.sh)"
+        docker compose exec -T -e APP_DB_USER="$APP_DB_USER_VALUE" postgres \
+            sh -c "$app_db_role_script" app_db_role.sh --check \
+            || die "the database isn't handed to ${APP_DB_USER_VALUE} yet (above) — nothing deployed."
+    fi
+fi
 
 PROJECT="$(envval COMPOSE_PROJECT_NAME)"
 DOMAIN="$(envval FRONTEND_DOMAIN)"

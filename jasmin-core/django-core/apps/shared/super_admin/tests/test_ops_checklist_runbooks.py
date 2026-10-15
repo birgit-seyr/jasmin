@@ -28,6 +28,7 @@ class TestSeededRunbooks:
             ("csp_audit", "nginx/security_headers.conf"),
             ("rotate_django_secret", "DJANGO_SECRET_KEY_FALLBACK"),
             ("rotate_db_password", "docker compose exec postgres"),
+            ("rotate_db_password", "APP_DB_PASSWORD"),
             ("rotate_backup_encryption_key", "old key"),
         ],
     )

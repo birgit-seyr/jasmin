@@ -16,6 +16,11 @@ export interface Offer {
   readonly amount_ordered?: string;
   /** @nullable */
   readonly organic_status?: string | null;
+  /**
+   * The available amount the client read, sent with an edit of ``amount``. Order lines move the stock all the time, so a changed amount is saved only while the stored one still equals this, and refused with offer.amount_changed (409) otherwise. Without it, only the stored amount itself is accepted.
+   * @pattern ^-?\d{0,6}(?:\.\d{0,3})?$
+   */
+  expected_amount?: string;
   readonly is_finalized?: boolean;
   /** @nullable */
   readonly finalized_at?: string | null;

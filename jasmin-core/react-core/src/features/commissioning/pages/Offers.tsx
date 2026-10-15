@@ -167,7 +167,12 @@ export default function Offers() {
         form.setFieldsValue(defaultValues);
         return { ...record, ...defaultValues };
       }
-      return record;
+      // Orders move the available amount while the page shows it. With the
+      // amount the row opened with, the server keeps the stock as it is when
+      // the office left the amount alone, and refuses a new amount once orders
+      // have moved the stock since. Taken now, not at the save: a refetch
+      // while the row is open updates the row, but not its open form.
+      return { ...record, expected_amount: record.amount };
     },
     [],
   );

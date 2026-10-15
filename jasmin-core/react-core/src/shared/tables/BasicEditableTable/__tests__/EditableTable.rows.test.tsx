@@ -293,6 +293,86 @@ describe("EditableTable rows", () => {
     expect(screen.getByText("Carrots")).toBeInTheDocument();
   });
 
+  describe("a row whose save the server refuses", () => {
+    const refusingApi = () => ({
+      ...savingApi(),
+      update: vi.fn(() =>
+        Promise.reject({
+          isAxiosError: true,
+          response: { data: { message: "Orders moved the stock." } },
+        }),
+      ),
+    });
+
+    async function renameCarrotsUnsaved(api: ReturnType<typeof refusingApi>) {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      render(
+        <EditableTable<Row>
+          columns={[NAME_COLUMN]}
+          initialData={ROWS}
+          permissions={PERMISSIONS}
+          apiFunctions={api}
+        />,
+      );
+      await userEvent.click(
+        (await screen.findAllByRole("button", { name: "table.edit" }))[0],
+      );
+      const input = await screen.findByDisplayValue("Carrots");
+      await userEvent.clear(input);
+      await userEvent.type(input, "Purple carrots");
+    }
+
+    it("stays open with the server's reason when the office clicks into another row", async () => {
+      const api = refusingApi();
+      await renameCarrotsUnsaved(api);
+
+      await userEvent.click(screen.getByText("Leeks"));
+
+      expect(await screen.findByText(/Orders moved the stock\./)).toBeInTheDocument();
+      expect(api.update).toHaveBeenCalledTimes(1);
+      expect(screen.getByDisplayValue("Purple carrots")).toBeInTheDocument();
+      expect(screen.queryByDisplayValue("Leeks")).not.toBeInTheDocument();
+    });
+
+    it("stays open with the server's reason when the office adds a row", async () => {
+      const api = refusingApi();
+      await renameCarrotsUnsaved(api);
+
+      await userEvent.click(screen.getByRole("button", { name: "table.add_record" }));
+
+      expect(await screen.findByText(/Orders moved the stock\./)).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Purple carrots")).toBeInTheDocument();
+      expect(screen.getAllByRole("textbox")).toHaveLength(1);
+    });
+  });
+
+  it("saves what customEdit put in the form, also when the rows refetch while it is open", async () => {
+    // How a page sends a value as the row opened with it: the offers page
+    // sends the available amount it showed, which orders move meanwhile.
+    const api = savingApi();
+    const keepOpenedName = (record: Row) => ({ ...record, opened_name: record.name });
+    const table = (rows: Row[]) => (
+      <EditableTable<Row>
+        columns={[NAME_COLUMN]}
+        initialData={rows}
+        permissions={PERMISSIONS}
+        apiFunctions={api}
+        customEdit={keepOpenedName}
+      />
+    );
+    const { rerender } = render(table(ROWS));
+    await userEvent.click(
+      (await screen.findAllByRole("button", { name: "table.edit" }))[0],
+    );
+
+    rerender(table([{ ...CARROTS, name: "Washed carrots" }, LEEKS]));
+    await flushMicrotasks();
+    await userEvent.click(screen.getByRole("button", { name: "table.save" }));
+
+    await vi.waitFor(() => expect(api.update).toHaveBeenCalledTimes(1));
+    expect(api.update.mock.calls[0][1]).toMatchObject({ opened_name: "Carrots" });
+  });
+
   it("counts a value a row hidden from the table holds as taken", async () => {
     const api = savingApi();
     render(

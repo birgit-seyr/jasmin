@@ -29,7 +29,7 @@ directory instead, so a reload always sees the current file. It also:
 
 ### 2. The backup sidecar dumps as a read-only role
 
-The `backup` service logs in as the database owner (a superuser) and holds its
+The `backup` service logs in as the superuser (`POSTGRES_USER`) and holds its
 password. Anything that gets into that container can write to or drop the whole
 database.
 
@@ -39,10 +39,11 @@ takes `POSTGRES_PASSWORD` out of the backup container:
 
 - `docker-compose.yml`: `BACKUP_DB_USER: ${BACKUP_DB_USER:-${POSTGRES_USER}}`
   and `BACKUP_DB_PASSWORD: ${BACKUP_DB_PASSWORD:-${POSTGRES_PASSWORD}}`. While
-  the two are unset in `.env`, backups keep running as the owner.
-- `backups/backup.sh`: uses those two and warns when it dumps as the owner.
-- `backups/restore.sh`: a restore writes, so it still runs as the owner, with
-  the password handed in for that one command:
+  the two are unset in `.env`, backups keep running as the superuser.
+- `backups/backup.sh`: uses those two and warns when it dumps as the superuser.
+- `backups/restore.sh`: a restore writes, so it still runs as the superuser,
+  with the password handed in for that one command (it loads the dump as the
+  app's role, `APP_DB_USER`, whose password the backup container keeps):
 
   ```sh
   export POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)"
@@ -51,7 +52,11 @@ takes `POSTGRES_PASSWORD` out of the backup container:
   ```
 
 - `scripts/deploy.sh`: refuses to deploy when only one of the two variables is
-  set, and warns while they are unset or equal to the owner.
+  set, and warns while they are unset or equal to the superuser.
+- `.github/workflows/ci.yml`: the production-images job's restore step hands
+  the superuser password in the same way.
+- `scripts/restore_drill.sh`: its sandbox restores give restore.sh's ledger
+  refresh the sandbox's superuser as the backup login.
 - `CLAUDE.md`: a sentence on the new variables under "Database backups".
 
 ## How to enable
@@ -96,10 +101,10 @@ fails, and `scripts/update.sh` cannot be used for this one update.
 
 ### Backup role (after the deploy above)
 
-Backups keep running as the owner until these steps are done.
+Backups keep running as the superuser until these steps are done.
 
 1. Check the fallback is active: `docker compose config | grep BACKUP_DB_USER`
-   shows the owner's name.
+   shows the superuser's name.
 2. Generate a password: `openssl rand -hex 32`
 3. Create the role (replace `<hex>` and `<db>`, the value of `POSTGRES_DB`):
 
@@ -114,10 +119,10 @@ Backups keep running as the owner until these steps are done.
 
 4. Add `BACKUP_DB_USER=jasmin_backup` and `BACKUP_DB_PASSWORD=<hex>` to `.env`.
 5. Dry dump with the new role: `docker compose run --rm --no-deps -T backup predeploy`
-   — must finish without error and without the "dumping as the database owner"
+   — must finish without error and without the "dumping as the superuser"
    warning.
 6. `docker compose up -d backup`
-7. `docker compose logs --tail=50 backup` — no errors, no owner warning.
+7. `docker compose logs --tail=50 backup` — no errors, no superuser warning.
 8. `docker compose exec backup printenv POSTGRES_PASSWORD` — prints nothing.
 
 ## Risks
@@ -132,7 +137,7 @@ Backups keep running as the owner until these steps are done.
   `nginx/super_admin_allowlist/super_admin_allowed_ips.conf` is missing — and
   with it every tenant's site. Run `scripts/validate_gateway_config.sh` before
   every deploy that follows a change to the file.
-- **Restores need the owner password passed in.** Once the patch is live,
+- **Restores need the superuser password passed in.** Once the patch is live,
   `restore.sh` fails fast without `-e POSTGRES_PASSWORD`; use the command shown
   above.
 

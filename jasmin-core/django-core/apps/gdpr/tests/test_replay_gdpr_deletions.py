@@ -298,9 +298,14 @@ class TestLedgerExportFormat:
         if not BACKUP_SH.is_file():
             pytest.skip("backups/backup.sh is not in this checkout")
         script = BACKUP_SH.read_text()
-        start = script.index("printf '%s' \"") + len("printf '%s' \"")
-        template = script[start : script.index('"\n}', start)]
-        sql = template.replace("$1", tenant.schema_name).replace('\\"', '"')
+        start = script.index("SELECT ((to_jsonb(t)")
+        end = script.index("gdpr_deletionlog t;", start) + len("gdpr_deletionlog t")
+        # psql fills in the variable ``schema``, quoted; here the test does.
+        sql = (
+            script[start:end]
+            .replace(":'schema'", f"'{tenant.schema_name}'")
+            .replace(':"schema"', f'"{tenant.schema_name}"')
+        )
 
         member = MemberFactory(user=None)
         log = DeletionLog.objects.create(

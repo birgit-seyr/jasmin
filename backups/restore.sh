@@ -33,11 +33,13 @@ set -eu
 #      names swap its next connection opens the restored copy.
 #   2. docker compose exec backup sh /backups/restore.sh /backups/<file>.sql.gz.gpg
 #      Refreshes the GDPR deletion ledger from the live database first, then
-#      restores into <db>_restore, prints its schemas and a few row counts
-#      next to the live database's, and swaps once "swap" is typed at the
-#      prompt, which asks for backend and huey to be stopped. Without a
-#      terminal (exec -T, a script), -e CONFIRM_SWAP=1 confirms instead; with
-#      neither, the script stops before the swap and <db> stays as it was.
+#      restores into <db>_restore, as the app's database role when
+#      APP_DB_USER is set (postgres/app_db_role.sh), prints its schemas and a
+#      few row counts next to the live database's, and swaps once "swap" is
+#      typed at the prompt, which asks for backend and huey to be stopped.
+#      Without a terminal (exec -T, a script), -e CONFIRM_SWAP=1 confirms
+#      instead; with neither, the script stops before the swap and <db> stays
+#      as it was.
 #      The swap refuses while sessions are connected to <db>, or when one
 #      connects in the few seconds it then watches. Once the app is stopped,
 #      -e TERMINATE_SESSIONS=1 ends the sessions left, such as a psql shell
@@ -80,7 +82,15 @@ DB_NAME="${POSTGRES_DB}"
 DB_USER="${POSTGRES_USER}"
 
 export PGPASSWORD="${POSTGRES_PASSWORD}"
+# The app's role, when there is one, owns the database and may create schemas
+# and functions in it. Every session here looks names up in pg_catalog only, so
+# no operator or function the app put elsewhere runs with the superuser's rights.
+export PGOPTIONS="-c search_path=pg_catalog"
 BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
+if [ -n "${APP_DB_USER:-}" ] && [ -z "${APP_DB_PASSWORD:-}" ]; then
+    echo "[$(date)] ERROR: APP_DB_USER is set but APP_DB_PASSWORD is empty; the dump loads as that role" >&2
+    exit 1
+fi
 
 LEDGER_FILE="/backups/gdpr-deletion-ledger.jsonl"
 
@@ -113,6 +123,14 @@ run_psql() {
 
 admin_psql() {
     run_psql "$ADMIN_DB" "$@"
+}
+
+# psql on the database $1 as the app's role, APP_DB_USER, the same way.
+app_psql() {
+    psql_database="$1"
+    shift
+    PGPASSWORD="$APP_DB_PASSWORD" psql -X -q -P pager=off -v ON_ERROR_STOP=1 \
+        -h "$DB_HOST" -p "$DB_PORT" -U "$APP_DB_USER" -d "$psql_database" "$@"
 }
 
 # Succeeds when a database named $1 exists.
@@ -187,11 +205,23 @@ LANGUAGE plpgsql AS $$
 DECLARE
     total bigint;
 BEGIN
+    -- Plain tables only, locked before the check so they stay so: reading a
+    -- view put under the name would run the app's code.
     IF to_regclass(format('%I.%I', schema_name, table_name)) IS NULL THEN
+        RETURN NULL;
+    END IF;
+    EXECUTE format('LOCK TABLE %I.%I IN ACCESS SHARE MODE', schema_name, table_name);
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = schema_name AND c.relname = table_name
+          AND c.relkind IN ('r', 'p')
+    ) THEN
         RETURN NULL;
     END IF;
     EXECUTE format('SELECT count(*) FROM %I.%I', schema_name, table_name) INTO total;
     RETURN total;
+EXCEPTION WHEN undefined_table OR invalid_schema_name THEN
+    RETURN NULL;
 END
 $$;
 CREATE FUNCTION pg_temp.newest_migration(schema_name name) RETURNS text
@@ -202,11 +232,21 @@ BEGIN
     IF to_regclass(format('%I.django_migrations', schema_name)) IS NULL THEN
         RETURN NULL;
     END IF;
+    EXECUTE format('LOCK TABLE %I.django_migrations IN ACCESS SHARE MODE', schema_name);
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = schema_name AND c.relname = 'django_migrations'
+          AND c.relkind IN ('r', 'p')
+    ) THEN
+        RETURN NULL;
+    END IF;
     EXECUTE format(
         'SELECT to_char(max(applied), ''YYYY-MM-DD HH24:MI'') FROM %I.django_migrations',
         schema_name
     ) INTO applied;
     RETURN applied;
+EXCEPTION WHEN undefined_table OR invalid_schema_name THEN
+    RETURN NULL;
 END
 $$;
 SELECT n.nspname AS schema,
@@ -348,9 +388,18 @@ RESTORE_STATE="restoring"
 # relation until the end, thousands per tenant schema, past what Postgres'
 # default lock table holds. The query results the dump prints (setval and
 # the like) go to /dev/null; errors still reach stderr.
-run_psql "$RESTORE_DB" -f "$TMP_SQL" > /dev/null
-RESTORE_STATE="restored"
+if [ -n "${APP_DB_USER:-}" ]; then
+    # The app's role loads the dump, which names no owners, so the role owns
+    # the copy. Loaded as the superuser, the dump's constraints and indexes
+    # would run functions of the app's with the superuser's rights. The script
+    # creates the role if it is missing and hands it the new, empty database.
+    PGHOST="$DB_HOST" PGPORT="$DB_PORT" sh /usr/local/bin/app_db_role.sh "$RESTORE_DB"
+    app_psql "$RESTORE_DB" -f "$TMP_SQL" > /dev/null
+else
+    run_psql "$RESTORE_DB" -f "$TMP_SQL" > /dev/null
+fi
 rm -f "$TMP_SQL"
+RESTORE_STATE="restored"
 echo "[$(date)] The dump is restored into ${RESTORE_DB}."
 
 # ── Check, confirm, swap ───────────────────────────────────────

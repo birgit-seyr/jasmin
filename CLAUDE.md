@@ -1157,7 +1157,8 @@ npm run lint:fix                 # Auto-fix issues
 - Backend: black, ruff baseline, mypy baseline, import contracts, pytest (with a
   Postgres service for django-tenants tests)
 - Production images: builds the backend runtime, frontend nginx and backup
-  images from `docker-compose.yml` and boots them on production settings
+  images from `docker-compose.yml`, boots them on production settings with the
+  app logged in as its own database role, and takes a backup through a restore
   (`docker-smoke` boots the dev image)
 - Two "you forgot to regenerate" gates fail PRs most often: `makemigrations
   --check --dry-run`, and the schema-freshness diff (`spectacular` then
@@ -1191,6 +1192,20 @@ push scaffold; deploy.sh adds a DB-only `predeploy` dump before every deploy.
 `BACKUP_ENCRYPTION_KEY` is required; compose refuses to start without it.
 Don't hand-roll `pg_dump`; that skips the encrypted path. The restore procedure
 is in the header of `backups/restore.sh`.
+
+**Database roles:** backend and huey log in as the app's own role,
+`APP_DB_USER`, which owns the database and everything in it but is no
+superuser; the superuser `POSTGRES_USER` serves backups, restores and psql.
+`postgres/app_db_role.sh` creates the role with a new data volume, and its
+header has the steps for moving a running database over; a restore loads the
+dump as the role. While `APP_DB_USER` is unset, the app logs in as the
+superuser. A migration that needs a superuser fails in CI's production-images
+job. The role owns `public` and may create schemas, so it could plant an
+operator, function or view for a superuser session to run: every superuser
+session in the scripts pins `search_path` to `pg_catalog`, quotes names, and
+reads plain tables only, each locked before it is checked. A superuser's own
+psql there pins it too (`PGOPTIONS='-c search_path=pg_catalog' psql …`), and SQL
+built from the app's data quotes it.
 
 **Stack components** (`docker-compose.yml`):
 

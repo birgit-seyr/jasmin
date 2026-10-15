@@ -59,6 +59,15 @@ class OfferGroupNameAmbiguous(BadRequestError):
     code = "offer_group.name_ambiguous"
 
 
+class OfferAmountChanged(ConflictError):
+    """A save would set an offer's available amount, but the stored amount is
+    no longer the one the client read: orders moved the stock since. The save
+    writes nothing, so it can't undo them; reloading shows the current amount,
+    which ``details.amount`` also carries."""
+
+    code = "offer.amount_changed"
+
+
 # --------------------------------------------------------------------------- #
 # Orders / delivery notes / invoices                                          #
 # --------------------------------------------------------------------------- #

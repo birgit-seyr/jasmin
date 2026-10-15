@@ -137,6 +137,9 @@ class TestRotationService:
         assert result.generated_secret
         assert "docker compose exec postgres" in result.instructions
         assert "\\password" in result.instructions
+        # Two logins, each with its own variable in .env.
+        assert "APP_DB_PASSWORD" in result.instructions
+        assert "POSTGRES_PASSWORD" in result.instructions
         # Typed at the prompt, never part of SQL text or the response.
         assert result.generated_secret not in result.instructions
         assert result.extras == {}

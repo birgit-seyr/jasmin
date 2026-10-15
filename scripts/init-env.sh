@@ -114,6 +114,7 @@ gen_alnum()  {                                                # human-typable su
 DJANGO_SECRET_KEY="$(gen_django)"
 FIELD_ENCRYPTION_KEY="$(gen_fernet)"
 POSTGRES_PASSWORD="$(gen_hex)"
+APP_DB_PASSWORD="$(gen_hex)"
 REDIS_PASSWORD="$(gen_hex)"
 BACKUP_ENCRYPTION_KEY="$(gen_hex)"
 GLITCHTIP_DB_PASSWORD="$(gen_hex)"
@@ -146,6 +147,10 @@ FIELD_ENCRYPTION_KEY=${FIELD_ENCRYPTION_KEY}
 POSTGRES_DB=jasmin
 POSTGRES_USER=jasmin
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+# The role backend and huey log in as: it owns the database, but is no
+# superuser (postgres/app_db_role.sh). POSTGRES_USER serves backups and psql.
+APP_DB_USER=jasmin_app
+APP_DB_PASSWORD=${APP_DB_PASSWORD}
 REDIS_PASSWORD=${REDIS_PASSWORD}
 
 # --- PLATFORM email = OPS ALERTS ONLY (mail_admins). NOT a fallback for tenant

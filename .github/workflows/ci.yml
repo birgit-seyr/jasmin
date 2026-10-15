@@ -404,6 +404,11 @@ jobs:
       POSTGRES_DB: jasmin
       POSTGRES_USER: jasmin
       POSTGRES_PASSWORD: ci-postgres-password
+      # The app's own database role, which postgres creates with the data
+      # volume (postgres/app_db_role.sh): backend and huey migrate, provision
+      # and serve without a superuser, as in production.
+      APP_DB_USER: jasmin_app
+      APP_DB_PASSWORD: ci-app-db-password
       REDIS_PASSWORD: ci-redis-password
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,.ci.example.test
       FRONTEND_DOMAIN: ci.example.test
@@ -444,6 +449,11 @@ jobs:
         run: |
           $COMPOSE exec -T backend python manage.py shell -c "from apps.shared.tenants.services import TenantService; TenantService().provision_tenant(schema_name='ci', name='CI farm', domain='farm.ci.example.test', admin_email='admin@ci.example.test', admin_password='$(openssl rand -base64 24)')"
 
+      - name: The app logs in as its own role, which owns what it created
+        run: |
+          $COMPOSE exec -T backend python manage.py shell -c "from django.db import connection; cursor = connection.cursor(); cursor.execute('SELECT current_user::text, rolsuper FROM pg_roles WHERE rolname = current_user'); user, superuser = cursor.fetchone(); print(user, 'superuser' if superuser else 'no superuser'); assert user == 'jasmin_app' and not superuser"
+          $COMPOSE exec -T postgres /docker-entrypoint-initdb.d/app_db_role.sh --check
+
       - name: The frontend serves the app
         run: $COMPOSE exec -T frontend sh -c 'wget -qO- http://127.0.0.1/ | grep -q "id=\"root\""'
 
@@ -462,6 +472,19 @@ jobs:
         # when it fails; backup.sh exits non-zero unless the dump decrypts and
         # ends with pg_dump's completion line.
         run: $COMPOSE run --rm --no-deps -T backup predeploy
+
+      - name: A restore swaps in a copy the app's role owns
+        # restore.sh loads the dump as the app's role, which so owns the copy
+        # it swaps in; the app then serves it, the tenant created above
+        # included.
+        run: |
+          $COMPOSE stop backend huey
+          dump="$($COMPOSE exec -T backup sh -c 'ls -t /backups/*_predeploy_*.sql.gz.gpg | head -1')"
+          $COMPOSE exec -T -e CONFIRM_SWAP=1 backup sh /backups/restore.sh "$dump"
+          $COMPOSE exec -T postgres /docker-entrypoint-initdb.d/app_db_role.sh --check
+          $COMPOSE up -d --no-build --wait --wait-timeout 300 backend huey
+          $COMPOSE exec -T backend python manage.py shell -c "from apps.shared.tenants.models import Tenant; assert Tenant.objects.filter(schema_name='ci').exists(), 'the restored database has no ci tenant'"
+          $COMPOSE exec -T backend python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health/ready/', timeout=10).read().decode())"
 
       - name: The backend booted without errors
         # gunicorn logs a failed start-up step as [ERROR], Django's handlers as

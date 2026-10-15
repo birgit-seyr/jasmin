@@ -33027,6 +33027,16 @@ components:
           type: string
           readOnly: true
           nullable: true
+        expected_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,3})?$
+          writeOnly: true
+          description: The available amount the client read, sent with an edit of
+            ``amount``. Order lines move the stock all the time, so a changed amount
+            is saved only while the stored one still equals this, and refused with
+            offer.amount_changed (409) otherwise. Without it, only the stored amount
+            itself is accepted.
         is_finalized:
           type: boolean
           readOnly: true
@@ -36529,6 +36539,16 @@ components:
           type: string
           readOnly: true
           nullable: true
+        expected_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,3})?$
+          writeOnly: true
+          description: The available amount the client read, sent with an edit of
+            ``amount``. Order lines move the stock all the time, so a changed amount
+            is saved only while the stored one still equals this, and refused with
+            offer.amount_changed (409) otherwise. Without it, only the stored amount
+            itself is accepted.
         is_finalized:
           type: boolean
           readOnly: true

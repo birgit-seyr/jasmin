@@ -491,6 +491,16 @@ def alert_on_mass_deletes() -> dict[str, int]:
     }
 
 
+def _sql_identifier(name: str) -> str:
+    """``name`` as a quoted Postgres identifier."""
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _sql_literal(value: str) -> str:
+    """``value`` as a Postgres string literal."""
+    return "'" + value.replace("'", "''") + "'"
+
+
 def _send_mass_delete_ops_alert(
     bursts: list[tuple[tuple[str, str], Counter[str], int]],
 ) -> None:
@@ -500,7 +510,9 @@ def _send_mass_delete_ops_alert(
     platform's transactional mail uses also carries this — no extra
     config. The email is short on purpose and names nobody: each burst
     comes with the query that lists its deletions in the tenant schema's
-    audit log (Django admin isn't installed, so there is no admin page).
+    audit log (Django admin isn't installed, so there is no admin page). The
+    schema and the actor come from rows the app writes, so the query quotes
+    them, and the operator runs it as the app's database role.
     """
     from auditlog.models import LogEntry
 
@@ -516,8 +528,9 @@ def _send_mass_delete_ops_alert(
         )
         lines.append(
             "    SELECT timestamp, content_type_id, object_pk, object_repr "
-            f'FROM "{tenant_schema}".auditlog_logentry '
-            f"WHERE actor_id = '{actor_id}' AND action = {LogEntry.Action.DELETE} "
+            f"FROM {_sql_identifier(tenant_schema)}.auditlog_logentry "
+            f"WHERE actor_id = {_sql_literal(str(actor_id))} "
+            f"AND action = {LogEntry.Action.DELETE} "
             f"AND timestamp >= now() - interval '{window_hours} hours' "
             "ORDER BY timestamp;"
         )
@@ -527,8 +540,9 @@ def _send_mass_delete_ops_alert(
             f"Window: last {window_hours}h",
             f"Threshold: {MASS_DELETE_THRESHOLD}",
             "",
-            "Triage: run each burst's query in psql on the database "
-            "(docker compose exec postgres psql -U <user> -d <db>).",
+            "Triage: run each burst's query in psql as the app's own database "
+            "role, not the superuser: docker compose exec postgres sh -c "
+            '\'psql -U "${APP_DB_USER:-$POSTGRES_USER}" -d "$POSTGRES_DB"\'',
         ]
     )
     mail_admins(

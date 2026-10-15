@@ -235,7 +235,11 @@ export function useOffersColumns({
   const columns = useMemo<EditableColumnConfig<TableRecord>[]>(() => {
     const baseColumns = [
       finalColumn,
-      ...washingCleaningColumns,
+      // A published offer lets only its available amount change.
+      ...washingCleaningColumns.map((column) => ({
+        ...column,
+        disabled: (record: TableRecord) => record.is_finalized === true,
+      })),
       {
         ...shareArticleColumn,
         disabled: editableOnlyOnCreate,
@@ -359,6 +363,7 @@ export function useOffersColumns({
         ...noteColumn,
         inputType: "optional",
         width: "25em",
+        disabled: (record: TableRecord) => record.is_finalized === true,
       },
     ];
 

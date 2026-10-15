@@ -106,6 +106,7 @@ from .my_data_serializer import (
     MyMemberDataUpdateSerializer,
     MySubscriptionSubscribeSerializer,
 )
+from .offers_serializer import OfferSerializer
 from .reseller_import_serializer import ResellerImportSerializer
 from .resellers_serializer import (
     CommissioningListResellersEntry,
@@ -121,7 +122,6 @@ from .resellers_serializer import (
     InvoiceSentToAccountingSerializer,
     InvoiceSentToResellerSerializer,
     OfferGroupSerializer,
-    OfferSerializer,
     OrderContentItemSerializer,
     OrderContentListItemSerializer,
     OrderContentListResponseSerializer,

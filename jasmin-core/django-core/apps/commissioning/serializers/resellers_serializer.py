@@ -11,7 +11,6 @@ from ..models import (
     DeliveryNoteReseller,
     InvoiceReseller,
     InvoiceResellerContent,
-    Offer,
     OfferGroup,
     OrderContent,
     OrganicCertificate,
@@ -288,24 +287,6 @@ class ResellerSerializer(
         # Override the auto-wired DeletableListSerializer so the list path
         # also bulk-precomputes linked-delivery-station deletability.
         list_serializer_class = ResellerListSerializer
-
-
-class OfferSerializer(serializers.ModelSerializer):
-    share_article_name = serializers.CharField(read_only=True)
-    forecast_exists = serializers.BooleanField(read_only=True)
-    amount_ordered = serializers.DecimalField(
-        max_digits=7, decimal_places=3, read_only=True
-    )
-
-    organic_status = serializers.CharField(
-        source="share_article.organic_status", read_only=True, allow_null=True
-    )
-
-    class Meta:
-        model = Offer
-        fields = "__all__"
-        # Offers are finalized only through ``/bulk_finalize/``.
-        read_only_fields = FINALIZATION_READONLY_FIELDS
 
 
 def _order_day_field() -> serializers.IntegerField:

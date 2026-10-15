@@ -28,6 +28,10 @@ DB_NAME="${POSTGRES_DB}"
 DB_USER="${POSTGRES_USER}"
 
 export PGPASSWORD="${POSTGRES_PASSWORD}"
+# The app's role, when there is one, owns the database and may create schemas
+# and functions in it. Every session here looks names up in pg_catalog only, so
+# no operator or function the app put elsewhere runs with the superuser's rights.
+export PGOPTIONS="-c search_path=pg_catalog"
 
 # GDPR: encryption passphrase (required)
 BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
@@ -146,14 +150,50 @@ do_backup() {
 # SHA-256; an encrypted copy goes off-host whenever the ledger changed.
 LEDGER_FILE="${BACKUP_DIR}/gdpr-deletion-ledger.jsonl"
 
+# The tables below hold rows the app writes, in a database the app owns. Each
+# is read in a transaction that locks it first, so nothing can drop, rename or
+# replace it before the read, and only while it is a plain table: reading a
+# view the app put under its name would run the app's code with this login's
+# rights.
+
+# The tenant schemas, one per line.
+tenant_schemas_sql() {
+    cat <<'SQL'
+BEGIN;
+LOCK TABLE public.tenants_tenant IN ACCESS SHARE MODE;
+SELECT relkind = 'r' AS is_table FROM pg_class
+WHERE oid = 'public.tenants_tenant'::regclass \gset
+\if :is_table
+SELECT schema_name FROM public.tenants_tenant
+WHERE schema_name <> 'public' ORDER BY schema_name;
+\else
+DO $$ BEGIN RAISE EXCEPTION 'public.tenants_tenant is not a table'; END $$;
+\endif
+COMMIT;
+SQL
+}
+
 ledger_sql() {
     # One row per erasure, keys sorted by jsonb: the same row always prints
-    # the same line, so ``sort -u`` merges repeated exports.
-    printf '%s' "SELECT ((to_jsonb(t) - 'user_email' - 'description') || jsonb_build_object(
-        'schema', '$1',
-        'email_sha256', CASE WHEN coalesce(t.user_email, '') <> ''
-            THEN encode(sha256(convert_to(lower(trim(t.user_email)), 'UTF8')), 'hex') END
-    ))::text FROM \"$1\".gdpr_deletionlog t"
+    # the same line, so ``sort -u`` merges repeated exports. The schema comes
+    # in as the psql variable ``schema``, which psql quotes: the app chose it.
+    cat <<'SQL'
+BEGIN;
+LOCK TABLE :"schema".gdpr_deletionlog IN ACCESS SHARE MODE;
+SELECT c.relkind = 'r' AS is_table FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = :'schema' AND c.relname = 'gdpr_deletionlog' \gset
+\if :is_table
+SELECT ((to_jsonb(t) - 'user_email' - 'description') || jsonb_build_object(
+    'schema', :'schema',
+    'email_sha256', CASE WHEN coalesce(t.user_email, '') <> ''
+        THEN encode(sha256(convert_to(lower(trim(t.user_email)), 'UTF8')), 'hex') END
+))::text FROM :"schema".gdpr_deletionlog t;
+\else
+DO $$ BEGIN RAISE EXCEPTION 'gdpr_deletionlog is not a table'; END $$;
+\endif
+COMMIT;
+SQL
 }
 
 # Prints the ledger's lines and those of the file $1, sorted and without
@@ -180,22 +220,25 @@ export_gdpr_ledger() {
         echo "[$(date)] ERROR: GDPR ledger: cannot write ${rows}; the ledger stays as it is" >&2
         return 1
     fi
-    schemas=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -At \
-        -c "SELECT schema_name FROM public.tenants_tenant WHERE schema_name <> 'public' ORDER BY schema_name") \
+    schemas=$(tenant_schemas_sql | psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+        -q -At -v ON_ERROR_STOP=1) \
         || { echo "[$(date)] ERROR: GDPR ledger: cannot list tenant schemas" >&2; rm -f "$rows"; return 1; }
-    for schema in $schemas; do
+    while read -r schema; do
+        [ -n "$schema" ] || continue
         # UTC, so a timestamp prints the same way on every run. A psql that
         # fails may have printed part of a line, so a schema joins the rows
         # only once it has been read in full.
-        if ! PGTZ=UTC psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -At \
-                -v ON_ERROR_STOP=1 -c "$(ledger_sql "$schema")" > "$part"; then
+        if ! ledger_sql | PGTZ=UTC psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+                -q -At -v ON_ERROR_STOP=1 -v schema="$schema" > "$part"; then
             echo "[$(date)] WARN: GDPR ledger: could not read ${schema}.gdpr_deletionlog; its new entries wait for the next run" >&2
         elif ! cat "$part" >> "$rows"; then
             echo "[$(date)] ERROR: GDPR ledger: cannot write ${rows}; the ledger stays as it is" >&2
             rm -f "$rows" "$part"
             return 1
         fi
-    done
+    done <<EOF
+$schemas
+EOF
     rm -f "$part"
     # A merge the disk cut short fails, or differs from a second one that
     # writes nothing.

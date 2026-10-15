@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import datetime
 import json
+from collections import Counter
 from unittest.mock import patch
 
 import pytest
@@ -128,6 +129,21 @@ class TestMassDeleteAlerts:
 
 
 @pytest.mark.django_db
+class TestTriageQuery:
+    def test_quotes_the_schema_and_the_actor_and_runs_as_the_app_role(self):
+        # Both come from rows the app writes, and the operator pastes the query
+        # into psql.
+        bursts = [(('farm"x', "o'id"), Counter({"commissioning.Member": 30}), 30)]
+
+        with patch.object(gdpr_tasks, "mail_admins") as mock_mail:
+            gdpr_tasks._send_mass_delete_ops_alert(bursts)
+
+        body = mock_mail.call_args.kwargs["message"]
+        assert 'FROM "farm""x".auditlog_logentry ' in body
+        assert "WHERE actor_id = 'o''id' " in body
+        assert 'psql -U "${APP_DB_USER:-$POSTGRES_USER}"' in body
+
+
 class TestNonSensitiveIgnored:
     def test_non_sensitive_model_deletes_dont_trigger(self, tenant):
         """``LogEntry`` for a model NOT in ``SENSITIVE_DELETION_MODELS``

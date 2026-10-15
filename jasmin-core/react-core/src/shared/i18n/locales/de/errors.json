@@ -279,6 +279,9 @@
     "not_found": "Lager nicht gefunden.",
     "in_use": "Dieses Lager wird noch verwendet (etwa von Prognosen oder Dokumentationseinträgen) und kann nicht gelöscht werden."
   },
+  "offer": {
+    "amount_changed": "Die verfügbare Menge dieses Angebots hat sich inzwischen geändert — bitte die Seite neu laden und die Menge erneut eintragen."
+  },
   "offer_group": {
     "not_found": "Angebotsgruppe nicht gefunden.",
     "cannot_delete_default": "Die Standard-Angebotsgruppe kann nicht gelöscht werden.",

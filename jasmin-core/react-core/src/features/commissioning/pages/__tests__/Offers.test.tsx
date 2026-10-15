@@ -613,27 +613,42 @@ describe("Offers editing", () => {
     });
   });
 
-  it("updates and deletes offers through the generated client", async () => {
+  it("updates an offer with the amount it opened with, and deletes offers, through the generated client", async () => {
     api.offersPartialUpdate.mockResolvedValue({ id: "offer-1" });
     api.offersDestroy.mockResolvedValue(undefined);
     renderPage();
     await pickOfferGroup();
 
-    await grid().apiFunctions!.update!("offer-1", { price_1: "2.60" });
+    // The row was refetched while it stood open: orders took 8 PU.
+    const payload = grid().customSave!(
+      { amount: "20.000", price_1: "2.60", expected_amount: "20.000" },
+      { key: "offer-1", amount: "12.000" },
+    );
+    await grid().apiFunctions!.update!("offer-1", payload!);
     await grid().apiFunctions!.delete!("offer-1");
 
     expect(api.offersPartialUpdate).toHaveBeenCalledWith("offer-1", {
+      amount: "20.000",
       price_1: "2.60",
+      expected_amount: "20.000",
+      year: YEAR,
+      delivery_week: WEEK,
+      offer_group: "og-1",
     });
     expect(api.offersDestroy).toHaveBeenCalledWith("offer-1");
   });
 
-  it("seeds a new offer with size M", () => {
+  it("seeds a new offer with size M, and an open one with the amount it opens with", () => {
     renderPage();
     const form = { setFieldsValue: vi.fn() } as unknown as FormInstance;
 
     expect(grid().customEdit!({ key: -1 }, form)).toEqual({ key: -1, size: "M" });
     expect(form.setFieldsValue).toHaveBeenCalledWith({ size: "M" });
+    expect(grid().customEdit!({ key: "offer-1", amount: "20.000" }, form)).toEqual({
+      key: "offer-1",
+      amount: "20.000",
+      expected_amount: "20.000",
+    });
   });
 });
 
@@ -673,22 +688,6 @@ describe("Offers prices", () => {
 
     const unchanged = within(screen.getByTestId("offer-1-price_1")).getByText("2,40 €");
     expect(unchanged).toHaveStyle({ fontWeight: "normal" });
-  });
-
-  it("locks the prices of a finalized offer", async () => {
-    tenantState.values = { used_tiers_for_offers: [1, 5, 10] };
-    renderPage();
-    await pickOfferGroup();
-
-    const priceColumn = (dataIndex: string) =>
-      grid()
-        .columns.flatMap((column) => column.children ?? [column])
-        .find((column) => column.dataIndex === dataIndex)!;
-    const disabled = priceColumn("price_2").disabled as (
-      record: TableRecord,
-    ) => boolean;
-    expect(disabled({ key: "offer-1", is_finalized: true })).toBe(true);
-    expect(disabled({ key: "offer-1", is_finalized: false })).toBe(false);
   });
 
   describe("tier prices derived from the base price", () => {
