@@ -107,11 +107,16 @@ async function postRefreshWithRetry(): Promise<RefreshedSession> {
   }
 }
 
-/** Refresh holding the cross-tab lock. Web Locks are missing outside secure
- *  contexts and in older browsers; there the tab refreshes without it. */
-async function refreshInTurn(): Promise<RefreshedSession> {
-  if (!("locks" in navigator)) return postRefreshWithRetry();
-  return await navigator.locks.request(REFRESH_LOCK, postRefreshWithRetry);
+/**
+ * Run `request` holding the cross-tab lock (see `REFRESH_LOCK`): after any
+ * refresh in flight in this tab or another, and before the next. A logout
+ * takes its turn too, or a refresh answered after it would set a new, valid
+ * cookie. Web Locks are missing outside secure contexts and in older browsers;
+ * there `request` runs without the lock.
+ */
+export async function inRefreshTurn<T>(request: () => Promise<T>): Promise<T> {
+  if (!("locks" in navigator)) return request();
+  return await navigator.locks.request(REFRESH_LOCK, request);
 }
 
 /**
@@ -131,7 +136,7 @@ export async function performRefresh(): Promise<RefreshedSession> {
   }
   isRefreshing = true;
   try {
-    const session = await refreshInTurn();
+    const session = await inRefreshTurn(postRefreshWithRetry);
     setAccessToken(session.access);
     processQueue(null, session);
     return session;

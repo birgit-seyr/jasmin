@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
 
-import axiosInstance, { performRefresh } from "@shared/services/api";
+import axiosInstance, { inRefreshTurn, performRefresh } from "@shared/services/api";
 import {
   SUPER_ADMIN_AUTH_ENDPOINTS,
   TENANT_AUTH_ENDPOINTS,
@@ -414,30 +414,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const endpoints = getEndpoints();
       // Empty body — refresh cookie carries the token. AllowAny on backend
-      // means this still works even with an expired access token.
-      await axiosInstance.post(endpoints.logout, {});
+      // means this still works even with an expired access token. Sent in
+      // the refresh lock's turn, so it logs out the cookie a refresh in
+      // flight in another tab is about to set.
+      await inRefreshTurn(() => axiosInstance.post(endpoints.logout, {}));
     } catch (err) {
       // Logout failures are non-fatal.
       console.error("Logout API call failed:", err);
     } finally {
+      // Clearing the token also empties the query cache
+      // (app/clearCacheOnSessionEnd.ts), so the next user on this device
+      // sees none of this one's data.
       clearAccessToken();
       persistMeta(null);
       setError(null);
-      // Wipe any cached API responses held by the service worker. Without
-      // this, a NetworkFirst response that succeeded earlier could still be
-      // served from cache to the next user on the same device.
-      if (typeof window !== "undefined" && "caches" in window) {
-        try {
-          const names = await caches.keys();
-          await Promise.all(
-            names
-              .filter((n) => n.includes("api-cache") || n.includes("auth"))
-              .map((n) => caches.delete(n)),
-          );
-        } catch (err) {
-          console.warn("Failed to clear SW caches on logout:", err);
-        }
-      }
       // Both realms (tenant + super-admin) mount the login route at /login.
       navigate("/login");
     }

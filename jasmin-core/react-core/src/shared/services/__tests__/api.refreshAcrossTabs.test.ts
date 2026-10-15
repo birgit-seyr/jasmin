@@ -33,14 +33,21 @@ async function openTab() {
   vi.resetModules();
   const api = await import("../api");
   const tokens = await import("../tokenStore");
-  return { refresh: api.performRefresh, accessToken: tokens.getAccessToken };
+  return {
+    refresh: api.performRefresh,
+    accessToken: tokens.getAccessToken,
+    // As AuthContext's logout sends it.
+    logout: () =>
+      api.inRefreshTurn(() => api.default.post("/api/auth/logout/", {})),
+  };
 }
 
 /**
- * The refresh endpoint plus the browser's cookie jar. A POST carries the
- * cookie the jar holds when it goes out. The backend blacklists that cookie at
- * once and answers `answerAfterMs` later; only then does the new cookie land
- * in the jar. Returns the log of what happened, in order.
+ * The refresh and logout endpoints plus the browser's cookie jar. A POST
+ * carries the cookie the jar holds when it goes out. A refresh blacklists that
+ * cookie at once and answers `answerAfterMs` later; only then does the new
+ * cookie land in the jar. A logout blacklists the cookie and empties the jar.
+ * Returns the log of what happened, in order.
  */
 function fakeRefreshBackend({ answerAfterMs = 50 } = {}) {
   const events: string[] = [];
@@ -50,6 +57,13 @@ function fakeRefreshBackend({ answerAfterMs = 50 } = {}) {
   server.use(
     http.post("/api/auth/refresh/", async () => {
       const sent = jar;
+      if (sent === 0) {
+        events.push("refused a refresh without a cookie");
+        return HttpResponse.json(
+          { code: "auth.invalid_token", message: "No refresh cookie" },
+          { status: 401 },
+        );
+      }
       events.push(`sent cookie ${sent}`);
       if (blacklisted.has(sent)) {
         events.push(`refused cookie ${sent}`);
@@ -65,6 +79,12 @@ function fakeRefreshBackend({ answerAfterMs = 50 } = {}) {
       jar = rotated;
       events.push(`set cookie ${rotated}`);
       return HttpResponse.json({ access: `access ${rotated}` });
+    }),
+    http.post("/api/auth/logout/", () => {
+      events.push(`logged out cookie ${jar}`);
+      blacklisted.add(jar);
+      jar = 0;
+      return HttpResponse.json({});
     }),
   );
   return events;
@@ -145,6 +165,28 @@ describe("two tabs refreshing at once", () => {
       "access 2",
       "access 3",
     ]);
+  });
+});
+
+describe("a logout while another tab refreshes", () => {
+  it("waits its turn under the Web Lock and logs out the cookie the refresh got back", async () => {
+    installWebLocks();
+    const events = fakeRefreshBackend();
+    const refreshing = await openTab();
+    const leaving = await openTab();
+
+    await Promise.all([refreshing.refresh(), leaving.logout()]);
+
+    // Without the turn the logout would go out first, with cookie 1, and the
+    // refresh answering after it would leave cookie 2 alive.
+    expect(events).toEqual([
+      "sent cookie 1",
+      "set cookie 2",
+      "logged out cookie 2",
+    ]);
+    const later = await openTab();
+    await expect(later.refresh()).rejects.toBeTruthy();
+    expect(events.at(-1)).toBe("refused a refresh without a cookie");
   });
 });
 

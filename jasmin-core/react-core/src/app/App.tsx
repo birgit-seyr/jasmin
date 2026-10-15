@@ -18,6 +18,7 @@ const JasminApp = lazy(() => import("./JasminApp"));
 import i18n from "@shared/i18n";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { clearCacheOnSessionEnd } from "./clearCacheOnSessionEnd";
 import { shouldRetryQuery } from "./queryRetry";
 
 // Global error fallbacks for React Query. Any useQuery/useMutation that
@@ -63,6 +64,7 @@ const queryClient = new QueryClient({
     },
   }),
 });
+clearCacheOnSessionEnd(queryClient);
 
 function App() {
   const isPlatform = isPlatformDomain();

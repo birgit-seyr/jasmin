@@ -18,10 +18,15 @@ vi.mock("react-router-dom", async () => {
 
 const performRefreshMock = vi.fn<() => Promise<RefreshedSession>>();
 const axiosPostMock = vi.fn();
+// Runs the request at once, as with no other tab holding the lock.
+const inRefreshTurnMock = vi.fn(
+  (request: () => Promise<unknown>) => request(),
+);
 
 vi.mock("@shared/services/api", () => ({
   default: { post: (...args: unknown[]) => axiosPostMock(...args) },
   performRefresh: () => performRefreshMock(),
+  inRefreshTurn: (request: () => Promise<unknown>) => inRefreshTurnMock(request),
 }));
 
 import { AuthProvider, useAuth } from "../AuthContext";
@@ -412,6 +417,32 @@ describe("AuthContext.logout", () => {
     expect(navigateMock).toHaveBeenLastCalledWith("/login");
     expect(probedAuth?.isAuthenticated).toBe(false);
     expect(probedAuth?.user).toBeNull();
+  });
+
+  it("sends the logout POST in the refresh lock's turn", async () => {
+    // A refresh in flight in another tab would otherwise answer after the
+    // logout and set a new, valid cookie.
+    const steps: string[] = [];
+    inRefreshTurnMock.mockImplementationOnce(async (request) => {
+      steps.push("turn starts");
+      const answer = await request();
+      steps.push("turn ends");
+      return answer;
+    });
+    axiosPostMock.mockImplementation(async (url: string) => {
+      steps.push(`POST ${url}`);
+      return { data: {} };
+    });
+
+    renderProvider();
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-isauth").textContent).toBe("true"),
+    );
+    await act(async () => {
+      await probedAuth!.logout();
+    });
+
+    expect(steps).toEqual(["turn starts", "POST /api/auth/logout/", "turn ends"]);
   });
 
   it("still cleans up locally when the logout API call errors", async () => {
