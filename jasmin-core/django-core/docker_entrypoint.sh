@@ -146,7 +146,12 @@ case "$cmd" in
         ;;
     gunicorn)
         echo "Starting gunicorn ..."
+        # --no-control-socket: gunicorn's runtime-control socket (for the
+        # gunicornc tool, which nothing here uses) would go under $HOME, and the
+        # runtime image's non-root user has no writable home, so every boot
+        # would log a permission error.
         exec gunicorn config.wsgi:application \
+            --no-control-socket \
             --bind 0.0.0.0:8000 \
             --workers "${GUNICORN_WORKERS:-4}" \
             --threads "${GUNICORN_THREADS:-2}" \

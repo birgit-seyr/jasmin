@@ -1150,11 +1150,15 @@ npm run lint:fix                 # Auto-fix issues
 
 **CI/CD** — configured in `.github/workflows/ci.yml`:
 
-- Runs on all pushes to main and all PRs; five jobs
+- Runs on all pushes to main and all PRs, and weekly on main so the dependency
+  audits catch new advisories between pushes; six jobs
 - Frontend: type-check, lint, `lint:pins`, vitest, production build, bundle-size
-  budget, npm audit
+  budget, npm audit (fails closed when npm returns no audit report)
 - Backend: black, ruff baseline, mypy baseline, import contracts, pytest (with a
   Postgres service for django-tenants tests)
+- Production images: builds the backend runtime, frontend nginx and backup
+  images from `docker-compose.yml` and boots them on production settings
+  (`docker-smoke` boots the dev image)
 - Two "you forgot to regenerate" gates fail PRs most often: `makemigrations
   --check --dry-run`, and the schema-freshness diff (`spectacular` then
   `git diff --exit-code` on `schema.yml`)

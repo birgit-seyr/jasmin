@@ -5,11 +5,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Weekly on main, so the dependency audits run even in a week without a push:
+  # a new advisory against main's dependencies shows up here.
+  schedule:
+    - cron: "17 5 * * 1"
 
 # Cancel an in-flight run if a new commit lands on the same branch/PR.
-# Saves CI minutes and surfaces only the freshest result on a PR.
+# Saves CI minutes and surfaces only the freshest result on a PR. The event is
+# part of the group so the weekly run never cancels a push run on main, whose
+# result update.sh's deploy gate reads.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -379,6 +385,103 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose -f docker-compose.dev.yml down -v
+
+  prod-images:
+    name: Production images (build + boot)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # docker-smoke boots the DEV image. Production runs other build stages: the
+    # backend's runtime stage (non-root, gunicorn, collectstatic under
+    # DEBUG=False behind the settings' boot guards), the frontend's nginx stage
+    # with its asset-keeping start script, and the backup image. This job builds
+    # them from the production compose file and boots them on production
+    # settings, so a stage that breaks fails here instead of on the server after
+    # `docker compose up -d`. The override only moves the logs to json-file.
+    env:
+      COMPOSE: docker compose -f docker-compose.yml -f .github/ci/docker-compose.prod-smoke.yml
+      # Throwaway values for what the compose file and the settings' boot guards
+      # require. None of them is a real secret; the keys are generated below.
+      POSTGRES_DB: jasmin
+      POSTGRES_USER: jasmin
+      POSTGRES_PASSWORD: ci-postgres-password
+      REDIS_PASSWORD: ci-redis-password
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,.ci.example.test
+      FRONTEND_DOMAIN: ci.example.test
+      EMAIL_HOST: smtp.ci.example.test
+      EMAIL_ADMIN: ops@ci.example.test
+      BACKUP_ENCRYPTION_KEY: ci-backup-passphrase
+      # Interpolated by the compose file for GlitchTip, which this job doesn't start.
+      GLITCHTIP_DB_PASSWORD: ci-unused
+      GLITCHTIP_SECRET_KEY: ci-unused
+      GLITCHTIP_DOMAIN: https://glitchtip.ci.example.test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Generate throwaway keys
+        run: |
+          echo "DJANGO_SECRET_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "FIELD_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_')" >> "$GITHUB_ENV"
+
+      - name: Build the production images
+        run: $COMPOSE build backend frontend backup
+
+      - name: Boot backend, huey and frontend on production settings
+        # --wait returns once each service's healthcheck passes and fails the
+        # step if one doesn't within the timeout: the backend after its
+        # migrations and collectstatic, huey after its first heartbeat, the
+        # frontend once nginx serves.
+        run: $COMPOSE up -d --no-build --wait --wait-timeout 900 backend huey frontend
+
+      - name: The backend is ready (database and Redis reachable)
+        run: |
+          $COMPOSE exec -T backend python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health/ready/', timeout=10).read().decode())"
+
+      - name: A tenant can be created (tenant migrations on the runtime image)
+        # The runtime image is installed without the dev dependencies, which
+        # every other job has; provisioning runs every tenant migration and
+        # its data seeds there.
+        run: |
+          $COMPOSE exec -T backend python manage.py shell -c "from apps.shared.tenants.services import TenantService; TenantService().provision_tenant(schema_name='ci', name='CI farm', domain='farm.ci.example.test', admin_email='admin@ci.example.test', admin_password='$(openssl rand -base64 24)')"
+
+      - name: The frontend serves the app
+        run: $COMPOSE exec -T frontend sh -c 'wget -qO- http://127.0.0.1/ | grep -q "id=\"root\""'
+
+      - name: The backup container boots and writes an encrypted dump
+        # Started only now, once the database is migrated: its start-up run
+        # dumps the database once before it installs its cron schedule, and
+        # backup.sh discards a dump under its size floor, which an empty
+        # database's would be. The backup service has no healthcheck, so the
+        # dump file itself is the check.
+        run: |
+          $COMPOSE up -d --no-build backup
+          timeout 300 sh -c 'until $COMPOSE exec -T backup sh -c "ls /backups/*.sql.gz.gpg" 2>/dev/null; do sleep 5; done'
+
+      - name: The pre-deploy dump works
+        # deploy.sh takes this dump before every migration and stops the deploy
+        # when it fails; backup.sh exits non-zero unless the dump decrypts and
+        # ends with pg_dump's completion line.
+        run: $COMPOSE run --rm --no-deps -T backup predeploy
+
+      - name: The backend booted without errors
+        # gunicorn logs a failed start-up step as [ERROR], Django's handlers as
+        # "- ERROR"; both carry on serving, so the health checks above stay
+        # green.
+        run: |
+          if $COMPOSE logs --no-color backend | grep -E '\[ERROR\]| - (ERROR|CRITICAL) |Traceback \(most recent call last\)'; then
+            echo "The backend logged errors while booting (above)."
+            exit 1
+          fi
+
+      - name: Show state and logs on failure
+        if: failure()
+        run: |
+          $COMPOSE ps -a
+          $COMPOSE logs --no-color backend huey frontend backup postgres
+
+      - name: Tear down
+        if: always()
+        run: $COMPOSE down -v
 
   secret-scan:
     name: Secret scan (gitleaks)

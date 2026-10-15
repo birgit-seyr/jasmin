@@ -1,0 +1,24 @@
+# Override for the production compose file, used by the prod-images job in
+# .github/workflows/ci.yml. It only moves the containers' logs from the host's
+# systemd journal to json-file, which needs nothing from the host, so the job
+# runs on any Docker host, one without journald included. Everything else is
+# production as it stands in docker-compose.yml.
+services:
+  postgres:
+    logging: !override
+      driver: json-file
+  redis:
+    logging: !override
+      driver: json-file
+  backend:
+    logging: !override
+      driver: json-file
+  huey:
+    logging: !override
+      driver: json-file
+  frontend:
+    logging: !override
+      driver: json-file
+  backup:
+    logging: !override
+      driver: json-file

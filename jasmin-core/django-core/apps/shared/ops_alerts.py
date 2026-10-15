@@ -30,12 +30,20 @@ def alert_operator(
 
     With ``throttle_key``, at most one alert per key goes out within
     ``throttle_seconds``; later ones in the window are dropped. A failed send
-    is logged and swallowed, so an alert never breaks the code that raises it.
+    is logged and swallowed, and so is a cache error on the throttle (Redis
+    down), in which case the alert goes out unthrottled: an alert never breaks
+    the code that raises it.
     """
-    if throttle_key is not None and not cache.add(
-        f"ops-alert:{throttle_key}", True, timeout=throttle_seconds
-    ):
-        return
+    if throttle_key is not None:
+        try:
+            first_in_window = cache.add(
+                f"ops-alert:{throttle_key}", True, timeout=throttle_seconds
+            )
+        except Exception:
+            logger.exception("ops_alert.throttle_failed key=%s", throttle_key)
+        else:
+            if not first_in_window:
+                return
 
     def send() -> None:
         try:

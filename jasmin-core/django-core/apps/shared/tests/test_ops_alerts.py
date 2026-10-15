@@ -51,3 +51,17 @@ class TestAlertOperator:
             django_capture_on_commit_callbacks(execute=True),
         ):
             alert_operator("Subject", "Body")
+
+    def test_a_cache_error_on_the_throttle_still_sends(
+        self, mailoutbox, django_capture_on_commit_callbacks
+    ):
+        with (
+            mock.patch(
+                "apps.shared.ops_alerts.cache.add",
+                side_effect=ConnectionError("redis down"),
+            ),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            alert_operator("Subject", "Body", throttle_key="key", throttle_seconds=60)
+
+        assert len(mailoutbox) == 1
