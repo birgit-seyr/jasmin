@@ -32904,11 +32904,6 @@ components:
           type: string
           readOnly: true
           nullable: true
-        email:
-          type: string
-          format: email
-          readOnly: true
-          nullable: true
         birth_date:
           type: string
           format: date
@@ -32920,6 +32915,11 @@ components:
         account_owner_stored:
           type: boolean
           readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
         member_number:
           type: integer
           readOnly: true
@@ -36456,12 +36456,13 @@ components:
       description: |-
         Incoming shape for ``PATCH /commissioning/my_member_data/``.
 
-        Field allowlist for member self-edit. Office-only flags
-        (``is_active``, ``is_trial``, ``member_number``, entry_date,
-        coop-share totals) are NOT in this list and silently ignored
-        if a client tries to send them — DRF only deserialises what's
-        declared. Validators (IBAN format, email uniqueness) come from
-        the model fields automatically.
+        Field allowlist for member self-edit. Office-only fields
+        (``email``, ``is_active``, ``is_trial``, ``member_number``,
+        entry_date, coop-share totals) are NOT in this list and silently
+        ignored if a client tries to send them — DRF only deserialises
+        what's declared. ``email`` is the address the co-op writes to, and
+        nothing here could confirm that the member owns a new one. The IBAN
+        format validator comes from the model field automatically.
       properties:
         first_name:
           type: string
@@ -36495,14 +36496,6 @@ components:
           type: string
           nullable: true
           maxLength: 100
-        email:
-          nullable: true
-          oneOf:
-          - type: string
-            format: email
-            maxLength: 255
-          - type: string
-            maxLength: 0
         birth_date:
           type: string
           format: date
@@ -39650,15 +39643,30 @@ components:
       - amount
       - week
       - year
+    RecipientCategoryEnum:
+      enum:
+      - data_subject
+      - farm_office
+      - farm_accounting
+      - other
+      type: string
+      description: |-
+        * `data_subject` - data_subject
+        * `farm_office` - farm_office
+        * `farm_accounting` - farm_accounting
+        * `other` - other
     RefreshResponse:
       type: object
       properties:
         access:
           type: string
+        user:
+          $ref: '#/components/schemas/LoginUser'
         tenant:
           $ref: '#/components/schemas/LoginTenant'
       required:
       - access
+      - user
     RegenerateChargesResponse:
       type: object
       properties:
@@ -40426,12 +40434,21 @@ components:
         One ``EmailLog`` row. ``provider_message_id`` is exposed so
         the user can correlate with their inbox if needed; ``related_*``
         FKs are skipped (loose pointers, no SAR value).
+
+        ``recipient`` is the address only where ``recipient_category`` is
+        ``data_subject``, an address on the subject's own records. A mail to the
+        farm's office or accounting address, or to any other address, is named by
+        its category alone, with ``recipient`` null and ``provider_message_id``
+        and ``error`` blank.
       properties:
         id:
           type: string
         recipient:
           type: string
           format: email
+          nullable: true
+        recipient_category:
+          $ref: '#/components/schemas/RecipientCategoryEnum'
         subject:
           type: string
         template:
@@ -40464,6 +40481,7 @@ components:
       - provider_message_id
       - purpose
       - recipient
+      - recipient_category
       - sent_at
       - status
       - subject

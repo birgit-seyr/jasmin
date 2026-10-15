@@ -39,6 +39,7 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from .models import OFFICE_DELETION_CHANNELS
+from .services.subject_emails import RecipientCategory
 
 # ---------------------------------------------------------------------------
 # Subject + Account
@@ -455,10 +456,19 @@ class SarInvoiceResellerSerializer(serializers.Serializer):
 class SarEmailLogEntrySerializer(serializers.Serializer):
     """One ``EmailLog`` row. ``provider_message_id`` is exposed so
     the user can correlate with their inbox if needed; ``related_*``
-    FKs are skipped (loose pointers, no SAR value)."""
+    FKs are skipped (loose pointers, no SAR value).
+
+    ``recipient`` is the address only where ``recipient_category`` is
+    ``data_subject``, an address on the subject's own records. A mail to the
+    farm's office or accounting address, or to any other address, is named by
+    its category alone, with ``recipient`` null and ``provider_message_id``
+    and ``error`` blank."""
 
     id = serializers.CharField()
-    recipient = serializers.EmailField()
+    recipient = serializers.EmailField(allow_null=True)
+    recipient_category = serializers.ChoiceField(
+        choices=[category.value for category in RecipientCategory]
+    )
     subject = serializers.CharField(allow_blank=True)
     template = serializers.CharField(allow_blank=True)
     purpose = serializers.CharField(allow_blank=True)

@@ -125,6 +125,28 @@ MATRIX: list[tuple[str, str, str, str]] = [
     ("/api/commissioning/crate_contents/", "post", "customer", "deny"),
     ("/api/commissioning/crate_contents/", "post", "staff", "deny"),
     ("/api/commissioning/crate_contents/", "post", "office", "4xx"),
+    # ------- Finalized share contents (Staff read, Office write) -------
+    # The office plans and finalizes the share contents members get in their
+    # box; the crew reads them but never adds, changes or deletes one. The
+    # detail rows name an unknown pk: permissions run in ``initial()`` before
+    # ``get_object()``, so a crew role is denied before the lookup. Office
+    # "4xx": past the permission layer, the empty POST body is refused and the
+    # unknown pk is a 404.
+    ("/api/commissioning/share_contents/", "get", "gardener", "ok"),
+    ("/api/commissioning/share_contents/", "get", "staff", "ok"),
+    ("/api/commissioning/share_contents/", "get", "management", "ok"),
+    ("/api/commissioning/share_contents/", "post", "gardener", "deny"),
+    ("/api/commissioning/share_contents/", "post", "staff", "deny"),
+    ("/api/commissioning/share_contents/", "post", "management", "deny"),
+    ("/api/commissioning/share_contents/", "post", "office", "4xx"),
+    ("/api/commissioning/share_contents/unknown/", "patch", "gardener", "deny"),
+    ("/api/commissioning/share_contents/unknown/", "patch", "staff", "deny"),
+    ("/api/commissioning/share_contents/unknown/", "patch", "management", "deny"),
+    ("/api/commissioning/share_contents/unknown/", "patch", "office", "4xx"),
+    ("/api/commissioning/share_contents/unknown/", "delete", "gardener", "deny"),
+    ("/api/commissioning/share_contents/unknown/", "delete", "staff", "deny"),
+    ("/api/commissioning/share_contents/unknown/", "delete", "management", "deny"),
+    ("/api/commissioning/share_contents/unknown/", "delete", "office", "4xx"),
     # ------- Read-only GET @actions declared in ``read_actions`` -------
     # A custom @action takes ``write_permission`` unless the viewset names it
     # in ``read_actions``. These all sit on viewsets whose read gate is
@@ -213,6 +235,10 @@ def test_route_permission_matrix(tenant, path, method, role, expected):
         resp = client.get(path)
     elif method == "post":
         resp = client.post(path, data={}, format="json")
+    elif method == "patch":
+        resp = client.patch(path, data={}, format="json")
+    elif method == "delete":
+        resp = client.delete(path)
     else:
         raise ValueError(f"unsupported method: {method}")
 

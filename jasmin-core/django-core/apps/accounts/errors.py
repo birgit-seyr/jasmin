@@ -43,6 +43,20 @@ class AccountBlocked(AuthError):
     http_status = 403
 
 
+class AccountLocked(AuthError):
+    """Too many failed sign-ins for this address from this client IP: the
+    login, its 2FA step and step-up are refused until the lock runs out (see
+    ``apps.accounts.services.login_lockout``).
+
+    429, not 401: the frontend answers a 401 with a silent token refresh,
+    which would hide the refusal. The super-admin realm's
+    ``super_admin.account_locked`` answers the same way.
+    """
+
+    code = "auth.account_locked"
+    http_status = 429
+
+
 class SelfRegistrationDisabled(AuthError):
     """Public self-registration is off for this tenant (TenantSettings
     ``allows_self_registration`` is False). The register endpoints refuse so the
@@ -257,6 +271,7 @@ __all__ = [
     "AuthError",
     "InvalidCredentials",
     "AccountBlocked",
+    "AccountLocked",
     "SelfRegistrationDisabled",
     "TenantMismatch",
     "InvalidToken",

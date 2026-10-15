@@ -33,6 +33,7 @@ from apps.commissioning.tests.factories import (
     JasminUserFactory,
     MemberFactory,
     ShareArticleFactory,
+    ShareContentFactory,
     ShareDeliveryFactory,
     ShareFactory,
     SharesDeliveryDayFactory,
@@ -942,6 +943,127 @@ class TestShareExportCsvAction:
         # The in-range week appears as a column; the out-of-range week does not.
         assert f"{in_week.week}/{in_week.year}" in body
         assert f"{out_week.week}/{out_week.year}" not in body
+
+
+# ---------------------------------------------------------------------------
+# ShareContentViewSet — the crew reads finalized share contents, the office writes
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestShareContentWritePermissions:
+    """Finalized share contents are what members get in their box, and every
+    write recomputes the share. The office plans and finalizes them, so
+    gardener, staff and management read them but never add, change or delete
+    one."""
+
+    CREW_ROLES = ["gardener", "staff", "management"]
+    LIST = reverse("share_contents-list")
+    RECOMPUTE_SHARES = "apps.commissioning.services.recompute.recompute_shares"
+
+    @staticmethod
+    def _client(role: str) -> APIClient:
+        client = APIClient()
+        client.force_authenticate(user=JasminUserFactory(roles=[role]))
+        return client
+
+    @staticmethod
+    def _detail(share_content) -> str:
+        return reverse("share_contents-detail", kwargs={"pk": share_content.pk})
+
+    @staticmethod
+    def _new_row(share) -> dict:
+        return {
+            "share": share.pk,
+            "share_article": ShareArticleFactory().pk,
+            "delivery_station": DeliveryStationFactory().pk,
+            "amount": "5.000",
+            "unit": "KG",
+            "size": "M",
+        }
+
+    @pytest.mark.parametrize("role", CREW_ROLES)
+    def test_crew_reads_a_finalized_share_content(self, tenant, role):
+        share_content = ShareContentFactory(is_finalized=True)
+
+        resp = self._client(role).get(self._detail(share_content))
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["id"] == share_content.pk
+
+    @pytest.mark.parametrize("role", CREW_ROLES)
+    def test_crew_patch_is_refused_and_changes_nothing(self, tenant, role):
+        share_content = ShareContentFactory(
+            is_finalized=True, price_per_unit=Decimal("2.50")
+        )
+
+        with mock.patch(self.RECOMPUTE_SHARES) as recompute_shares:
+            resp = self._client(role).patch(
+                self._detail(share_content),
+                {"amount": "0", "price_per_unit": "0"},
+                format="json",
+            )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        recompute_shares.assert_not_called()
+        share_content.refresh_from_db()
+        assert share_content.amount == Decimal("5.000")
+        assert share_content.price_per_unit == Decimal("2.50")
+
+    @pytest.mark.parametrize("role", CREW_ROLES)
+    def test_crew_delete_is_refused_and_keeps_the_row(self, tenant, role):
+        share_content = ShareContentFactory(is_finalized=True)
+
+        with mock.patch(self.RECOMPUTE_SHARES) as recompute_shares:
+            resp = self._client(role).delete(self._detail(share_content))
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        recompute_shares.assert_not_called()
+        assert ShareContent.objects.filter(pk=share_content.pk).exists()
+
+    @pytest.mark.parametrize("role", CREW_ROLES)
+    def test_crew_create_is_refused_and_adds_no_row(self, tenant, role):
+        share = ShareFactory()
+
+        with mock.patch(self.RECOMPUTE_SHARES) as recompute_shares:
+            resp = self._client(role).post(
+                self.LIST, self._new_row(share), format="json"
+            )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        recompute_shares.assert_not_called()
+        assert not ShareContent.objects.filter(share_id=share.pk).exists()
+
+    def test_office_adds_a_share_content(self, api_client, tenant):
+        share = ShareFactory()
+
+        with mock.patch(self.RECOMPUTE_SHARES) as recompute_shares:
+            resp = api_client.post(self.LIST, self._new_row(share), format="json")
+
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        recompute_shares.assert_called_once_with([share.pk])
+        assert ShareContent.objects.filter(share_id=share.pk).count() == 1
+
+    def test_office_changes_a_finalized_share_content(self, api_client, tenant):
+        share_content = ShareContentFactory(is_finalized=True)
+
+        with mock.patch(self.RECOMPUTE_SHARES) as recompute_shares:
+            resp = api_client.patch(
+                self._detail(share_content), {"amount": "2.000"}, format="json"
+            )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        recompute_shares.assert_called_once_with([share_content.share_id])
+        share_content.refresh_from_db()
+        assert share_content.amount == Decimal("2.000")
+
+    def test_office_deletes_a_finalized_share_content(self, api_client, tenant):
+        share_content = ShareContentFactory(is_finalized=True)
+
+        with mock.patch(self.RECOMPUTE_SHARES) as recompute_shares:
+            resp = api_client.delete(self._detail(share_content))
+
+        assert resp.status_code == status.HTTP_204_NO_CONTENT
+        recompute_shares.assert_called_once_with([share_content.share_id])
+        assert not ShareContent.objects.filter(pk=share_content.pk).exists()
 
 
 # ---------------------------------------------------------------------------

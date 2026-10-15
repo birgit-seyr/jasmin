@@ -37,6 +37,7 @@ from apps.payments.models import BillingProfile
 from ..errors import RetentionPeriodActive
 from ..field_classes import FieldClass, get_classification, resolve_replacement
 from ..models import DeletionLog
+from .subject_emails import SubjectEmailKeys, subject_email_keys
 from .subjects import ErasureSubject
 
 if TYPE_CHECKING:
@@ -51,38 +52,6 @@ if TYPE_CHECKING:
     from . import GDPRService
 
 logger = logging.getLogger("gdpr")
-
-
-def _ci_username_q(emails: Iterable[str]) -> Q:
-    """OR of case-insensitive ``username`` matches for every address.
-
-    ``django-axes`` stores the raw submitted login credential, so a
-    member who signed in as ``Foo@Bar.com`` lands an axes row whose
-    ``username`` is mixed-case. Matching the canonical lowercase email
-    with ``username__in`` would miss it — leaving login records behind
-    on an Art. 17 deletion, or overlooking them in an Art. 15 export.
-    ``username__iexact`` per address closes the gap; email addresses are
-    case-insensitive identifiers, so this is the correct comparison."""
-    query = Q()
-    for email in emails:
-        query |= Q(username__iexact=email)
-    return query
-
-
-def _ci_recipient_q(emails: Iterable[str]) -> Q:
-    """OR of case-insensitive ``recipient`` matches for every address.
-
-    ``EmailLog.recipient`` stores whatever casing the send used, and the
-    secondary address columns (``Member.email_2``/``email_3``, reseller
-    contact fields) are unvalidated CharFields — so mixed-case rows exist
-    on both sides of the match. A case-sensitive ``recipient__in`` would
-    let those rows survive an Art. 17 scrub, or hide them from an
-    Art. 15 export; ``recipient__iexact`` per address mirrors
-    ``_ci_username_q``."""
-    query = Q()
-    for email in emails:
-        query |= Q(recipient__iexact=email)
-    return query
 
 
 def _apply_classification(instance: Any, model_label: str) -> None:
@@ -135,12 +104,13 @@ class AnonymizationMixin:
 
         Order of operations matters:
 
-        1. **Collect known emails** BEFORE any wipe — they're the
-           search key for the side-channel records (EmailLog, axes).
+        1. **Work out the email keys** BEFORE any wipe — the subject's
+           addresses and record links find the side-channel records
+           (EmailLog, axes); see :mod:`.subject_emails`.
         2. **Anonymize primary records** (JasminUser, Member).
         3. **Anonymize related records via FK** (BillingProfile,
            Reseller + its ContactEntity, UserInvitation).
-        4. **Scrub side-channel records** keyed by email (EmailLog,
+        4. **Scrub side-channel records** found by those keys (EmailLog,
            axes AccessLog / AccessAttempt / AccessFailureLog).
         5. **Log to DeletionLog** for backup-replay.
 
@@ -171,15 +141,23 @@ class AnonymizationMixin:
         # ``reseller.linked_user``, the key it was found by.
         user, member, reseller = subject.user, subject.member, subject.reseller
 
-        # Phase 1: collect every email address tied to this subject.
-        # These become the search keys for EmailLog + axes scrubs.
-        known_emails = GDPRService._collect_subject_emails(subject)
+        # Phase 1: the keys the EmailLog + axes scrubs find the subject's
+        # records by. Only the subject's own: an address someone else's record
+        # holds too, or a row linked to someone else's record, stays untouched.
+        email_keys = subject_email_keys(subject)
         original_email = subject.email
 
         # Phase 2: primary records.
         if user is not None:
             GDPRService._anonymize_jasmin_user(user)
         if member is not None:
+            if user is None or member.user_id != user.pk:
+                # A login of the member's outside the subject outlives the
+                # erasure (``ErasureSubject.of_ex_member``). It is released, as
+                # phase 3 releases a reseller's: the link would name the
+                # anonymised member again. Saving the member without it
+                # retracts the login's member role.
+                member.user = None
             GDPRService._anonymize_member(member)
             GDPRService._anonymize_billing_profile(member)
             GDPRService._anonymize_consent_records(member)
@@ -191,8 +169,8 @@ class AnonymizationMixin:
             GDPRService._anonymize_user_invitations(user)
 
         # Phase 4: side-channel scrubs.
-        GDPRService._anonymize_email_logs(known_emails)
-        GDPRService._purge_axes_records(known_emails)
+        GDPRService._anonymize_email_logs(email_keys)
+        GDPRService._purge_axes_records(email_keys)
 
         # Phase 4.6: purge the plaintext SEPA export. pain.008 files embed the
         # debtor name + IBAN in cleartext (the encrypted DB columns are scrubbed
@@ -254,69 +232,6 @@ class AnonymizationMixin:
                 # correctly-aged anonymisation, but never erase a live record).
                 continue
             run.sepa_xml_export.delete(save=True)
-
-    @staticmethod
-    def _collect_known_emails(
-        user: JasminUser, *, include_shared_secondaries: bool = True
-    ) -> set[str]:
-        """Email addresses of a login user's subject; see
-        :meth:`_collect_subject_emails`."""
-        return GDPRService._collect_subject_emails(
-            ErasureSubject.of_user(user),
-            include_shared_secondaries=include_shared_secondaries,
-        )
-
-    @staticmethod
-    def _collect_subject_emails(
-        subject: ErasureSubject, *, include_shared_secondaries: bool = True
-    ) -> set[str]:
-        """Return email addresses attached to the subject.
-
-        Two callers, two needs:
-
-        * **Art. 17 anonymization** (phase 4 scrubs) — pass the default.
-          We're erasing this subject, so scrub EVERY address they ever
-          used, secondary addresses included.
-        * **Art. 15 SAR side-channel** (EmailLog + login history) — pass
-          ``include_shared_secondaries=False``. ``Member.email_2`` /
-          ``email_3`` (and the reseller contact's secondaries) are plain
-          CharFields with NO unique constraint, so a shared household /
-          family address can legitimately sit on several Members. Keying
-          the SAR search on a shared address would surface ANOTHER
-          subject's emails + login records — over-disclosing a third
-          party, which Art. 15 forbids. The primary ``email`` columns are
-          unique (``JasminUser.email`` and ``Member.email``), so restrict
-          the SAR to those plus the reseller's own business addresses.
-
-        Must run BEFORE any of the wipes — otherwise the addresses we're
-        trying to find historical records for are already gone.
-        """
-        secondaries = ["email_2", "email_3"] if include_shared_secondaries else []
-        emails: set[str | None] = set()
-        user, member, reseller = subject.user, subject.member, subject.reseller
-
-        if user is not None:
-            emails.add(user.email)
-            # Historical invitation emails (the address invited to the
-            # platform, even if it was never accepted).
-            emails.update(
-                UserInvitation.objects.filter(user=user).values_list("email", flat=True)
-            )
-
-        # No ``, None`` default on the ``getattr`` calls — the field lists are
-        # hard-coded; a missing attribute here would mean the schema changed
-        # out from under us and the GDPR email-erasure target list is silently
-        # incomplete. Better to raise.
-        if member is not None:
-            emails.update(getattr(member, field) for field in ["email", *secondaries])
-
-        # B2B side: the ContactEntity the subject's Reseller points to.
-        if reseller is not None:
-            contact_fields = ["email", "order_email", *secondaries]
-            emails.update(getattr(reseller.contact, field) for field in contact_fields)
-            emails.add(reseller.invoice_email)
-
-        return {email for email in emails if email}
 
     @staticmethod
     def _anonymize_jasmin_user(user: JasminUser) -> None:
@@ -804,9 +719,10 @@ class AnonymizationMixin:
             invitation.save()
 
     @staticmethod
-    def _anonymize_email_logs(known_emails: set[str]) -> None:
-        """Scrub recipient, subject, and error on every EmailLog row
-        that was sent to any of the subject's known addresses.
+    def _anonymize_email_logs(email_keys: SubjectEmailKeys) -> None:
+        """Scrub recipient, subject, and error on every EmailLog row of the
+        subject: linked to one of their records, or sent to one of their own
+        addresses (:meth:`SubjectEmailKeys.email_log_q`).
 
         We KEEP the row (audit trail of "an email was sent on
         <date> for <purpose>"), but everything that can name the
@@ -821,7 +737,8 @@ class AnonymizationMixin:
         ``FIELD_CLASSIFICATION`` — all EmailLog entries are static
         strings so the bulk update is safe.
         """
-        if not known_emails:
+        email_log_q = email_keys.email_log_q()
+        if email_log_q is None:
             return
         update_kwargs: dict[str, Any] = {}
         for field, (field_class, replacement) in get_classification(
@@ -839,17 +756,18 @@ class AnonymizationMixin:
                     "bulk-update path needs a static value."
                 )
             update_kwargs[field] = replacement
-        EmailLog.objects.filter(_ci_recipient_q(known_emails)).update(**update_kwargs)
+        EmailLog.objects.filter(email_log_q).update(**update_kwargs)
 
     @staticmethod
-    def _purge_axes_records(known_emails: set[str]) -> None:
-        """Delete axes login records keyed by the subject's emails:
+    def _purge_axes_records(email_keys: SubjectEmailKeys) -> None:
+        """Delete axes login records keyed by the subject's own addresses:
         ``AccessLog`` (SUCCESSFUL logins — stores the username/email,
         ip_address and user_agent, see ``_sar_login_history``),
         ``AccessAttempt`` and ``AccessFailureLog`` (failed attempts).
         These are transient security records (no statutory retention) —
         hard-delete is the right action."""
-        if not known_emails:
+        username_q = email_keys.login_q()
+        if username_q is None:
             return
         # Local import: ``django-axes`` is in TENANT_APPS so the
         # tables exist in tenant schemas; using a top-level import
@@ -857,9 +775,9 @@ class AnonymizationMixin:
         # tenant-only dependency explicit.
         from axes.models import AccessAttempt, AccessFailureLog, AccessLog
 
-        # Case-insensitive match: axes stores the credential as typed, so a
-        # mixed-case login would survive an exact ``username__in`` purge.
-        username_q = _ci_username_q(known_emails)
+        # Case-insensitive match: axes keys its rows by the lower-cased
+        # address, so an address stored with capitals would miss them in an
+        # exact ``username__in`` purge.
         AccessAttempt.objects.filter(username_q).delete()
         AccessFailureLog.objects.filter(username_q).delete()
         # Successful-login rows carry the subject's email/IP/UA in plaintext —

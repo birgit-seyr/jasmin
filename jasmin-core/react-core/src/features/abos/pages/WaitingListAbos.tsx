@@ -25,6 +25,7 @@ import {
   termCapacity,
   termWeekKeys,
 } from "@features/abos/utils/stationCapacity";
+import { offerErrorMessage } from "@features/abos/utils/offerErrorMessage";
 import { EditableTable, wrapApiFunctions } from "@shared/tables";
 import type {
   ApiFunctions,
@@ -47,7 +48,6 @@ import { useAdminConfirmationModalAbos } from "@features/abos/hooks/modals/useAd
 import { useSharedAboColumns } from "@features/abos/hooks/columns/useSharedAboColumns";
 import { notify, toApiDate } from "@shared/utils";
 import { parseDateLoose } from "@shared/utils/endOfTerm";
-import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
 import type { AboRecord } from "./types";
 
 export default function WaitingListAbos() {
@@ -368,16 +368,7 @@ export default function WaitingListAbos() {
             invalidateData();
           },
           onError: (error) => {
-            const code = getErrorCode(error);
-            notify.error(
-              code === "share_type_variation.over_capacity"
-                ? t("abos.offer_variation_full")
-                : code === "delivery_station.over_capacity"
-                  ? t("abos.offer_station_full")
-                  : code === "onboarding_mode.email_action_blocked"
-                    ? getErrorMessage(error, t("abos.offer_failed"))
-                    : t("abos.offer_failed"),
-            );
+            notify.error(offerErrorMessage(error, t));
           },
         },
       );

@@ -17,6 +17,9 @@ from typing import TYPE_CHECKING, Any
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
+
+from apps.authz.roles import STAFF_ROLES, Role
 
 from ..errors import (
     MemberAlreadyCancelled,
@@ -29,8 +32,13 @@ from ..errors import (
     UserAlreadyLinked,
     UserInBlockedStatus,
 )
-from ..models import Member
+from ..models import Member, Subscription, UserInvitation
+from ..models.choices import InvitationStatus
 from .member_email import schedule_member_email
+from .waiting_list_offer_service import (
+    release_rejected_subscription,
+    withdraw_from_waiting_list,
+)
 
 if TYPE_CHECKING:
     # Type-only: the concrete user model keeps mypy precise, while the runtime
@@ -227,17 +235,27 @@ class MemberService:
         """Reject `member` (with optional reason) and best-effort notify.
 
         Side-effects executed in the same atomic block:
-          1. ``Member.reject()`` stamps ``admin_rejected_at`` +
+          1. ``_reject_open_subscriptions`` rejects the member's open
+             subscriptions along with the member and frees what they hold:
+             station-day reservations, waiting-list places and open offers,
+             and the variation slot an accepted offer holds. It runs before
+             the member row is written: a subscription confirm locks its
+             subscription and then writes the member, so both take the locks
+             in the same order.
+          2. ``Member.reject()`` stamps ``admin_rejected_at`` +
              ``admin_rejection_reason`` and clears any stale
              ``admin_confirmed_at``.
-          2. ``_deactivate_linked_user`` flips the linked JasminUser
-             (if any) to ``account_status='inactive'`` so a rejected
-             applicant can no longer log into the portal AND any
-             pending invitation link stops working. Same transaction
-             as the reject stamp — a rolled-back rejection leaves the
-             user account untouched.
           3. ``accounts.application_rejected`` email scheduled via
-             on_commit.
+             on_commit. It renders in the language of the login linked to
+             the member, so it is scheduled before step 4 can unlink it.
+          4. ``_deactivate_linked_user`` ends the linked login's (if any)
+             access as this member: a member's portal login is flipped to
+             ``account_status='inactive'`` so a rejected applicant can no
+             longer log into the portal AND any pending invitation link
+             stops working; a login with a staff or customer role keeps
+             that access and is unlinked from the member instead. Same
+             transaction as the reject stamp — a rolled-back rejection
+             leaves the user account untouched.
         """
         # ``reject`` is for PENDING applications only. Un-flipping the confirm
         # flag on an ALREADY-CONFIRMED member would leave member_number,
@@ -251,8 +269,8 @@ class MemberService:
                 "offboarded instead."
             )
 
+        self._reject_open_subscriptions(member, admin_user=admin_user, reason=reason)
         member.reject(admin_user=admin_user, reason=reason, save=True)
-        self._deactivate_linked_user(member, admin_user=admin_user)
 
         if member.email:
             self._send_email(
@@ -265,12 +283,67 @@ class MemberService:
                 },
                 log_label="reject",
             )
+        self._deactivate_linked_user(member, admin_user=admin_user)
         return member
+
+    @staticmethod
+    def _reject_open_subscriptions(
+        member: Member, *, admin_user: JasminUser, reason: str | None
+    ) -> None:
+        """Reject the open subscriptions of `member`, whom the office is
+        rejecting, and free what they hold.
+
+        A subscription that is neither confirmed, rejected nor cancelled is
+        part of the rejected application: it gets the member's rejection stamp
+        and reason, so the office finds it decided rather than pending, and
+        ``release_rejected_subscription`` frees its station-day reservation,
+        its waiting-list place and any open offer. The stamp ends the variation
+        slot an accepted offer holds. A subscription already cancelled or
+        rejected keeps its stamps; one still on the waiting list leaves it.
+
+        The stamps are written with ``update()``, like the waiting-list
+        withdrawal's: a rejection must not fail on a term that the
+        subscription's own validation has come to refuse.
+        """
+        open_subscriptions = list(
+            Subscription.objects.filter(
+                member_id=member.pk,
+                admin_confirmed=False,
+                admin_rejected_at__isnull=True,
+                cancelled_at__isnull=True,
+            )
+            .select_for_update()
+            .order_by("pk")
+        )
+        if open_subscriptions:
+            # The stamps ``AdminConfirmableMixin.reject`` writes;
+            # ``admin_confirmed`` is False already.
+            Subscription.objects.filter(
+                pk__in=[subscription.pk for subscription in open_subscriptions]
+            ).update(
+                admin_confirmed_by=admin_user,
+                admin_confirmed_at=None,
+                admin_rejected_at=timezone.now(),
+                admin_rejection_reason=reason,
+            )
+        for subscription in open_subscriptions:
+            release_rejected_subscription(subscription)
+        withdraw_from_waiting_list(Subscription.objects.filter(member_id=member.pk))
 
     @staticmethod
     def _deactivate_linked_user(member: Member, *, admin_user: JasminUser) -> None:
         """Flip the linked JasminUser (if any) to ``inactive`` and
-        cancel any open invitations.
+        cancel any open invitations — when the login is there for the
+        membership alone.
+
+        A login with a staff or customer role keeps those roles and its
+        account status: it is unlinked from the rejected member instead and
+        loses only the member role (``_unlink_login_with_other_roles``). The
+        member create and the CSV import link any login whose email matches,
+        an admin's included, and rejecting is an office action; deactivating
+        such a login is an admin's decision, made with step-up on the
+        admin-users endpoints, where the last active admin can't be
+        deactivated.
 
         Re-activation is intentionally NOT automatic if the office
         later un-rejects the Member — that would silently re-open
@@ -281,11 +354,16 @@ class MemberService:
 
         No-op when:
           * ``member.user`` is not set (member was never linked);
-          * the user is already ``inactive`` (idempotent on repeat
-            calls).
+          * a login without a staff or customer role is already
+            ``inactive`` (idempotent on repeat calls).
         """
         user = member.user
         if user is None:
+            return
+        if user.has_any_role(STAFF_ROLES | {Role.CUSTOMER}):
+            MemberService._unlink_login_with_other_roles(
+                member, user, admin_user=admin_user
+            )
             return
         if user.account_status == "inactive":
             return
@@ -300,13 +378,7 @@ class MemberService:
         user.save(update_fields=["account_status", "is_active"])
 
         # Cancel any still-open UserInvitation rows so a stolen
-        # accept-link can't be used after rejection. Lazy import:
-        # UserInvitation lives in the commissioning app, but the
-        # cleanup is a small, focused query that doesn't justify
-        # a cross-service call.
-        from apps.commissioning.models import UserInvitation
-        from apps.commissioning.models.choices import InvitationStatus
-
+        # accept-link can't be used after rejection.
         UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
             status=InvitationStatus.CANCELLED
         )
@@ -317,6 +389,35 @@ class MemberService:
             member.id,
             user.id,
             previous_status,
+            admin_user.id,
+        )
+
+    @staticmethod
+    def _unlink_login_with_other_roles(
+        member: Member, user: JasminUser, *, admin_user: JasminUser
+    ) -> None:
+        """Detach a login with a staff or customer role from the rejected
+        `member`, leaving its account status and its other roles as they are.
+
+        Saving the member without the login makes ``Member.save`` retract the
+        member role (``retract_member_role``), since no member links the
+        login any more. An invitation sent for this membership is cancelled:
+        accepting it would confirm the rejected member. The login's other
+        open invitations stay usable.
+        """
+        kept_roles = sorted(set(user.roles or []) - {Role.MEMBER})
+        member.user = None
+        member.save(update_fields=["user"])
+
+        UserInvitation.objects.filter(
+            user=user, member=member, status=InvitationStatus.SENT
+        ).update(status=InvitationStatus.CANCELLED)
+
+        logger.info(
+            "member.reject_unlinked_user member=%s user=%s kept_roles=%s by=%s",
+            member.id,
+            user.id,
+            kept_roles,
             admin_user.id,
         )
 
@@ -334,9 +435,8 @@ class MemberService:
             MemberHasNoEmail: member has no email address on file.
             MemberUserAlreadyActive: member already has a non-pending user.
         """
-        # Local imports avoid the costly authz/invitations import at
-        # module load time.
-        from apps.authz.roles import Role
+        # Local imports avoid the costly invitations import at module load
+        # time.
         from apps.shared.invitations import (
             create_user_with_invitation,
             resend_invitation,

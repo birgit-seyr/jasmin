@@ -88,6 +88,15 @@ class OrderContentNotFound(NotFoundError):
     code = "order_content.not_found"
 
 
+class OrderContentChanged(ConflictError):
+    """A write of an order line found the line on another offer each time it
+    locked the offer it had looked up, so it stops rather than move the stock
+    of an offer the line may no longer order from. Another write moved the
+    line in the meantime; reloading shows its offer."""
+
+    code = "order_content.changed"
+
+
 class OrderContentOfferRequired(ForbiddenError):
     """A customer order line must order an offer. A free ``share_article`` line
     has no offer, so it would skip the stock check and the offer group's

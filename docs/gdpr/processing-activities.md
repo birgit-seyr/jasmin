@@ -118,7 +118,7 @@ implements all of them — paths refer to `apps/` packages.
 | Source                      | Auto-captured by `django-axes` + auditlog                                                                            |
 | Recipients                  | Office staff (read-only)                                                                                             |
 | Retention                   | django-axes: per platform config; auditlog: same as member retention                                                 |
-| Security measures           | JWT auth; rate limiting on /login (20/min) + /register (10/h); axes lockout                                          |
+| Security measures           | JWT auth; rate limiting on /login (20/min) + /register (10/h); failed sign-ins recorded per email and IP address (django-axes), with a lockout after 5 that each deployment switches on (off by default) |
 | Code locations              | `apps/accounts/`, `apps/authz/`                                                                                      |
 
 ### 3.5 Member-rights workflows (GDPR Art. 15 / 16 / 17 / 20)
@@ -152,8 +152,9 @@ Concrete platform measures that satisfy Art. 32 — all already in code:
 - **Backups:** AES-256 GPG-encrypted `pg_dump`; the `DeletionLog` is also
   kept outside the database, with an encrypted off-host copy, and a restore
   replays it so anonymised PII doesn't resurrect
-- **Brute-force protection:** `django-axes` lockout + per-endpoint
-  throttle scopes
+- **Brute-force protection:** per-endpoint throttle scopes; failed
+  sign-ins recorded per email and IP address (`django-axes`), with a
+  lockout after 5 that each deployment switches on (off by default)
 - **Honeypot field on registration:** silent drop on bot fills
 
 ---

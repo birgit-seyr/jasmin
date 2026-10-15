@@ -11,7 +11,7 @@ Covers:
 - Configuration → Users surface refuses the "member" role
 - Configuration → Users active/inactive toggle, with whitelist enforcement
 - MemberViewSet.create handles the existing-user enrolment flow
-- Member.email uniqueness (DB constraint)
+- Member.email is shareable; JasminUser.email stays unique (DB constraint)
 """
 
 from __future__ import annotations

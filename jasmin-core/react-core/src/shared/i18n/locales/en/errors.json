@@ -252,6 +252,7 @@
   },
   "order_content": {
     "not_found": "Order line not found.",
+    "changed": "The order line has changed in the meantime — please reload the page and make the change again.",
     "finalized": "Cannot update a finalized order content.",
     "insufficient_stock": "Not enough stock available — available: {{available}}.",
     "offer_required": "You can only order offers.",
@@ -301,6 +302,7 @@
     "refresh_missing": "Session expired — please sign in again.",
     "tenant_mismatch": "This account does not belong to this tenant.",
     "account_blocked": "This account is blocked.",
+    "account_locked": "Too many failed attempts — signing in to this account from here is temporarily locked. Please try again later, or set a new password via \"Forgot your password?\".",
     "self_registration_disabled": "Self-registration is disabled for this organization.",
     "step_up_required": "This action requires re-authentication to confirm identity.",
     "cross_origin_refused": "The request did not come from this website and was refused.",
@@ -545,7 +547,8 @@
     "expired": "This offer has expired. Please contact the office.",
     "invalid": "This offer link is invalid or has already been used.",
     "not_available": "This subscription is not a pending waiting-list entry.",
-    "member_has_no_email": "This member has no email address to send the offer to. Add one to the member, then offer the spot."
+    "member_has_no_email": "This member has no email address to send the offer to. Add one to the member, then offer the spot.",
+    "entry_closed": "No spot can be offered to this entry: the subscription was cancelled or rejected, or the member cancelled their membership or was rejected."
   },
   "onboarding_mode": {
     "email_action_blocked": "This action emails the member, and no member emails are sent while onboarding mode is on. Turn off onboarding mode first."

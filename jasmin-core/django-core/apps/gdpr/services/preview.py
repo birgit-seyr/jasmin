@@ -32,7 +32,7 @@ from apps.notifications.models import EmailLog
 from apps.payments.models import BillingProfile
 
 from ..field_classes import FieldClass, get_classification
-from .anonymization import _ci_recipient_q
+from .subject_emails import SubjectEmailKeys, subject_email_keys
 from .subjects import ErasureSubject
 
 if TYPE_CHECKING:
@@ -127,9 +127,9 @@ class PreviewMixin:
         user, member, reseller = subject.user, subject.member, subject.reseller
         persona = GDPRService.detect_subject_persona(subject)
         retention_blocks = GDPRService.check_retention_blocks_for_subject(subject)
-        known_emails = GDPRService._collect_subject_emails(subject)
+        email_keys = subject_email_keys(subject)
 
-        presence = GDPRService._preview_presence(subject, known_emails)
+        presence = GDPRService._preview_presence(subject, email_keys)
 
         models: list[dict[str, Any]] = []
         field_count = 0
@@ -176,7 +176,7 @@ class PreviewMixin:
 
     @staticmethod
     def _preview_presence(
-        subject: ErasureSubject, known_emails: set[str]
+        subject: ErasureSubject, email_keys: SubjectEmailKeys
     ) -> dict[str, tuple[bool, int]]:
         """``{model_label: (present, row_count)}`` for every classified model,
         scoped to this subject — mirrors which rows :meth:`anonymize_subject`
@@ -239,11 +239,10 @@ class PreviewMixin:
                 UserInvitation, user=user
             )
 
-        # ``_ci_recipient_q`` on an EMPTY set is an empty ``Q()`` that matches
-        # every row — guard it so an emailless user doesn't "match all".
+        email_log_q = email_keys.email_log_q()
         email_count = (
-            EmailLog.objects.filter(_ci_recipient_q(known_emails)).count()
-            if known_emails
+            EmailLog.objects.filter(email_log_q).count()
+            if email_log_q is not None
             else 0
         )
         presence["notifications.EmailLog"] = (email_count > 0, email_count)

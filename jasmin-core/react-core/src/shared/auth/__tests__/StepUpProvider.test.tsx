@@ -11,6 +11,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import i18n from "@shared/i18n";
 import { runStepUpFlow } from "@shared/services/stepUp";
 import { getAccessToken, setAccessToken } from "@shared/services/tokenStore";
 import StepUpProvider from "../StepUpProvider";
@@ -180,6 +181,38 @@ describe("StepUpProvider", () => {
       { password: "hunter2", totp_code: "123456" },
       expect.anything(),
     );
+  });
+
+  it("shows a lockout in the app's own words and keeps the flow open", async () => {
+    const user = userEvent.setup();
+    render(
+      <StepUpProvider>
+        <div />
+      </StepUpProvider>,
+    );
+
+    const flow = runStepUpFlow({ ttlSeconds: 300 });
+    flow.catch(() => {});
+    await screen.findByText("auth.step_up.title");
+
+    const serverMessage =
+      "Too many failed attempts. Try again later or reset your password.";
+    axiosPostMock.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        status: 429,
+        data: { code: "auth.account_locked", message: serverMessage },
+      },
+    });
+    await submitPassword(user);
+
+    const lockedMessage = i18n.t("errors.auth.account_locked");
+    expect(lockedMessage).not.toBe("errors.auth.account_locked");
+    expect(await screen.findByText(lockedMessage)).toBeInTheDocument();
+    expect(screen.queryByText(serverMessage)).not.toBeInTheDocument();
+    // The modal stays up for a later try; the original action isn't failed.
+    expect(screen.getByLabelText("auth.step_up.password")).toBeInTheDocument();
+    expect(getAccessToken()).toBe("stale-token");
   });
 
   it("cancelling the modal rejects the flow", async () => {

@@ -424,7 +424,8 @@ class TestResyncHonoursCancellation:
         )
 
         # A backdated exit is already past the next Sunday cancel_subscription
-        # accepts, so the exit force-ends the running subscription.
+        # accepts, so the exit force-ends the running subscription, at the end
+        # of today's week: the box of week 27 stays.
         exit_date = datetime.date(2026, 6, 24)  # a Wednesday
         cancel_member_with_coop_shares(
             member,
@@ -432,16 +433,17 @@ class TestResyncHonoursCancellation:
             cancelled_by=JasminUserFactory(),
             force=True,
         )
+        end_of_this_week = datetime.date(2026, 7, 5)
         subscription.refresh_from_db()
-        assert subscription.cancelled_effective_at == exit_date
+        assert subscription.cancelled_effective_at == end_of_this_week
         assert subscription.valid_until == datetime.date(2026, 8, 30)
-        assert _delivered_weeks(subscription) == set()
+        assert _delivered_weeks(subscription) == {(2026, 27)}
 
-        # Weeks 32 and 33 leave the pause; the member left before both.
+        # Weeks 32 and 33 leave the pause; the subscription ended before both.
         _shorten_pause(pause, datetime.date(2026, 8, 2))
 
-        assert _delivered_weeks(subscription) == set()
-        assert _positive_planned_charges_after(subscription, exit_date) == []
+        assert _delivered_weeks(subscription) == {(2026, 27)}
+        assert _positive_planned_charges_after(subscription, end_of_this_week) == []
 
     def test_a_cancelled_subscription_keeps_its_pauses_inside_its_term(
         self, tenant, station_day, member

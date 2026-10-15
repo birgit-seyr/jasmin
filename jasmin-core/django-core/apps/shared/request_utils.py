@@ -126,9 +126,9 @@ def client_ip(request) -> str:
     NOT the leftmost entry, which the client fully controls. Reading the
     leftmost entry let an attacker forge the IP recorded in the
     security / consent / GDPR audit trails. This mirrors DRF's
-    ``NUM_PROXIES`` and axes' ``AXES_IPWARE_PROXY_COUNT`` (all driven by
-    ``TRUSTED_PROXY_COUNT``) so the recorded forensic IP matches the value
-    used for throttle / lockout keying.
+    ``NUM_PROXIES`` (both driven by ``TRUSTED_PROXY_COUNT``), and axes keys
+    the lockout on this very helper (``AXES_CLIENT_IP_CALLABLE``), so the
+    recorded forensic IP matches the value used for throttle / lockout keying.
 
     Falls back to ``REMOTE_ADDR`` and finally to an empty string if the
     request is missing (e.g. when an auditlog signal fires outside an HTTP

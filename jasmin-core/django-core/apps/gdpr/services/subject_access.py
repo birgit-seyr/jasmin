@@ -24,7 +24,7 @@ from apps.notifications.models import EmailLog
 from apps.payments.models import BillingProfile, ChargeSchedule
 
 from ..models import DeletionRequest
-from .anonymization import _ci_recipient_q, _ci_username_q
+from .subject_emails import RecipientCategory, SubjectEmailKeys, subject_email_keys
 from .subjects import ErasureSubject
 
 if TYPE_CHECKING:
@@ -81,6 +81,31 @@ def _sar_contact_entity(contact: ContactEntity) -> dict:
     }
 
 
+def _sar_email_log_entry(row: EmailLog, email_keys: SubjectEmailKeys) -> dict:
+    """Serialise one of the subject's EmailLog rows. The recipient is named
+    only when the address is on the subject's own records; a mail to the
+    farm's office or accounting address, or to any other address, carries its
+    ``recipient_category`` instead. Those addresses aren't the subject's to
+    see, and neither are the provider id and the error text of a delivery to
+    them, which can echo the address."""
+    recipient_category = email_keys.recipient_category(row.recipient)
+    named = recipient_category == RecipientCategory.DATA_SUBJECT
+    return {
+        "id": str(row.pk),
+        "recipient": row.recipient if named else None,
+        "recipient_category": recipient_category,
+        "subject": row.subject,
+        "template": row.template,
+        "purpose": row.purpose,
+        "status": row.status,
+        "provider_message_id": row.provider_message_id if named else "",
+        "error": row.error if named else "",
+        "created_at": row.created_at,
+        "sent_at": row.sent_at,
+        "delivered_at": row.delivered_at,
+    }
+
+
 class SubjectAccessMixin:
     """SAR bundle builder, mixed into
     :class:`apps.gdpr.services.GDPRService`."""
@@ -105,8 +130,10 @@ class SubjectAccessMixin:
     # shape changes incompatibly. The frontend can branch on it.
     # v2: added the ``billing_profile`` section (SEPA mandate).
     # v3: added the ``user_invitations`` section.
+    # v4: an ``email_log`` entry carries ``recipient_category``, and its
+    #     ``recipient`` is null unless the address is the subject's own.
 
-    SAR_FORMAT_VERSION = 3
+    SAR_FORMAT_VERSION = 4
 
     # Heavy categories (EmailLog, axes login records) can grow without
     # bound for a long-tenured user. The SAR endpoint is rate-limited
@@ -150,10 +177,13 @@ class SubjectAccessMixin:
         - ``charge_schedules`` — billing rows (the member's ledger).
         - ``reseller_orders`` — B2B order history.
         - ``reseller_invoices`` — B2B invoice history.
-        - ``email_log`` — emails sent to the user's known addresses
-          (capped at ``SAR_EMAIL_LOG_LIMIT``).
-        - ``login_history`` — successful + failed login records
-          (capped at ``SAR_LOGIN_HISTORY_LIMIT``).
+        - ``email_log`` — emails linked to the subject's records or sent to
+          their own addresses (capped at ``SAR_EMAIL_LOG_LIMIT``); see
+          :mod:`apps.gdpr.services.subject_emails` for which those are. A
+          recipient address not on the subject's own records shows only as its
+          category.
+        - ``login_history`` — successful + failed login records under the
+          subject's own addresses (capped at ``SAR_LOGIN_HISTORY_LIMIT``).
         - ``deletion_requests`` — Art. 17 requests the user has filed.
         - ``user_invitations`` — invitations the co-op sent to the user
           (the token is surfaced as presence only, never the raw value).
@@ -178,13 +208,10 @@ class SubjectAccessMixin:
         Art. 15 requests with it. ``account`` is None without a login, and
         ``subject`` also names the member and reseller ids."""
         user, member, reseller = subject.user, subject.member, subject.reseller
-        # SAR side-channel (EmailLog + login history) must key ONLY on the
-        # subject's UNIQUE addresses — a shared email_2/email_3 would pull in
-        # another subject's records (Art. 15 forbids over-disclosing a third
-        # party). Anonymization still scrubs every address (the default).
-        known_emails = GDPRService._collect_subject_emails(
-            subject, include_shared_secondaries=False
-        )
+        # The side-channel sections (EmailLog + login history) come only from
+        # the subject's own addresses and records: an address another record
+        # holds too would disclose that person's mail, which Art. 15 forbids.
+        email_keys = subject_email_keys(subject)
 
         return {
             "format_version": GDPRService.SAR_FORMAT_VERSION,
@@ -207,8 +234,8 @@ class SubjectAccessMixin:
             "charge_schedules": GDPRService._sar_charge_schedules(member),
             "reseller_orders": GDPRService._sar_reseller_orders(reseller),
             "reseller_invoices": GDPRService._sar_reseller_invoices(reseller),
-            "email_log": GDPRService._sar_email_log(known_emails),
-            "login_history": GDPRService._sar_login_history(known_emails),
+            "email_log": GDPRService._sar_email_log(email_keys),
+            "login_history": GDPRService._sar_login_history(email_keys),
             "deletion_requests": GDPRService._sar_deletion_requests(subject),
             "user_invitations": (
                 GDPRService._sar_user_invitations(user) if user is not None else []
@@ -663,46 +690,33 @@ class SubjectAccessMixin:
         ]
 
     @staticmethod
-    def _sar_email_log(known_emails: set[str]) -> dict:
-        """Every EmailLog row sent to any of the user's addresses,
-        newest first. Capped at ``SAR_EMAIL_LOG_LIMIT``; the dict
-        carries ``truncated`` + ``total_count`` so the user knows
-        when not all rows were returned (heavy-tenure case)."""
-        if not known_emails:
+    def _sar_email_log(email_keys: SubjectEmailKeys) -> dict:
+        """Every EmailLog row of the subject
+        (:meth:`SubjectEmailKeys.email_log_q`), newest first, each as
+        :func:`_sar_email_log_entry` shows it. Capped at
+        ``SAR_EMAIL_LOG_LIMIT``; the dict carries ``truncated`` +
+        ``total_count`` so the user knows when not all rows were returned
+        (heavy-tenure case)."""
+        email_log_q = email_keys.email_log_q()
+        if email_log_q is None:
             return {"truncated": False, "total_count": 0, "entries": []}
-        qs = EmailLog.objects.filter(_ci_recipient_q(known_emails)).order_by(
-            "-created_at"
-        )
+        qs = EmailLog.objects.filter(email_log_q).order_by("-created_at")
         total = qs.count()
         limit = GDPRService.SAR_EMAIL_LOG_LIMIT
         return {
             "truncated": total > limit,
             "total_count": total,
-            "entries": [
-                {
-                    "id": str(row.pk),
-                    "recipient": row.recipient,
-                    "subject": row.subject,
-                    "template": row.template,
-                    "purpose": row.purpose,
-                    "status": row.status,
-                    "provider_message_id": row.provider_message_id,
-                    "error": row.error,
-                    "created_at": row.created_at,
-                    "sent_at": row.sent_at,
-                    "delivered_at": row.delivered_at,
-                }
-                for row in qs[:limit]
-            ],
+            "entries": [_sar_email_log_entry(row, email_keys) for row in qs[:limit]],
         }
 
     @staticmethod
-    def _sar_login_history(known_emails: set[str]) -> dict:
+    def _sar_login_history(email_keys: SubjectEmailKeys) -> dict:
         """``django-axes`` AccessLog (successful logins) +
         AccessFailureLog (failed attempts) keyed by username — which
         is the user's email. Useful for the data subject to spot
         unauthorised access attempts on their account."""
-        if not known_emails:
+        username_q = email_keys.login_q()
+        if username_q is None:
             return {
                 "truncated": False,
                 "successful_logins": [],
@@ -712,7 +726,6 @@ class SubjectAccessMixin:
         from axes.models import AccessFailureLog, AccessLog
 
         limit = GDPRService.SAR_LOGIN_HISTORY_LIMIT
-        username_q = _ci_username_q(known_emails)
         successful_qs = AccessLog.objects.filter(username_q).order_by("-attempt_time")
         failed_qs = AccessFailureLog.objects.filter(username_q).order_by(
             "-attempt_time"

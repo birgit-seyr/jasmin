@@ -1160,12 +1160,12 @@ class ShareDeliveryViewSet(
 
 
 class ShareContentViewSet(BaseArchivableViewSet):
+    write_permission = IsOffice
     serializer_class = ShareContentSerializer
     queryset = ShareContent.objects.filter(is_finalized=True)
 
     def scope_queryset(self, queryset: QuerySet) -> QuerySet:
-        # A permanent scope, not a list filter: this viewset serves finalized
-        # share contents on every action, detail routes included.
+        # A permanent scope, not a list filter: every action, detail routes included.
         return queryset.filter(is_finalized=True)
 
     def perform_create(self, serializer):

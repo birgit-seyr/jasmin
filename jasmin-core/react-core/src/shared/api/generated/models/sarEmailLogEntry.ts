@@ -5,15 +5,24 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { RecipientCategoryEnum } from './recipientCategoryEnum';
 
 /**
  * One ``EmailLog`` row. ``provider_message_id`` is exposed so
 the user can correlate with their inbox if needed; ``related_*``
 FKs are skipped (loose pointers, no SAR value).
+
+``recipient`` is the address only where ``recipient_category`` is
+``data_subject``, an address on the subject's own records. A mail to the
+farm's office or accounting address, or to any other address, is named by
+its category alone, with ``recipient`` null and ``provider_message_id``
+and ``error`` blank.
  */
 export interface SarEmailLogEntry {
   id: string;
-  recipient: string;
+  /** @nullable */
+  recipient: string | null;
+  recipient_category: RecipientCategoryEnum;
   subject: string;
   template: string;
   purpose: string;

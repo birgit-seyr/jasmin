@@ -149,7 +149,7 @@ def cancel_member_with_coop_shares(
     )
 
     subscriptions_ended, subscriptions_not_ended = _cancel_active_subscriptions(
-        member, now=now, effective=effective, cancelled_by=cancelled_by
+        member, now=now, effective=effective, cancelled_by=cancelled_by, today=today
     )
 
     _cancel_draft_subscriptions(
@@ -234,15 +234,16 @@ def cancel_coop_shares_of_departed_member(member: Member) -> None:
 
 
 def _cancel_active_subscriptions(
-    member: Member, *, now, effective, cancelled_by
+    member: Member, *, now, effective, cancelled_by, today: date
 ) -> tuple[list[str], list[str]]:
     """End the member's still-active (admin-confirmed) subscriptions, so
     "member leaves" owns the full billing lifecycle (truncate term, drop
     future ShareDeliveries, re-plan charges via notify_subscription_changed)
     instead of relying on the caller incidentally deactivating the billing
-    profile. ``cancel_subscription`` aligns to a Sunday within the term; skip
-    subscriptions it can't cancel at this date (e.g. exit in the past, or term
-    already ended) rather than aborting the member exit.
+    profile. ``cancel_subscription`` aligns to a Sunday within the term; a
+    subscription it can't cancel at that date (it hasn't started by then, or
+    the exit lies in an earlier week than ``today``) is force-ended instead of
+    aborting the member exit, on the date :func:`_force_end_date` picks.
 
     Returns ``(subscriptions_ended, subscriptions_not_ended)`` — the latter
     keep a live mandate and need manual attention.
@@ -286,14 +287,17 @@ def _cancel_active_subscriptions(
         except SubscriptionCancellationError:
             # The normal Sunday-aligned cancel can't truncate THIS
             # subscription — it hasn't started yet (e.g. a future-dated trial),
-            # or no Sunday remains in its term. The member is leaving, so it must
-            # NOT survive: end it leniently (stamp cancelled + drop deliveries
-            # after the exit) instead of recording a silent failure.
+            # or the exit lies in an earlier week than today. The member is
+            # leaving, so it must NOT survive: end it leniently (stamp cancelled
+            # + drop deliveries after its end) instead of recording a silent
+            # failure.
             try:
                 with transaction.atomic():
                     _force_end_subscription(
                         subscription,
-                        effective=effective,
+                        effective=_force_end_date(
+                            subscription, exit_date=effective, today=today
+                        ),
                         now=now,
                         cancelled_by=cancelled_by,
                     )
@@ -337,10 +341,12 @@ def _cancel_draft_subscriptions(
     wind drafts down here: stamp them cancelled + release their capacity
     reservation, freeing a departed member's slot. The confirm endpoint refuses
     a departed member's subscription; in onboarding mode it confirms one only
-    when it ends by the exit date.
+    when it ends by the exit date. The member's waiting-list entries leave the
+    list, and an open offer is cancelled, so its magic link stops working.
     """
     from ..models import Subscription
     from .capacity_reservation_service import CapacityReservationService
+    from .waiting_list_offer_service import withdraw_from_waiting_list
 
     draft_subscriptions = list(
         Subscription.objects.filter(
@@ -370,24 +376,46 @@ def _cancel_draft_subscriptions(
         )
         for draft in draft_subscriptions:
             CapacityReservationService.release_for_subscription(draft)
+    withdraw_from_waiting_list(Subscription.objects.filter(member_id=member.pk))
+
+
+def _force_end_date(subscription, *, exit_date: date, today: date) -> date:
+    """The ``cancelled_effective_at`` a member exit stamps on a subscription it
+    force-ends.
+
+    The exit date itself, unless the exit lies before ``today``: the boxes up to
+    the end of the current ISO week have been packed and handed out, or are
+    about to be, and are owed, so the subscription then runs to
+    ``next_sunday(today)`` — the earliest end ``cancel_subscription`` accepts.
+    Only the member and its coop shares keep the backdated exit date. Never
+    past ``valid_until`` (``subscription_cancel_before_valid_until``): a term
+    that ends before that Sunday keeps its end and every delivery in it.
+    """
+    from ..utils.iso_week_utils import next_sunday
+
+    end = exit_date if exit_date >= today else next_sunday(today)
+    if subscription.valid_until is not None:
+        end = min(end, subscription.valid_until)
+    return end
 
 
 def _force_end_subscription(subscription, *, effective, now, cancelled_by) -> None:
     """Lenient end for a confirmed subscription the Sunday-aligned
-    ``cancel_subscription`` can't truncate (it hasn't started yet, or no Sunday
-    remains in its term). Used only by the member-exit cascade: the member is
-    leaving, so the subscription must not survive even if its term can't be
-    cleanly truncated.
+    ``cancel_subscription`` can't truncate (it hasn't started yet, or the exit
+    lies in an earlier week than today). Used only by the member-exit cascade:
+    the member is leaving, so the subscription must not survive even if its
+    term can't be cleanly truncated.
 
-    Stamps it cancelled and drops every ShareDelivery after the member's exit
+    Stamps it cancelled effective ``effective`` — the date
+    :func:`_force_end_date` picks — and drops every ShareDelivery after it
     (mirrors the delivery-drop in ``SubscriptionService.cancel_subscription``,
     minus the date-validation guards). ``valid_until`` is deliberately left
-    untouched — ``TimeBoundMixin`` requires it to fall on a Sunday and the exit
-    date may not be one; the ``cancelled_at`` stamp is what marks the
+    untouched — ``TimeBoundMixin`` requires it to fall on a Sunday and
+    ``effective`` may not be one; the ``cancelled_at`` stamp is what marks the
     subscription ended (the "active" check keys on ``cancelled_at IS NULL``).
     The paths that build deliveries or charges from the term read its end
     through ``subscription_term.effective_term_end``, so ``cancelled_effective_at``
-    bounds them: a later pause edit restores nothing after the exit.
+    bounds them: a later pause edit restores nothing after it.
     """
     from ..models import Subscription
     from .subscription_deliveries import truncate_future_deliveries
@@ -400,9 +428,8 @@ def _force_end_subscription(subscription, *, effective, now, cancelled_by) -> No
     # that re-validation raises SubscriptionDeliveryStationDayOutOfRange (a
     # JasminError) which would otherwise escape and roll back the whole member
     # exit. The cancellation stamp itself needs no term re-validation, and
-    # ``_cancel_active_subscriptions`` skips every subscription whose
-    # ``valid_until`` falls on or before the exit, so valid_until > effective
-    # and the cancel-before-valid_until constraint holds.
+    # ``_force_end_date`` never picks a date past ``valid_until``, so the
+    # cancel-before-valid_until constraint holds.
     Subscription.objects.filter(pk=subscription.pk).update(
         cancelled_at=now,
         cancelled_effective_at=effective,
@@ -412,7 +439,7 @@ def _force_end_subscription(subscription, *, effective, now, cancelled_by) -> No
     subscription.cancelled_effective_at = effective
     subscription.cancelled_by = cancelled_by
 
-    # Drop future deliveries past the exit date + re-plan charges (shared with
+    # Drop the deliveries after ``effective`` + re-plan charges (shared with
     # SubscriptionService.cancel_subscription).
     truncate_future_deliveries(subscription, cutoff_date=effective)
 

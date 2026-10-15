@@ -873,17 +873,16 @@ class TestRegenerateProtectsBundledCharges:
 
 
 @pytest.mark.django_db
-class TestBackdatedMemberExit:
-    """``cancel_subscription`` refuses an exit before the next Sunday, so a
-    backdated member exit force-ends the subscription: it stamps
-    ``cancelled_effective_at`` and keeps ``valid_until``. The charges must stop
-    at the exit all the same, also one a DRAFT run holds."""
+class TestForceEndedTerm:
+    """The member exit's force-end stamps ``cancelled_effective_at`` and keeps
+    ``valid_until``. The charges must stop at that end all the same, also one a
+    DRAFT run holds, and also when it has passed by the time they are planned."""
 
     _bundle = TestRegenerateProtectsBundledCharges._bundle
 
     @pytest.fixture(autouse=True)
     def _frozen_today(self):
-        """Pin "today" to Monday 2026-07-06, after every exit below. Autouse, so
+        """Pin "today" to Monday 2026-07-06, after every end below. Autouse, so
         it is in place before ``tenant_settings`` stamps its ``valid_from`` from
         the clock; settings stamped from the real clock would not be in force
         on the pinned day."""

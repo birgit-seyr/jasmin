@@ -63,9 +63,22 @@ vi.mock("react-router-dom", async () => {
 
 import { AuthProvider } from "@shared/contexts/AuthContext";
 import { LocaleProvider, useLocale } from "@shared/contexts/LocaleContext";
+import i18n from "@shared/i18n";
 import { SUPPORTED_LANGUAGES } from "@shared/i18n/languages";
 import LoginPage from "../LoginPage";
 import { clearAccessToken, getAccessToken } from "@shared/services/tokenStore";
+
+/** The backend's English text for a lock, which the page must not show. */
+const LOCKED_SERVER_MESSAGE =
+  "Too many failed attempts. Try again later or reset your password.";
+
+/** The app's own lockout text in the language the page speaks; a key missing
+ *  from the catalogue would come back as the key itself. */
+function lockedMessage(): string {
+  const message = i18n.t("errors.auth.account_locked");
+  expect(message).not.toBe("errors.auth.account_locked");
+  return message;
+}
 
 /** The language the app speaks, which JasminApp hands to i18next. */
 let pageLanguage: string | null = null;
@@ -289,14 +302,17 @@ describe("LoginPage (integration)", () => {
     expect(getAccessToken()).toBeNull();
   });
 
-  it("surfaces a friendly message on a 429 lockout (django-axes)", async () => {
+  it("shows the lockout in the app's own words on a 429 auth.account_locked", async () => {
+    // 429, not 401: a 401 would send the client into a silent refresh.
+    let refreshAttempts = 0;
     server.use(
+      http.post(/\/auth\/refresh\/?$/, () => {
+        refreshAttempts += 1;
+        return HttpResponse.json({ detail: "no cookie" }, { status: 401 });
+      }),
       http.post("/api/auth/login/", () =>
         HttpResponse.json(
-          {
-            code: "auth.locked",
-            message: "Too many failed attempts. Try again in 15 minutes.",
-          },
+          { code: "auth.account_locked", message: LOCKED_SERVER_MESSAGE },
           { status: 429 },
         ),
       ),
@@ -317,11 +333,47 @@ describe("LoginPage (integration)", () => {
       screen.getByRole("button", { name: "auth.login_card.sign_in" }),
     );
 
-    expect(
-      await screen.findByText(
-        "Too many failed attempts. Try again in 15 minutes.",
+    expect(await screen.findByText(lockedMessage())).toBeInTheDocument();
+    expect(screen.queryByText(LOCKED_SERVER_MESSAGE)).not.toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+    // Boot fires one silent refresh; the refused login adds none.
+    expect(refreshAttempts).toBe(1);
+  });
+
+  it("shows the lockout when the second step is refused", async () => {
+    server.use(
+      http.post("/api/auth/login/", () =>
+        HttpResponse.json({ requires_2fa: true, challenge_token: "challenge" }),
       ),
-    ).toBeInTheDocument();
+      http.post("/api/auth/two-factor/verify/", () =>
+        HttpResponse.json(
+          { code: "auth.account_locked", message: LOCKED_SERVER_MESSAGE },
+          { status: 429 },
+        ),
+      ),
+    );
+
+    renderLogin();
+
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByPlaceholderText("auth.login_card.email"),
+      "alice@example.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText("auth.login_card.password"),
+      "pw",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "auth.login_card.sign_in" }),
+    );
+    await user.type(await screen.findByPlaceholderText("123456"), "123456");
+    await user.click(
+      screen.getByRole("button", { name: "auth.two_factor.verify" }),
+    );
+
+    expect(await screen.findByText(lockedMessage())).toBeInTheDocument();
+    expect(getAccessToken()).toBeNull();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 

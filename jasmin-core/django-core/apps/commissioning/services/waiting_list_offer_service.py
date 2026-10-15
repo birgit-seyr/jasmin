@@ -12,6 +12,15 @@ Flow:
 4. If the member doesn't respond in time, a sweep job expires the offer and
    frees the slot again.
 
+**Closed entries.** An entry whose subscription is cancelled or rejected, or
+whose member has cancelled the membership or was rejected, is out of the
+running (:func:`waiting_list_entry_closed`): an offer would hold a slot for an
+application the office turned down, or for a member whose subscription the
+confirm refuses. Such an entry is never offered a spot and its open offer can't
+be accepted. Rejecting the subscription or the member, and the member's exit,
+take the entry off the list and cancel its open offer
+(:func:`withdraw_from_waiting_list`).
+
 **Holds / race-safety.** Offering must reserve the slot for the whole response
 window so a concurrent subscribe can't snipe it out from under the notified
 member:
@@ -22,8 +31,10 @@ member:
   ``CONFIRMED``-but-not-yet-admin-confirmed (accepted) subscription counts
   toward the farm-wide cap (see ``_occupying_q`` there). No extra table.
 
-The offer itself is taken under the variation row lock (variation → station-day,
-the canonical order) so two concurrent offers for the last share serialise.
+The offer itself is taken under the subscription's row lock, which serialises it
+with a concurrent rejection or exit, and then under the variation row lock, so
+two concurrent offers for the last share serialise (subscription → variation →
+station-day, the order the subscription confirm takes them in).
 """
 
 from __future__ import annotations
@@ -32,6 +43,7 @@ import logging
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
+from django.db.models import Q, QuerySet
 from django.utils import timezone
 
 from apps.shared.display_formats import DisplayFormats
@@ -39,6 +51,7 @@ from apps.shared.money import fits_decimal_column, to_decimal
 
 from ..errors import (
     SubscriptionPriceInvalid,
+    WaitingListOfferEntryClosed,
     WaitingListOfferExpired,
     WaitingListOfferInvalid,
     WaitingListOfferMemberHasNoEmail,
@@ -86,6 +99,66 @@ def offer_station_name(station_day: DeliveryStationDay | None) -> str:
     return contact_name or station.short_name or ""
 
 
+def waiting_list_entry_closed(subscription: Subscription) -> bool:
+    """Whether ``subscription`` is out of the running for a freed spot: it was
+    cancelled or rejected, or its member has cancelled the membership or was
+    rejected. A member who has given notice counts as gone: outside onboarding
+    mode, which makes no offers, the subscription confirm refuses their
+    subscription whatever the exit date."""
+    member = subscription.member
+    return (
+        subscription.cancelled_at is not None
+        or subscription.admin_rejected_at is not None
+        or member.cancelled_at is not None
+        or member.admin_rejected_at is not None
+    )
+
+
+@transaction.atomic
+def withdraw_from_waiting_list(subscriptions: QuerySet[Subscription]) -> list[str]:
+    """Take the waiting-list entries among ``subscriptions`` off the list and
+    cancel their open offers. Returns the ids of the entries withdrawn.
+
+    An entry loses its queue position and an open offer its token, so the
+    offer's magic link stops working. The station-day reservation the offer
+    took is released the way a decline or an expiry releases it, and the
+    variation hold ends with the spot-available status. Rows off the list
+    without an open offer, accepted offers among them, are left as they are.
+
+    The rows are written with ``update()``: a rejection or an exit must not fail
+    on a term that the subscription's own validation has come to refuse.
+    """
+    entries = list(
+        subscriptions.filter(
+            Q(on_waiting_list=True)
+            | Q(waiting_list_status=Subscription.WaitingListStatus.SPOT_AVAILABLE)
+        )
+        .select_for_update(of=("self",))
+        .order_by("pk")
+    )
+    if not entries:
+        return []
+    withdrawn_ids = [entry.pk for entry in entries]
+    Subscription.objects.filter(pk__in=withdrawn_ids).update(
+        on_waiting_list=False,
+        waiting_list_status=Subscription.WaitingListStatus.NOT_ON_LIST,
+        waiting_list_position=None,
+        notification_token=None,
+    )
+    for entry in entries:
+        CapacityReservationService.release_for_subscription(entry)
+    logger.info("waiting_list.entries_withdrawn subscriptions=%s", withdrawn_ids)
+    return withdrawn_ids
+
+
+@transaction.atomic
+def release_rejected_subscription(subscription: Subscription) -> None:
+    """Free what a rejected subscription holds: its station-day reservation, and
+    its place on the waiting list with any open offer."""
+    withdraw_from_waiting_list(Subscription.objects.filter(pk=subscription.pk))
+    CapacityReservationService.release_for_subscription(subscription)
+
+
 class WaitingListOfferService:
     @classmethod
     @transaction.atomic
@@ -106,11 +179,23 @@ class WaitingListOfferService:
         the current price before sending. When ``None`` the stored price stands.
 
         Only a ``PENDING`` waiting-list entry can be offered. Raises
-        :class:`WaitingListOfferNotAvailable` otherwise, and the capacity errors
-        (409) if a slot isn't actually free right now — the office's "available"
-        view can go stale between render and click.
+        :class:`WaitingListOfferEntryClosed` for a closed entry (see
+        :func:`waiting_list_entry_closed`), :class:`WaitingListOfferNotAvailable`
+        for any other entry that isn't pending, and the capacity errors (409) if
+        a slot isn't actually free right now — the office's "available" view can
+        go stale between render and click.
         """
         assert_waiting_list_enabled()
+        # Read the entry under its row lock. A rejection or an exit that
+        # withdraws it at the same time either commits first, and the checks
+        # below see it, or waits for this offer to commit and then cancels it.
+        subscription = Subscription.objects.select_for_update().get(pk=subscription.pk)
+        if waiting_list_entry_closed(subscription):
+            raise WaitingListOfferEntryClosed(
+                "No spot can be offered to this entry: the subscription was "
+                "cancelled or rejected, or the member cancelled their membership "
+                "or was rejected."
+            )
         if (
             not subscription.on_waiting_list
             or subscription.waiting_list_status
@@ -174,11 +259,12 @@ class WaitingListOfferService:
     def get_open_offer(cls, token) -> Subscription | None:
         """The subscription behind an open (spot-available) offer token, or
         ``None``. Read-only — used to render the member's accept page. Returns
-        ``None`` when the tenant has the waiting list off, so stale magic links
-        render as an invalid offer."""
+        ``None`` when the tenant has the waiting list off, and for a closed
+        entry (see :func:`waiting_list_entry_closed`), whose offer can't be
+        accepted, so such a link renders as an invalid offer."""
         if not token or not waiting_list_enabled():
             return None
-        return (
+        subscription = (
             Subscription.objects.select_related(
                 "member", "share_type_variation", "default_delivery_station_day"
             )
@@ -188,6 +274,9 @@ class WaitingListOfferService:
             )
             .first()
         )
+        if subscription is None or waiting_list_entry_closed(subscription):
+            return None
+        return subscription
 
     @classmethod
     def accept_offer(cls, token) -> Subscription:
@@ -197,20 +286,34 @@ class WaitingListOfferService:
         reservation persists until the office admin-confirms.
 
         Raises :class:`WaitingListOfferInvalid` for an unknown/consumed token and
-        :class:`WaitingListOfferExpired` (freeing the slot) when the window lapsed.
+        for a closed entry (see :func:`waiting_list_entry_closed`), whose offer
+        is withdrawn, freeing the slot; and :class:`WaitingListOfferExpired`
+        (freeing the slot) when the window lapsed.
         """
         assert_waiting_list_enabled()
-        # Commit the outcome (expiry OR accept) inside the transaction, then
-        # raise the "expired" error OUTSIDE it — raising inside would roll the
-        # expiry + reservation release back, leaving a stale spot-available row.
+        # Commit the outcome (withdrawal, expiry OR accept) inside the
+        # transaction, then raise the error OUTSIDE it — raising inside would
+        # roll the withdrawal or expiry and its reservation release back,
+        # leaving a stale spot-available row.
         with transaction.atomic():
             subscription = cls._lock_open_offer(token)
-            expired = subscription.has_expired_notification
-            if expired:
+            closed = waiting_list_entry_closed(subscription)
+            expired = not closed and subscription.has_expired_notification
+            if closed:
+                withdraw_from_waiting_list(
+                    Subscription.objects.filter(pk=subscription.pk)
+                )
+            elif expired:
                 subscription.mark_as_expired()
                 CapacityReservationService.release_for_subscription(subscription)
             else:
                 subscription.confirm_spot()
+        if closed:
+            # The answer an unknown or used link gets, so the link tells its
+            # holder nothing about why the entry closed.
+            raise WaitingListOfferInvalid(
+                "This offer link is invalid or has already been used."
+            )
         if expired:
             raise WaitingListOfferExpired(
                 "This offer has expired. Please contact the office."

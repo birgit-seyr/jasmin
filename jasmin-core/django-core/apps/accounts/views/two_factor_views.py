@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import logging
 
-from django.contrib.auth.signals import user_login_failed
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import (
@@ -43,7 +42,7 @@ from apps.shared.same_origin import require_same_origin
 from core.serializers import ErrorResponseSerializer
 from core.throttling import set_throttle_scope
 
-from ..errors import AuthError, TwoFactorChallengeInvalid
+from ..errors import AccountLocked, AuthError, TwoFactorChallengeInvalid
 from ..serializers import (
     LoginResponseSerializer,
     MessageResponseSerializer,
@@ -53,7 +52,11 @@ from ..serializers import (
     TwoFactorStatusResponseSerializer,
     TwoFactorVerifyRequestSerializer,
 )
-from ..services import issue_post_two_factor_tokens, two_factor_service
+from ..services import (
+    issue_post_two_factor_tokens,
+    login_lockout,
+    two_factor_service,
+)
 from .auth_views import _login_payload
 
 logger = logging.getLogger("authentication")
@@ -192,6 +195,9 @@ def two_factor_verify_view(request):
         user = two_factor_service.consume_challenge_token(
             challenge=challenge_token, tenant_schema=tenant.schema_name
         )
+        # A challenge stays valid for its whole lifetime, however many codes
+        # it carries, so the lock is checked here as well as at the password.
+        login_lockout.refuse_if_locked(request, user.email)
         two_factor_service.verify_code(user=user, code=code)
     except AuthError as exc:
         logger.warning(
@@ -200,18 +206,16 @@ def two_factor_verify_view(request):
             client_ip(request),
             exc.message,
         )
-        # Feed django-axes so repeated bad 2FA codes lock the account exactly
-        # like login failures do — 2FA verify bypasses ``authenticate()``, so
-        # axes never sees these otherwise. Only when the challenge resolved a
-        # user: a bad/expired challenge token isn't a code-guessing attempt.
-        if user is not None:
-            user_login_failed.send(
-                sender=user.__class__,
-                credentials={"username": user.email},
-                request=request,
-            )
+        # A wrong code counts toward the (email, IP) lockout like a wrong
+        # password: it is checked outside ``authenticate()``, so axes counts it
+        # only through this report. Not without a user (a bad or expired
+        # challenge guesses no code), and not the lock's own refusal, which
+        # must not extend the lock.
+        if user is not None and not isinstance(exc, AccountLocked):
+            login_lockout.record_failure(request, user.email)
         raise
 
+    login_lockout.clear_failures(request, user.email)
     result = issue_post_two_factor_tokens(user=user, tenant=tenant)
     logger.info(
         "login.success_2fa user=%s tenant=%s ip=%s",

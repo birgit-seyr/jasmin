@@ -51,34 +51,41 @@ index eb2875e..039b73d 100644
  # GDPR: encryption passphrase (required)
  BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"
 diff --git a/backups/restore.sh b/backups/restore.sh
-index d276f22..a238302 100644
+index 428f809..23b2646 100644
 --- a/backups/restore.sh
 +++ b/backups/restore.sh
-@@ -14,9 +14,13 @@ set -eu
- #      Nothing may write to the database or serve from it while it is
- #      replaced, and nothing may serve the personal data the restore brings
- #      back before step 3 has erased it again.
--#   2. docker compose exec backup /backups/restore.sh /backups/<file>.sql.gz.gpg
+@@ -31,7 +31,9 @@ set -eu
+ #      script cannot verify this: the app holds a connection only while a
+ #      request or a task runs, so an idle app shows no session, and once the
+ #      names swap its next connection opens the restored copy.
+-#   2. docker compose exec backup sh /backups/restore.sh /backups/<file>.sql.gz.gpg
 +#   2. export POSTGRES_PASSWORD="$(grep -E '^POSTGRES_PASSWORD=' .env | cut -d= -f2-)"
 +#      docker compose exec -e POSTGRES_PASSWORD backup \
 +#          sh /backups/restore.sh /backups/<file>.sql.gz.gpg
  #      Refreshes the GDPR deletion ledger from the live database first, then
--#      restores.
-+#      restores. The restore writes, so it runs as the database owner, whose
-+#      password the backup container does not hold: ``-e POSTGRES_PASSWORD``
-+#      hands it over from the shell for this one command.
+ #      restores into <db>_restore, prints its schemas and a few row counts
+ #      next to the live database's, and swaps once "swap" is typed at the
+@@ -43,7 +45,10 @@ set -eu
+ #      -e TERMINATE_SESSIONS=1 ends the sessions left, such as a psql shell
+ #      or the nightly pg_dump. Right before the swap the ledger is refreshed
+ #      once more; if that fails after the first refresh worked, the swap
+-#      refuses too.
++#      refuses too. The restore writes, so it runs as the database owner,
++#      whose password the backup container does not hold:
++#      ``-e POSTGRES_PASSWORD`` hands it over from the shell for this one
++#      command.
  #   3. Only when the media volume is lost or damaged: unpack the media archive
- #      taken with that backup (<db>_media_<timestamp>.tar.gz.gpg), BEFORE the
- #      replay — the replay deletes the files of everyone erased since:
-@@ -48,9 +52,10 @@ BACKUP_FILE="${1:?Usage: restore.sh <backup_file.sql.gz.gpg>}"
+ #      taken with that backup (<db>_media_<timestamp>.tar.gz.gpg), BEFORE
+ #      step 4 — the erasure replay deletes the files of everyone erased since:
+@@ -77,9 +82,10 @@ BACKUP_FILE="${1:?Usage: sh /backups/restore.sh <backup_file.sql.gz.gpg>}"
  DB_HOST="${POSTGRES_HOST:-postgres}"
  DB_PORT="${POSTGRES_PORT:-5432}"
  DB_NAME="${POSTGRES_DB}"
 -DB_USER="${POSTGRES_USER}"
 -
 -export PGPASSWORD="${POSTGRES_PASSWORD}"
-+# The owner, not the read-only role backup.sh dumps with: the restore drops
-+# and recreates every object.
++# The owner, not the read-only role backup.sh dumps with: the restore
++# creates a database, fills it and renames the live one.
 +DB_USER="${POSTGRES_USER:?POSTGRES_USER must be set}"
 +export PGPASSWORD="${POSTGRES_PASSWORD:?pass the owner password: docker compose exec -e POSTGRES_PASSWORD backup ... (see the header)}"
  BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be set}"

@@ -30,7 +30,7 @@ vi.mock("@shared/api/generated/auth/auth", () => ({
 }));
 vi.mock("@shared/services/api", () => ({
   default: { post: apiPost },
-  performRefresh: () => Promise.resolve("token"),
+  performRefresh: () => Promise.resolve({ access: "token" }),
 }));
 vi.mock("@shared/utils/notify", () => ({ default: notify }));
 

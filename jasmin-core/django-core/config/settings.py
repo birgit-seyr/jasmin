@@ -607,7 +607,7 @@ MIDDLEWARE = [
     # django-auditlog: attributes each change to its user, looked up when the
     # entry is written so the JWT user DRF authenticates counts too.
     "apps.shared.audit_log_middleware.JasminAuditlogMiddleware",
-    # django-axes must be LAST so it sees the resolved request.user.
+    # Answers locks axes flags on Django's request; DRF auth views raise their own.
     "axes.middleware.AxesMiddleware",
 ]
 
@@ -701,7 +701,7 @@ TEMPLATES = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    # django-axes must be FIRST so it can intercept failed logins.
+    # django-axes first: it refuses a locked (email, IP) pair before any password.
     "axes.backends.AxesStandaloneBackend",
     "apps.accounts.backends.EmailOrUsernameModelBackend",
     "django.contrib.auth.backends.ModelBackend",
@@ -712,15 +712,20 @@ AUTHENTICATION_BACKENDS = [
 # of an IBAN — in change diffs that are retained indefinitely.
 AUDITLOG_MASK_CALLABLE = "apps.shared.pii_masking.mask_for_audit_log"
 
-# django-axes — account-level lockout against credential stuffing.
-AXES_ENABLED = not DEBUG  # Don't get locked out during development.
-AXES_FAILURE_LIMIT = 5  # Lock after 5 failed attempts.
-AXES_COOLOFF_TIME = 1  # hours
-AXES_LOCKOUT_PARAMETERS = [
-    ["username", "ip_address"]
-]  # Lock the (user, ip) pair, not the whole IP.
-AXES_RESET_ON_SUCCESS = True
-AXES_LOCKOUT_CALLABLE = None  # Default 403 response.
+# django-axes: failed sign-ins of tenant users, counted per (email, client IP).
+# How the views check, count and clear them: apps/accounts/services/login_lockout.py.
+AXES_ENABLED = not DEBUG  # Nothing is recorded or locked in development.
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # hours without a failure until a pair's count, or lock, lapses
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+AXES_USERNAME_CALLABLE = "apps.accounts.services.login_lockout.axes_username"
+# LOGIN_LOCKOUT_ENABLED=True locks a pair at the limit. Off by default: while every
+# client of one CDN edge arrives with the edge's address, a lock refuses them all.
+AXES_LOCK_OUT_AT_FAILURE = (
+    os.environ.get("LOGIN_LOCKOUT_ENABLED", "False").lower() == "true"
+)
+AXES_RESET_COOL_OFF_ON_FAILURE_DURING_LOCKOUT = False
+AXES_LOCKOUT_CALLABLE = None  # axes' own 429, which never reaches the DRF views
 AXES_VERBOSE = True
 # One trusted proxy hop: the gateway nginx, which appends the address it sees
 # to X-Forwarded-For, so we trust the last entry. Keep it at 1 although Bunny
@@ -728,18 +733,13 @@ AXES_VERBOSE = True
 # client there could forge X-Forwarded-For past the super-admin IP allowlist
 # and into the lockout, throttle and consent-IP keys. Behind Bunny, the client
 # address has to come from nginx's real_ip on the tenant vhost, before the
-# request reaches Django. Single source of
-# truth for the proxy depth — django-axes, DRF's NUM_PROXIES, and
-# ``apps.shared.request_utils.client_ip`` all read it so throttle/lockout
-# keying and the recorded forensic/consent IP stay in sync.
+# request reaches Django. Single source of truth for the proxy depth: DRF's
+# NUM_PROXIES and ``apps.shared.request_utils.client_ip`` (which django-axes
+# keys on) read it, so throttle/lockout keys and logged IPs stay in sync.
 TRUSTED_PROXY_COUNT = int(os.environ.get("TRUSTED_PROXY_COUNT", "1"))
-# django-ipware is NOT a dependency, so axes' ``AXES_IPWARE_*`` settings were
-# inert and axes silently fell back to ``REMOTE_ADDR`` (= the gateway proxy IP),
-# attributing every lockout to the proxy instead of the real client. Point axes
-# at the same proxy-aware helper the rest of the stack uses (it honors
-# ``TRUSTED_PROXY_COUNT`` / X-Forwarded-For) so throttle + lockout keying match
-# the recorded forensic IP. axes calls this with a single ``request`` arg (see
-# ``axes.helpers.get_client_ip_address``), which ``client_ip`` accepts.
+# django-ipware isn't installed, so axes would key on REMOTE_ADDR, the gateway.
+# The proxy-aware helper keys the lockout on the address the throttles and the
+# logs use; axes calls it with the request alone, which ``client_ip`` accepts.
 AXES_CLIENT_IP_CALLABLE = "apps.shared.request_utils.client_ip"
 
 # ---- Super-admin IP allowlist (app-layer defense-in-depth) ----------------
@@ -806,11 +806,11 @@ REST_FRAMEWORK = {
         # spike rarely, e.g. when a new season opens) and cheap for
         # the office to bump if a real campaign is running.
         "register": "10/hour",
-        # Login: anti-credential-stuffing. django-axes locks individual
-        # accounts after N failures, but doesn't slow an attacker
-        # iterating a list of emails (each is a single attempt per
-        # account). 20/minute per IP throttles the iteration loop
-        # itself without blocking a human typing their own password.
+        # Login: anti-credential-stuffing. The (email, IP) lockout, once
+        # LOGIN_LOCKOUT_ENABLED is on, stops repeats on one address, never an
+        # attacker iterating a list of emails (one attempt per address).
+        # 20/minute per IP throttles the iteration loop itself without
+        # blocking a human typing their own password.
         "login": "20/minute",
         # GDPR Art. 17 request lodging — each request sends mail to
         # ``user.email``. A stolen JWT (or a malicious office account)
@@ -868,9 +868,9 @@ REST_FRAMEWORK = {
         "super_admin_login": "10/hour",
         # Tenant step-up password re-confirm. Its own bucket: at the generous
         # ``login`` ceiling (20/min) a valid low-privilege token could grind
-        # the password to mint a sudo-mode token. Tighter
-        # per-user rate here PLUS the step-up view feeds django-axes so
-        # repeated wrong passwords lock the (username, ip) pair.
+        # the password to mint a sudo-mode token. A tighter per-user rate; the
+        # view also counts wrong passwords and codes toward the (email, IP)
+        # lockout, which refuses them once LOGIN_LOCKOUT_ENABLED is on.
         "step_up": "10/minute",
     },
     # Exactly one trusted proxy in front of Django: the gateway nginx, which
@@ -880,9 +880,9 @@ REST_FRAMEWORK = {
     # per-request-varying forged XFF gets a fresh throttle bucket every
     # request — a full bypass of the scoped rate limits below. NUM_PROXIES=1
     # makes DRF read only the last (gateway-appended) entry, i.e. the true
-    # client IP. Driven by the same TRUSTED_PROXY_COUNT as
-    # AXES_IPWARE_PROXY_COUNT above so both stay in sync (e.g. when a CDN is
-    # added in front of the gateway).
+    # client IP. Driven by the same TRUSTED_PROXY_COUNT as ``client_ip`` above
+    # (the address the lockout keys on) so both stay in sync (e.g. when a CDN
+    # is added in front of the gateway).
     "NUM_PROXIES": TRUSTED_PROXY_COUNT,
     # Single project-wide exception handler. Translates every exception that
     # escapes a view into the canonical {code, message, field, details,

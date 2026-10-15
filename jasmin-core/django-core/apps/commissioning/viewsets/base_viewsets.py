@@ -8,6 +8,7 @@ from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -103,8 +104,10 @@ def serializer_model(serializer_class: Any) -> type[Any]:
 # ``is_past``. A comment, not a docstring, so drf-spectacular doesn't publish it
 # as the description of the subclasses' operations.
 class BaseArchivableViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-    read_permission = IsStaff
-    write_permission = IsStaff
+    # Annotated so mypy types them as any permission class rather than inferring
+    # ``type[IsStaff]``, which would refuse a subclass that picks another gate.
+    read_permission: type[BasePermission] = IsStaff
+    write_permission: type[BasePermission] = IsStaff
     # ``is_past=true`` bypasses the active-manager cutoff and returns the full
     # multi-year archive; without a pagination class that list is unbounded (a
     # single GET can serialise the whole table). ``OptionalLimitOffsetPagination``

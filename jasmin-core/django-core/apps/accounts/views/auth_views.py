@@ -13,7 +13,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from django.conf import settings
-from django.contrib.auth.signals import user_login_failed
 from drf_spectacular.utils import (
     OpenApiResponse,
     PolymorphicProxySerializer,
@@ -49,6 +48,7 @@ from ..errors import (
     RefreshTokenMissing,
     RegistrationCodeInvalid,
     RegistrationError,
+    TwoFactorInvalidCode,
 )
 from ..models import JasminUser
 from ..serializers import (
@@ -77,6 +77,7 @@ from ..services import (
     authenticate_for_tenant,
     blacklist_refresh,
     email_verification_service,
+    login_lockout,
     refresh_access_token,
     register_public_applicant,
     revoke_all_sessions,
@@ -189,25 +190,33 @@ def user_login_view(request):
 
 def _login_payload(*, result, tenant) -> dict:
     """Shared by the login view and the post-2FA-verify view."""
-    user = result.user
     return {
         "access": result.access,
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "user_language": user.user_language,
-            "theme": user.theme,
-            "roles": user.roles or ["member"],
-            "member_id": result.member_id,
-            "reseller_id": result.reseller_id,
-        },
+        "user": _user_payload(
+            result.user, member_id=result.member_id, reseller_id=result.reseller_id
+        ),
         "tenant": {
             "id": tenant.id,
             "name": tenant.name,
             "schema_name": tenant.schema_name,
         },
+    }
+
+
+def _user_payload(
+    user: JasminUser, *, member_id: str | None, reseller_id: str | None
+) -> dict:
+    """The signed-in user as login and refresh return it."""
+    return {
+        "id": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "user_language": user.user_language,
+        "theme": user.theme,
+        "roles": user.roles or ["member"],
+        "member_id": member_id,
+        "reseller_id": reseller_id,
     }
 
 
@@ -244,8 +253,15 @@ def user_token_refresh_view(request):
         )
         raise
 
+    # The user goes along so a client whose cached user is gone can rebuild
+    # it from the session it still has.
     response_data = {
         "access": result["access"],
+        "user": _user_payload(
+            result["user"],
+            member_id=result["member_id"],
+            reseller_id=result["reseller_id"],
+        ),
         "tenant": {
             "id": tenant.id,
             "name": tenant.name,
@@ -535,6 +551,7 @@ def step_up_view(request: Request) -> Response:
     totp_code = serializer.validated_data.get("totp_code") or None
     payload = getattr(request.auth, "payload", None) if request.auth else None
     user = auth_user(request)
+    login_lockout.refuse_if_locked(request, user.email)
     try:
         access = verify_and_issue_step_up_token(
             user=user,
@@ -542,26 +559,21 @@ def step_up_view(request: Request) -> Response:
             totp_code=totp_code,
             current_access_payload=payload,
         )
-    except InvalidCredentials:
-        # Step-up deliberately bypasses ``authenticate()`` (it doesn't want
-        # the login flow's is_active / 2FA forks), so django-axes never sees
-        # these failures. Feed the same signal axes hooks for login so a
-        # wrong-password grind locks the (username, ip) pair exactly as
-        # repeated login failures do — closing the lockout-bypass hole.
-        user_login_failed.send(
-            sender=user.__class__,
-            credentials={"username": user.email},
-            request=request,
-        )
+    except (InvalidCredentials, TwoFactorInvalidCode):
+        # Step-up checks the password and the code itself, outside
+        # ``authenticate()``, so axes counts a wrong one only through this
+        # report — toward the same (email, IP) lockout a failed login feeds.
+        login_lockout.record_failure(request, user.email)
         raise
+    login_lockout.clear_failures(request, user.email)
     return Response({"access": access, "ttl_seconds": settings.STEP_UP_TTL_SECONDS})
 
 
 # Dedicated strict scope (keyed per user, since the request is
 # authenticated) — NOT the generous ``login`` bucket. Re-validating a
-# password is the same brute-force surface as logging in; pairing the
-# tighter rate with the axes signal above means wrong passwords both
-# throttle AND count toward account lockout.
+# password is the same brute-force surface as logging in, so the wrong
+# passwords and codes are throttled here AND counted toward the (email, IP)
+# lockout above, which refuses them once LOGIN_LOCKOUT_ENABLED is on.
 set_throttle_scope(step_up_view, "step_up")
 
 

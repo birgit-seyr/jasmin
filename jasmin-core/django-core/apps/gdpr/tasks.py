@@ -124,10 +124,14 @@ def anonymise_long_cancelled_members() -> dict[str, int]:
     retention window are deleted once they are past it
     (``_purge_files_kept_by_erasure``).
 
-    Two log channels per anonymisation:
+    Log channels per member:
 
       * ``gdpr.ex_member_anonymised`` (INFO) — happy path; goes into
         the GDPR audit log for regulator-facing accountability.
+      * ``gdpr.ex_member_login_kept`` (INFO) — follows it when the member's
+        login holds a staff or customer role. The login stays, released from
+        the member and without the member role
+        (``ErasureSubject.of_ex_member``).
       * ``gdpr.ex_member_blocked`` (WARNING) — retention block fired
         despite 10y+ elapsed. Usually means open CoopShares, open
         invoices, or active subscriptions that should have been
@@ -206,7 +210,8 @@ def _run_for_current_schema(cutoff: datetime.date) -> tuple[int, int]:
         # scrub. The outer loop is intentionally NOT wrapped, so one
         # failing member doesn't poison the rest of the run.
         try:
-            GDPRService.anonymize_subject(ErasureSubject.of_member(member))
+            subject = ErasureSubject.of_ex_member(member)
+            GDPRService.anonymize_subject(subject)
         except RetentionPeriodActive as exc:
             reasons = exc.details.get("reasons", [])
             log.warning(
@@ -228,6 +233,12 @@ def _run_for_current_schema(cutoff: datetime.date) -> tuple[int, int]:
                 member.pk,
                 days_since,
             )
+            if subject.user is None and member.user_id is not None:
+                log.info(
+                    "gdpr.ex_member_login_kept member_id=%s user_id=%s",
+                    member.pk,
+                    member.user_id,
+                )
             anonymised += 1
 
     return anonymised, blocked

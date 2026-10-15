@@ -1,4 +1,4 @@
-from . import two_factor_service
+from . import login_lockout, two_factor_service
 from .auth_service import (
     LoginResult,
     TwoFactorChallenge,
@@ -32,6 +32,7 @@ __all__ = [
     "create_user_with_invite",
     "issue_post_two_factor_tokens",
     "list_active_users",
+    "login_lockout",
     "refresh_access_token",
     "register_public_applicant",
     "request_password_reset",

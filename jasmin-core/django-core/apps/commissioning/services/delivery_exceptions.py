@@ -304,8 +304,9 @@ def _restore_weeks(subscription: Subscription, weeks: set[YearWeek]) -> set:
     # hold it (handles the static default DSD and time-bounded station-day
     # chains), then keep only the freed weeks within the subscription's term.
     # The term ends at ``effective_term_end``, so a subscription the member
-    # exit force-ended (``valid_until`` kept) gets nothing back after the exit
-    # and nothing at all when the exit came before ``valid_from``.
+    # exit force-ended (``valid_until`` kept) gets nothing back after its
+    # ``cancelled_effective_at`` and nothing at all when that came before
+    # ``valid_from``.
     targets = {
         year_week: delivery_station_day
         for year_week, delivery_station_day in (

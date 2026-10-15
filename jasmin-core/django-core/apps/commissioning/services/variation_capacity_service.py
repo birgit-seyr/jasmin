@@ -54,14 +54,27 @@ def _occupying_q() -> Q:
     An offer whose window has elapsed drops out automatically via the
     ``notification_expires_at`` time check — even before the sweep job flips its
     status to EXPIRED — so a lapsed offer frees its slot on its own.
+
+    An offered or accepted subscription holds nothing once the office has
+    rejected it or its member, or the member has cancelled the membership: the
+    slot goes back to the queue, and confirming such a subscription anyway
+    re-checks this cap. The member's stamps count as well as the
+    subscription's, because a member can be rejected or gone while a
+    subscription of theirs carries no stamp of its own, and an accepted offer's
+    hold has no time limit.
     """
     now = timezone.now()
     active = Q(admin_confirmed=True, on_waiting_list=False)
-    offered = Q(
+    application_open = Q(
+        admin_rejected_at__isnull=True,
+        member__admin_rejected_at__isnull=True,
+        member__cancelled_at__isnull=True,
+    )
+    offered = application_open & Q(
         waiting_list_status=Subscription.WaitingListStatus.SPOT_AVAILABLE,
         notification_expires_at__gt=now,
     )
-    accepted_pending = Q(
+    accepted_pending = application_open & Q(
         waiting_list_status=Subscription.WaitingListStatus.CONFIRMED,
         on_waiting_list=False,
         admin_confirmed=False,

@@ -168,8 +168,9 @@ measures, including:
 - **Resilience:** containerised deployment with health checks
 - **Regular testing:** pytest + ESLint + automated CI on every
   push (`.github/workflows/ci.yml`)
-- **Brute-force protection:** `django-axes` lockout + per-endpoint
-  rate limits
+- **Brute-force protection:** per-endpoint rate limits; failed sign-ins
+  recorded per email and IP address (`django-axes`), with a lockout
+  after 5 that each deployment switches on (off by default)
 
 Detailed measures: see §4 of
 [processing-activities.md](processing-activities.md).

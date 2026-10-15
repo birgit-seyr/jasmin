@@ -54,10 +54,14 @@ def alert_on_axes_bursts() -> None:
 
     Cross-tenant aggregation matters here: a botnet that distributes 4
     attempts across each of 10 tenants from a single IP is more
-    interesting than 5 attempts at one tenant. The per-tenant lockout
-    (django-axes) already handles single-tenant bursts at request time;
-    this task catches the slow / distributed pattern that lockout
-    alone wouldn't surface.
+    interesting than 5 attempts at one tenant. The (email, IP) lockout,
+    once ``LOGIN_LOCKOUT_ENABLED`` is on, stops a burst on one address at
+    request time; this task surfaces bursts either way, including the
+    slow / distributed pattern no lockout would. While the lockout is off,
+    nothing deletes the rows before they lapse, so a run of wrong passwords
+    that ends in the right one still shows here. With it on, a sign-in
+    deletes its own (email, IP) pair's rows — fewer than the limit, or the
+    pair would be locked.
     """
     # Resolve the axes model lazily — keeps the module importable even
     # if axes isn't fully initialised at decorator-time.

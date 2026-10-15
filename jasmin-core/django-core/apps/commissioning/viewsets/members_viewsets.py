@@ -103,7 +103,10 @@ from ..services.onboarding_policy import (
     onboarding_mode_enabled,
 )
 from ..services.renewal import term_predecessor
-from ..services.waiting_list_offer_service import offer_price_fits_column
+from ..services.waiting_list_offer_service import (
+    offer_price_fits_column,
+    release_rejected_subscription,
+)
 from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import parse_body_date, parse_bulk_ids
@@ -1259,8 +1262,9 @@ class SubscriptionViewSet(
             # or below-floor price.
             400: ErrorResponseSerializer,
             # Capacity full, ``EmailActionBlockedInOnboardingMode``,
-            # ``EmailSendingNotSetUp`` (no SMTP host of the tenant's own), or
-            # ``WaitingListOfferMemberHasNoEmail``.
+            # ``EmailSendingNotSetUp`` (no SMTP host of the tenant's own),
+            # ``WaitingListOfferMemberHasNoEmail``, or
+            # ``WaitingListOfferEntryClosed`` (entry or member cancelled/rejected).
             409: ErrorResponseSerializer,
         },
     )
@@ -1324,16 +1328,12 @@ class SubscriptionViewSet(
         # the audit fields and saves.
         subscription.reject(admin_user=auth_user(request), reason=reason, save=True)
 
-        # Free the draft's held station-day capacity. The reject stamps flags
-        # but does NOT delete the row, so the CASCADE that would otherwise drop
-        # the CapacityReservation never fires — without this, the rejected
-        # applicant keeps blocking the slot (and any waiting_list promotion) until
-        # the 14-day TTL lapses.
-        from ..services.capacity_reservation_service import (
-            CapacityReservationService,
-        )
-
-        CapacityReservationService.release_for_subscription(subscription)
+        # Free what the rejected draft holds. The reject stamps flags but does
+        # NOT delete the row, so the CASCADE that would otherwise drop the
+        # CapacityReservation never fires — without this, the rejected applicant
+        # keeps blocking the slot until the 14-day TTL lapses, and the link of
+        # an open waiting-list offer keeps working.
+        release_rejected_subscription(subscription)
 
         updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)

@@ -34,7 +34,8 @@ Likely detection paths:
 
 - An error-tracking alert (GlitchTip, self-hosted) on an unexpected
   access pattern
-- `django-axes` lockout spike
+- A failed-login burst alert (`axes.burst`) or, with the sign-in
+  lockout switched on, a lockout alert (`account.locked`)
 - Office staff notices content that should not be visible (e.g.
   one tenant's data leaking into another tenant's schema view)
 - Backup verification failure

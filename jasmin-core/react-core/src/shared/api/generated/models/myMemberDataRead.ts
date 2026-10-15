@@ -34,11 +34,11 @@ export interface MyMemberDataRead {
   /** @nullable */
   readonly country?: string | null;
   /** @nullable */
-  readonly email?: string | null;
-  /** @nullable */
   readonly birth_date?: string | null;
   readonly iban_stored?: boolean;
   readonly account_owner_stored?: boolean;
+  /** @nullable */
+  readonly email?: string | null;
   /** @nullable */
   readonly member_number?: number | null;
   readonly is_trial?: boolean;

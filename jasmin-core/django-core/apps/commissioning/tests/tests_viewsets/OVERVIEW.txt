@@ -662,7 +662,7 @@ test_shares_delivery_day_query_count.py (1 test)
 ────────────────────────────────────────────────
   (module-level)                           1   list can_be_deleted matches the per-instance answer
 
-test_shares_viewsets.py (148 tests)
+test_shares_viewsets.py (163 tests)
 ───────────────────────────────────
   TestShareTypeViewSet                    16   list, include_future (current + upcoming, not past), variation
                                                sizes and validity bounds, deletability, filter share_option
@@ -683,6 +683,10 @@ test_shares_viewsets.py (148 tests)
                                                sentinel still clears (clock frozen, week 30/2026)
   TestShareExportCsvAction                 5   missing / malformed / inverted dates → 400; empty range →
                                                header-only CSV; range filters to the ISO-week window
+  TestShareContentWritePermissions        15   gardener, staff and management read a finalized share
+                                               content, while their POST / PATCH / DELETE is refused (403;
+                                               no row added, changed or deleted, nothing recomputed); the
+                                               office adds, changes and deletes them
   TestDefaultShareContentBulkList          4   invalid year → 400; year and share_option are both required
                                                (each missing one → 400 naming it); filters to the
                                                requested share option

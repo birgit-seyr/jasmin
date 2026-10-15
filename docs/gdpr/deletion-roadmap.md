@@ -69,7 +69,10 @@ reseller, or any combination of them:
 
 `anonymise_long_cancelled_members` (daily, 03:00) erases ex-members with a
 login ten years after their exit, tenant by tenant through
-`apps.shared.tenants.sweep.for_each_tenant`.
+`apps.shared.tenants.sweep.for_each_tenant`. A login that also holds a staff or
+customer role outlives its member: the sweep erases the member alone and
+releases the login, which keeps its account and loses only the member role
+(`ErasureSubject.of_ex_member`).
 
 ## Access requests (Art. 15)
 
@@ -87,7 +90,9 @@ the database: `backups/backup.sh ledger` merges every tenant's log into one
 ledger every 10 minutes (an email address only as its SHA-256), never drops an
 entry, and pushes an encrypted copy off-host. After the database restore,
 `replay_gdpr_deletions --ledger -` re-runs the erasure for every subject the
-restored data holds again and writes the log rows back. The whole procedure is
+restored data holds again and writes the log rows back. A log row without a
+login names a member erased without one, so a login the restored member is
+linked to is released again, not erased. The whole procedure is
 in the header of `backups/restore.sh`; `scripts/restore_drill.sh` dry-runs the
 replay on every drill. A subject whose retention obligation came back with the
 restore is listed instead of erased, for the office to re-enter what the

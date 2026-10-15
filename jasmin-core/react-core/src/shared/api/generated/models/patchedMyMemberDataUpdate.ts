@@ -5,17 +5,17 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
-import type { PatchedMyMemberDataUpdateEmail } from './patchedMyMemberDataUpdateEmail';
 
 /**
  * Incoming shape for ``PATCH /commissioning/my_member_data/``.
 
-Field allowlist for member self-edit. Office-only flags
-(``is_active``, ``is_trial``, ``member_number``, entry_date,
-coop-share totals) are NOT in this list and silently ignored
-if a client tries to send them — DRF only deserialises what's
-declared. Validators (IBAN format, email uniqueness) come from
-the model fields automatically.
+Field allowlist for member self-edit. Office-only fields
+(``email``, ``is_active``, ``is_trial``, ``member_number``,
+entry_date, coop-share totals) are NOT in this list and silently
+ignored if a client tries to send them — DRF only deserialises
+what's declared. ``email`` is the address the co-op writes to, and
+nothing here could confirm that the member owns a new one. The IBAN
+format validator comes from the model field automatically.
  */
 export interface PatchedMyMemberDataUpdate {
   /**
@@ -58,8 +58,6 @@ export interface PatchedMyMemberDataUpdate {
    * @nullable
    */
   country?: string | null;
-  /** @nullable */
-  email?: PatchedMyMemberDataUpdateEmail;
   /** @nullable */
   birth_date?: string | null;
   /**

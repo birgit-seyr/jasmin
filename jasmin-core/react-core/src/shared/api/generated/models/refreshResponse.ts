@@ -5,9 +5,11 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { LoginUser } from './loginUser';
 import type { LoginTenant } from './loginTenant';
 
 export interface RefreshResponse {
   access: string;
+  user: LoginUser;
   tenant?: LoginTenant;
 }

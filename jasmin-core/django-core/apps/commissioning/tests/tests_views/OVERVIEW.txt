@@ -4,7 +4,7 @@ COMMISSIONING APP — VIEW TESTS OVERVIEW
 
 Directory: apps/commissioning/tests/tests_views/
 Total files: 13
-Total tests: 441
+Total tests: 442
 Run: poetry run pytest apps/commissioning/tests/tests_views/ -q
 
 Counts are collected cases, so a parametrized method counts once per case and a
@@ -207,7 +207,7 @@ alphabetical order.
      - test_single_query_regardless_of_id_count
 
 ================================================================================
-7. test_my_data_views.py  (68 tests)
+7. test_my_data_views.py  (69 tests)
    Views: my_member_data_view (GET/PATCH), my_customer_data_view (GET/PATCH),
           member self-service coop-share / subscription subscribe, membership
           cancel
@@ -217,7 +217,7 @@ alphabetical order.
      - test_user_without_member_returns_404
      - test_returns_editable_and_readonly_fields
 
-   TestMyMemberDataPatch  (10 cases)
+   TestMyMemberDataPatch  (11 cases)
      - test_patches_address_and_returns_fresh_state
      - test_member_cannot_set_membership_paper_received
      - test_confirmed_member_cannot_change_birth_date
@@ -227,6 +227,7 @@ alphabetical order.
      - test_unchanged_iban_does_not_require_step_up
      - test_rejects_invalid_iban
      - test_silently_drops_disallowed_fields
+     - test_the_email_is_not_self_editable
      - test_other_user_cannot_patch_my_member
 
    TestMyCustomerDataGet

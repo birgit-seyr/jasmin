@@ -456,7 +456,7 @@ class ChargeScheduleService:
         """SMOOTHED amounts for the still-unlocked periods, by period start.
 
         Splits the REMAINING term total (recomputed total minus ``locked_total``)
-        over those starting by ``effective_term_end``, so none after a member exit.
+        over those starting by ``effective_term_end``, none after a cancellation.
         """
         term_total = ChargeScheduleService._term_total(subscription, delivery_dates)
         remaining = term_total - locked_total

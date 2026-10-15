@@ -252,6 +252,7 @@
   },
   "order_content": {
     "not_found": "Bestellposition nicht gefunden.",
+    "changed": "Die Bestellposition hat sich inzwischen geändert — bitte die Seite neu laden und die Änderung erneut vornehmen.",
     "finalized": "Eine finalisierte Bestellposition kann nicht mehr geändert werden.",
     "insufficient_stock": "Nicht genügend Bestand verfügbar — verfügbar: {{available}}.",
     "offer_required": "Du kannst nur Angebote bestellen.",
@@ -301,6 +302,7 @@
     "refresh_missing": "Sitzung abgelaufen — bitte erneut anmelden.",
     "tenant_mismatch": "Dieser Account gehört nicht zu diesem Mandanten.",
     "account_blocked": "Dieser Account ist gesperrt.",
+    "account_locked": "Zu viele fehlgeschlagene Versuche — der Login für diesen Account ist von hier aus vorübergehend gesperrt. Bitte später erneut versuchen oder über „Passwort vergessen?“ ein neues Passwort setzen.",
     "self_registration_disabled": "Die Selbst-Registrierung ist für diese Organisation deaktiviert.",
     "step_up_required": "Für diese Aktion ist eine erneute Bestätigung der Identität erforderlich.",
     "cross_origin_refused": "Die Anfrage kam nicht von dieser Website und wurde abgelehnt.",
@@ -545,7 +547,8 @@
     "expired": "Dieses Angebot ist abgelaufen. Bitte kontaktiere das Büro.",
     "invalid": "Dieser Angebots-Link ist ungültig oder wurde bereits verwendet.",
     "not_available": "Dieses Abo ist kein offener Wartelisten-Eintrag und kann nicht angeboten werden.",
-    "member_has_no_email": "Dieses Mitglied hat keine E-Mail-Adresse, an die das Angebot gehen könnte. Trage beim Mitglied eine Adresse ein und biete den Platz dann an."
+    "member_has_no_email": "Dieses Mitglied hat keine E-Mail-Adresse, an die das Angebot gehen könnte. Trage beim Mitglied eine Adresse ein und biete den Platz dann an.",
+    "entry_closed": "Diesem Eintrag kann kein Platz angeboten werden: Das Abo wurde gekündigt oder abgelehnt, oder das Mitglied hat gekündigt oder wurde abgelehnt."
   },
   "onboarding_mode": {
     "email_action_blocked": "Diese Aktion schickt dem Mitglied eine E-Mail, und solange der Onboarding-Modus aktiv ist, werden keine E-Mails an Mitglieder verschickt. Bitte zuerst den Onboarding-Modus ausschalten."

@@ -274,6 +274,23 @@ class TestMyMemberDataPatch:
         assert member.is_active is True
         assert member.member_number == 4242
 
+    def test_the_email_is_not_self_editable(self, member_user, tenant):
+        """The email is the address the co-op writes to and the GDPR export
+        is keyed on, so only the office changes it. A client that still sends
+        it gets its other changes saved."""
+        member = MemberFactory(user=member_user, email="ada@example.com")
+        resp = _client_for(member_user).patch(
+            URL_MY_MEMBER,
+            data={"email": "office@example.com", "city": "Hamburg"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["email"] == "ada@example.com"
+
+        member.refresh_from_db()
+        assert member.email == "ada@example.com"
+        assert member.city == "Hamburg"
+
     def test_other_user_cannot_patch_my_member(self, member_user, tenant):
         # A member-A user must not be able to mutate member-B by some
         # query trick. The endpoint resolves the target from the JWT

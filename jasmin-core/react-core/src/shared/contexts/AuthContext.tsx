@@ -161,33 +161,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const tenantCtx = useContext(TenantContext);
 
   // Keep React state in sync with the underlying tokenStore.
-  // If the token is cleared from outside (e.g. api.ts response interceptor
-  // after a failed silent refresh), also drop the cached user metadata so
-  // pages reading `user` flip to the logged-out state immediately — without
-  // requiring a hard browser reload.
+  // If the token is cleared from outside (e.g. api.ts after a failed silent
+  // refresh), also drop this tab's user so pages reading `user` flip to the
+  // logged-out state immediately — without requiring a hard browser reload.
+  // The stored metadata stays: every tab shares it, and api.ts drops it when
+  // the server ended the session for all of them.
   useEffect(() => {
     return subscribeAccessToken((t) => {
       setAccessTokenState(t);
       if (t !== null) setSessionNotice(null);
-      if (t === null) {
-        setMeta(null);
-        try {
-          localStorage.removeItem("auth");
-        } catch {
-          /* no-op */
-        }
-      }
+      if (t === null) setMeta(null);
     });
   }, []);
 
   // Hydrate user metadata from localStorage and attempt silent refresh on boot.
   useEffect(() => {
     let hadSession = false;
+    let hadUser = false;
     try {
       const storedMeta = localStorage.getItem("auth");
       if (storedMeta) {
-        setMeta(JSON.parse(storedMeta) as AuthMetadata);
+        const parsed = JSON.parse(storedMeta) as AuthMetadata;
+        setMeta(parsed);
         hadSession = true;
+        hadUser = !!parsed.user;
       }
     } catch (err) {
       console.error("Failed to parse stored auth metadata:", err);
@@ -206,7 +203,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        await performRefresh();
+        const { user } = await performRefresh();
+        // The cookie can outlive the stored metadata: a tab on an older bundle
+        // drops the metadata when its refresh loses a race, and clearing the
+        // site's storage keeps the cookie. Without a user, JasminApp has no
+        // roles to route on, so the refresh answer's user (the tenant realm
+        // sends one) takes the stored one's place.
+        if (user && !hadUser && !cancelled) {
+          const restored: AuthMetadata = { user: { ...user } };
+          setMeta(restored);
+          try {
+            localStorage.setItem("auth", JSON.stringify(restored));
+          } catch {
+            /* the tab keeps the user in memory */
+          }
+        }
         // Silent refresh succeeded → we're authenticated. We deliberately do
         // NOT enrich the tenant context here. The deterministic effect in
         // TenantContext (keyed on the tenant id) owns post-refresh enrichment:
@@ -434,7 +445,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshAccessToken = useCallback(async (): Promise<string> => {
     try {
-      return await performRefresh();
+      return (await performRefresh()).access;
     } catch (err) {
       console.error("Manual refresh failed:", err);
       clearAccessToken();

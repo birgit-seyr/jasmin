@@ -69,6 +69,10 @@ x-backend-env: &backend-env
   # Same-origin check on the login / refresh / logout endpoints. "False" turns
   # it off, for a proxy that strips or alters Sec-Fetch-Site / Origin.
   AUTH_ORIGIN_GUARD: ${AUTH_ORIGIN_GUARD:-True}
+  # Sign-in lockout. "True" refuses an (email, client IP) pair for an hour after
+  # 5 failed sign-ins. Leave it off while the backend sees a CDN edge's address
+  # instead of the client's: everyone behind that edge would share one lock.
+  LOGIN_LOCKOUT_ENABLED: ${LOGIN_LOCKOUT_ENABLED:-False}
   SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
   # Secret-key rotation: verify in-flight JWTs / signed links against the old
   # key during a rotation window (see settings.py SECRET_KEY_FALLBACKS).

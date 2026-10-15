@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
+from apps.authz.roles import STAFF_ROLES, Role
 from apps.commissioning.models import Member, Reseller
 
 from ..field_classes import get_classification
@@ -49,6 +50,23 @@ class ErasureSubject:
         return cls(member=member)
 
     @classmethod
+    def of_ex_member(cls, member: Member) -> ErasureSubject:
+        """What the retention sweep erases once ``member``'s exit is past the
+        retention period: :meth:`of_member`, unless the member's login holds a
+        staff or customer role.
+
+        Such a login serves more than the membership, so it stays and the
+        erasure releases it from the member. The member create and the CSV
+        import link any login whose email matches, an admin's included, and the
+        office dates the exit, to any past day while the member has no entry
+        date. Erasing such a login is an admin's decision, made with step-up.
+        """
+        user = member.user
+        if user is not None and user.has_any_role(STAFF_ROLES | {Role.CUSTOMER}):
+            return cls(member=member)
+        return cls.of_member(member)
+
+    @classmethod
     def of_reseller(cls, reseller: Reseller) -> ErasureSubject:
         user = reseller.linked_user
         if user is not None:
@@ -60,7 +78,11 @@ class ErasureSubject:
         cls, *, user_pk: str = "", member_pk: str = "", reseller_pk: str = ""
     ) -> ErasureSubject | None:
         """The subject a deletion-log row names, or None when none of its
-        rows exist (any more, or yet)."""
+        rows exist (any more, or yet).
+
+        A row without a login names a member erased without one: a login the
+        member is linked to now, after a restore, outlived that erasure (see
+        :meth:`of_ex_member`) and isn't part of the subject."""
         if user_pk:
             user = get_user_model().objects.filter(pk=user_pk).first()
             if user is not None:
@@ -68,7 +90,7 @@ class ErasureSubject:
         if member_pk:
             member = Member.objects.filter(pk=member_pk).first()
             if member is not None:
-                return cls.of_member(member)
+                return cls.of_member(member) if user_pk else cls(member=member)
         if reseller_pk:
             reseller = Reseller.objects.filter(pk=reseller_pk).first()
             if reseller is not None:

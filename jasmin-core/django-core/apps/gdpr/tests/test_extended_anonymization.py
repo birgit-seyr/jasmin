@@ -331,8 +331,8 @@ class TestEmailLogAnonymization:
         """Rows where ``recipient`` was the subject's address get the
         recipient overwritten. Unrelated rows are untouched."""
         user = JasminUserFactory(email="alice@example.com")
-        # Member needed so _collect_known_emails picks up the
-        # secondary address — the row, not the variable, is what matters.
+        # Member needed so the erasure finds the row sent to the member's
+        # own address — the row, not the variable, is what matters.
         MemberFactory(user=user, email="alice.member@example.com")
 
         # Three log rows for the subject.
@@ -506,12 +506,11 @@ class TestAxesPurge:
         assert AccessLog.objects.filter(username="other@example.com").exists()
 
     def test_axes_records_purged_case_insensitively(self, tenant):
-        """axes stores the credential exactly as typed, so a member who
-        logged in as ``Casey@Example.COM`` lands rows whose ``username``
-        is mixed-case. The subject's canonical email is lowercase, so an
-        exact ``username__in`` purge would leave those rows behind. The
-        purge matches case-insensitively — a login-history record
-        can't survive deletion just because of letter-casing."""
+        """An axes row and the subject's address can differ in letter-casing
+        (axes lower-cases its key; an address may be stored with capitals),
+        so an exact ``username__in`` purge would leave rows behind. The
+        purge matches case-insensitively — a login-history record can't
+        survive deletion just because of letter-casing."""
         user = JasminUserFactory(email="casey@example.com")
 
         AccessLog.objects.create(

@@ -37,7 +37,11 @@ from rest_framework.test import APIClient
 from apps.accounts.models import JasminUser
 from apps.authz.roles import Role
 from apps.commissioning.models import UserInvitation
-from apps.commissioning.tests.factories import JasminUserFactory
+from apps.commissioning.tests.factories import (
+    JasminUserFactory,
+    MemberFactory,
+    ResellerFactory,
+)
 from apps.shared.auth_cookies import (
     TENANT_REFRESH_COOKIE,
     TENANT_REFRESH_COOKIE_PATH,
@@ -193,6 +197,40 @@ class TestRefreshEndpoint:
         client.cookies[TENANT_REFRESH_COOKIE] = "not-a-jwt"
         resp = client.post("/api/auth/refresh/", data={}, format="json")
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    # A client whose cached user is gone rebuilds it from the refresh answer,
+    # so the answer carries the user exactly as the login returned it: the
+    # roles the app routes on and the member or reseller the login acts for.
+    def test_refresh_returns_a_members_user_as_login_did(self, tenant):
+        u = JasminUserFactory(email="whoami@example.com", roles=[Role.MEMBER])
+        member = MemberFactory(user=u)
+        _set_password(u, "Rotate!42xyzabc")
+        client = APIClient()
+        login = _login(client, "whoami@example.com", "Rotate!42xyzabc")
+        assert login.status_code == status.HTTP_200_OK, login.data
+
+        resp = client.post("/api/auth/refresh/", data={}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["user"] == login.data["user"]
+        assert resp.data["user"]["roles"] == [Role.MEMBER]
+        assert resp.data["user"]["member_id"] == member.id
+        assert resp.data["user"]["reseller_id"] is None
+
+    def test_refresh_returns_a_customers_reseller(self, tenant):
+        u = JasminUserFactory(email="buyer@example.com", roles=[Role.CUSTOMER])
+        reseller = ResellerFactory(linked_user=u)
+        _set_password(u, "Rotate!42xyzabc")
+        client = APIClient()
+        login = _login(client, "buyer@example.com", "Rotate!42xyzabc")
+        assert login.status_code == status.HTTP_200_OK, login.data
+
+        resp = client.post("/api/auth/refresh/", data={}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert resp.data["user"] == login.data["user"]
+        assert resp.data["user"]["reseller_id"] == reseller.id
+        assert resp.data["user"]["member_id"] is None
 
 
 # --------------------------------------------------------------------------- #

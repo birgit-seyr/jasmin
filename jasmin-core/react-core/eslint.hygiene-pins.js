@@ -36,7 +36,7 @@ export const complexityPins = {
   "src/features/members/pages/Members.tsx": 42,
   "src/features/public/pages/PublicLegalNoticePage.tsx": 59,
   "src/shared/modals/UserInfoModal.tsx": 50,
-  "src/shared/services/api.ts": 30,
+  "src/shared/services/api.ts": 29,
   "src/shared/tables/BasicEditableTable/EditableCell.tsx": 34,
   "src/shared/tables/BasicEditableTable/EditableTable.tsx": 50,
   "src/shared/tables/BasicEditableTable/FormInput.tsx": 35,
@@ -48,7 +48,7 @@ export const complexityPins = {
 export const functionLengthPins = {
   "src/features/abos/hooks/columns/useAbosColumns.tsx": 586,
   "src/features/abos/modals/NewSubscriptionModal.tsx": 892,
-  "src/features/abos/pages/WaitingListAbos.tsx": 465,
+  "src/features/abos/pages/WaitingListAbos.tsx": 456,
   "src/features/commissioning/hooks/columns/useHarvestingListColumns.tsx": 458,
   "src/features/commissioning/hooks/columns/useOrderColumns.tsx": 422,
   "src/features/commissioning/hooks/columns/useShareArticleListColumns.tsx": 490,

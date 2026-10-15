@@ -36,6 +36,7 @@ from ..models import (
 from ..utils.iso_week_utils import date_from_order
 from ..utils.tax_rate_utils import resolve_article_tax_rate, resolve_crate_tax_rate
 from .delivery_note_invoices import current_invoices_by_delivery_note
+from .order_content_locks import lock_order_content
 from .order_days import apply_order_days
 from .snapshot_service import SnapshotService
 
@@ -590,10 +591,12 @@ class OrderContentService:
 
         ``amount=AMOUNT_NOT_SENT`` leaves the stored amount, the offer stock and
         the crate row untouched; ``None`` means zero. Only the
-        ``_UPDATABLE_ORDER_CONTENT_FIELDS`` in ``kwargs`` are applied.
+        ``_UPDATABLE_ORDER_CONTENT_FIELDS`` in ``kwargs`` are applied. The
+        line and its offer are read under their locks (``lock_order_content``),
+        so the stock moves by the difference to the amount actually stored.
         """
         try:
-            order_content = OrderContent.objects.get(id=order_content_id)
+            order_content = lock_order_content(order_content_id)
         except OrderContent.DoesNotExist:
             # The ID may be an offer ID from an unused-offer stub — create instead
             try:
@@ -627,8 +630,6 @@ class OrderContentService:
         offer = order_content.offer
 
         if offer is not None and new_amount is not None:
-            # Lock the offer row to prevent race conditions on availability
-            offer = Offer.objects.select_for_update().get(pk=offer.pk)
             old_amount = order_content.amount or Decimal("0")
             amount_difference = new_amount - old_amount
             pu_divisor = OrderContentService._amount_per_pu_or_one(offer)
@@ -656,12 +657,6 @@ class OrderContentService:
 
             offer.amount -= amount_difference / pu_divisor
             offer.save(update_fields=["amount"])
-            # Re-point the cached relation to the freshly-locked offer so the
-            # serialized response carries the NEW available amount — the row
-            # was loaded with a stale ``order_content.offer`` (its ``amount``
-            # predates this update), which made the frontend show an outdated
-            # ``offer_available_amount`` until the next refetch.
-            order_content.offer = offer
 
             crate_type = offer.used_crate
             if crate_type is not None:
@@ -707,9 +702,11 @@ class OrderContentService:
     @staticmethod
     @transaction.atomic
     def delete_order_content(order_content_id: str) -> dict[str, bool]:
-        """Delete order content, restore offer availability, and delete order if empty."""
+        """Delete order content, restore offer availability, and delete order if
+        empty. The stock restored is the amount stored under the line's lock
+        (``lock_order_content``)."""
         try:
-            order_content = OrderContent.objects.get(id=order_content_id)
+            order_content = lock_order_content(order_content_id)
         except OrderContent.DoesNotExist as exc:
             raise OrderContentNotFound(
                 "Order content not found",
@@ -730,20 +727,16 @@ class OrderContentService:
         )
 
         offer = order_content.offer
-        amount_to_restore = order_content.amount
-        order = order_content.order
 
         if offer:
-            # Lock the offer row to prevent race conditions on availability
-            offer = Offer.objects.select_for_update().get(pk=offer.pk)
             # ``Offer.amount`` is in PU. The create/update paths debit it by
             # ``amount / pu_divisor``; restore must use the SAME unit, else
             # stock drifts upward by ``amount_per_pu`` on every delete.
             pu_divisor = OrderContentService._amount_per_pu_or_one(offer)
-            offer.amount += (amount_to_restore or Decimal("0")) / pu_divisor
+            offer.amount += (order_content.amount or Decimal("0")) / pu_divisor
             offer.save(update_fields=["amount"])
 
-        order_pk = order.pk
+        order_pk = order_content.order_id
         order_content.delete()
 
         # Cascade future inventories for all affected entities + re-derive the
@@ -755,7 +748,7 @@ class OrderContentService:
 
         # ``OrderContent.delete()`` (model-level) already auto-deletes the
         # order when it was the last child — see TestEmptyParentAutoCleanup.
-        # Don't touch the stale ``order`` reference; just check whether the
+        # Don't touch the line's cached ``order``; just check whether the
         # row is still in the DB.
         if not Order.objects.filter(pk=order_pk).exists():
             return {"order_deleted": True}

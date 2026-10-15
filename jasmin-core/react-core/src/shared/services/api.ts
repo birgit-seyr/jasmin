@@ -1,7 +1,12 @@
 /// <reference types="vite/client" />
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
+import type { LoginUser } from "@shared/api/generated/models";
 import { isSuperAdminHostname } from "@shared/auth/superAdminHost";
-import { getErrorCode, type JasminErrorPayload } from "@shared/utils/apiError";
+import {
+  getErrorCode,
+  getErrorStatus,
+  type JasminErrorPayload,
+} from "@shared/utils/apiError";
 import { runStepUpFlow } from "./stepUp";
 import {
   clearAccessToken,
@@ -36,44 +41,102 @@ const axiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+/**
+ * What a successful refresh hands back: the new access token and, on the
+ * tenant realm, the signed-in user as the login returned it. The super-admin
+ * realm's answer carries no user.
+ */
+export interface RefreshedSession {
+  access: string;
+  user?: LoginUser;
+}
+
 interface QueueItem {
-  resolve: (value: string | PromiseLike<string>) => void;
+  resolve: (session: RefreshedSession) => void;
   reject: (reason?: unknown) => void;
 }
 
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
 
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token!)));
+const processQueue = (
+  error: unknown,
+  session: RefreshedSession | null = null,
+) => {
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(session!)));
   failedQueue = [];
 };
 
+// The tabs of one origin share the refresh cookie, and the backend blacklists
+// a refresh token the moment it rotates it. Two tabs refreshing at once would
+// both send the same cookie, and the slower one would lose its session. Under
+// this lock they take turns, and the next tab sends the cookie the previous
+// one got back. Every bundle has to ask for the same lock name.
+const REFRESH_LOCK = "jasmin-auth-refresh";
+
+// What the backend answers a refresh cookie it refuses: expired, revoked, or
+// blacklisted because a tab outside the lock rotated it a moment ago (a tab
+// still on an older bundle, or a browser without Web Locks). Only that last
+// case is worth a second try, but the answer doesn't tell them apart.
+const REFUSED_COOKIE_CODES = [
+  "auth.invalid_token",
+  "super_admin.refresh_token_invalid",
+];
+
+// How long a refused refresh waits before trying again, so the other tab's
+// answer, which carries the new cookie, has landed.
+const REFUSED_COOKIE_RETRY_DELAY_MS = 500;
+
+async function postRefresh(): Promise<RefreshedSession> {
+  const { data } = await axiosInstance.post<RefreshedSession>(
+    refreshEndpoint(),
+    {},
+  );
+  return data;
+}
+
+async function postRefreshWithRetry(): Promise<RefreshedSession> {
+  try {
+    return await postRefresh();
+  } catch (error) {
+    if (!REFUSED_COOKIE_CODES.includes(getErrorCode(error) ?? "")) throw error;
+    await new Promise((resolve) =>
+      setTimeout(resolve, REFUSED_COOKIE_RETRY_DELAY_MS),
+    );
+    return postRefresh();
+  }
+}
+
+/** Refresh holding the cross-tab lock. Web Locks are missing outside secure
+ *  contexts and in older browsers; there the tab refreshes without it. */
+async function refreshInTurn(): Promise<RefreshedSession> {
+  if (!("locks" in navigator)) return postRefreshWithRetry();
+  return await navigator.locks.request(REFRESH_LOCK, postRefreshWithRetry);
+}
+
 /**
- * Perform a single refresh call, deduplicated across concurrent callers.
+ * Refresh the session, one POST at a time in this tab and across the tabs of
+ * this origin (see `REFRESH_LOCK`).
  *
- * If a refresh is already in flight (e.g. triggered by a 401 from another
- * request), subsequent callers wait on the same promise instead of firing a
- * second `/auth/refresh/` POST. This avoids a race with
- * `ROTATE_REFRESH_TOKENS` where the first call rotates the cookie and the
- * second hits the blacklist → user gets force-logged-out on page reload.
+ * If a refresh is already in flight in this tab (e.g. triggered by a 401 from
+ * another request), later callers wait on it instead of firing a second
+ * `/auth/refresh/` POST, which would send the cookie the first one just had
+ * blacklisted. A refresh that fails ends this tab's session.
  */
-export async function performRefresh(): Promise<string> {
+export async function performRefresh(): Promise<RefreshedSession> {
   if (isRefreshing) {
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<RefreshedSession>((resolve, reject) => {
       failedQueue.push({ resolve, reject });
     });
   }
   isRefreshing = true;
   try {
-    const { data } = await axiosInstance.post<{ access: string }>(
-      refreshEndpoint(),
-      {},
-    );
-    setAccessToken(data.access);
-    processQueue(null, data.access);
-    return data.access;
+    const session = await refreshInTurn();
+    setAccessToken(session.access);
+    processQueue(null, session);
+    return session;
   } catch (err) {
+    handleRefreshFailure(err);
     processQueue(err, null);
     throw err;
   } finally {
@@ -121,7 +184,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 // ---- Response interceptor: silent refresh on 401 -------------------------
-function handleRefreshFailure() {
+function handleRefreshFailure(error: unknown) {
   // Refresh failed → user is logged out. Clear the in-memory token so
   // subscribers (AuthContext) flip `isAuthenticated` to false; the
   // route guards in JasminApp / SuperAdminApp will then render the
@@ -129,10 +192,16 @@ function handleRefreshFailure() {
   // a hard navigation during an error path can leave React mid-render
   // and produce a blank page.
   clearAccessToken();
-  try {
-    localStorage.removeItem("auth");
-  } catch {
-    /* no-op */
+  // The stored user metadata belongs to every tab of this origin, as the
+  // refresh cookie does. Drop it only when the server refused that cookie,
+  // which ends the session in every tab; a refresh that got no answer or hit
+  // a server error leaves the other tabs signed in.
+  if (getErrorStatus(error) === 401) {
+    try {
+      localStorage.removeItem("auth");
+    } catch {
+      /* no-op */
+    }
   }
   // Best effort: nudge the URL to /login so the back-stack is sane — but NOT
   // on public deep-link pages, where a logged-out visitor belongs (redirecting
@@ -164,13 +233,11 @@ axiosInstance.interceptors.response.use(
         })
       | undefined;
 
-    // ANY non-2xx (or network error) on the refresh endpoint itself means
-    // the session is over. Don't try to recover, just log the user out.
-    // This covers 401 (expected), 5xx (server hiccup), 0 (network error),
-    // and anything weird returned by an intermediary (e.g. service worker).
+    // A failing refresh POST is never answered with another refresh. It is
+    // performRefresh's to handle: that may try it again, and logs the user
+    // out once it gives up.
     const reqUrl = originalRequest?.url ?? "";
     if (reqUrl.includes("/auth/refresh/")) {
-      handleRefreshFailure();
       return Promise.reject(error);
     }
 
@@ -259,32 +326,24 @@ axiosInstance.interceptors.response.use(
     }
 
     if (isRefreshing) {
-      return new Promise<string>((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      })
-        .then((token) => {
-          originalRequest.headers = {
-            ...(originalRequest.headers ?? {}),
-            Authorization: `Bearer ${token}`,
-          };
-          return axiosInstance(originalRequest);
-        })
-        .catch((err) => Promise.reject(err));
+      return performRefresh().then(({ access }) => {
+        originalRequest.headers = {
+          ...(originalRequest.headers ?? {}),
+          Authorization: `Bearer ${access}`,
+        };
+        return axiosInstance(originalRequest);
+      });
     }
 
     originalRequest._retry = true;
 
-    try {
-      const access = await performRefresh();
-      originalRequest.headers = {
-        ...(originalRequest.headers ?? {}),
-        Authorization: `Bearer ${access}`,
-      };
-      return axiosInstance(originalRequest);
-    } catch (refreshError) {
-      handleRefreshFailure();
-      return Promise.reject(refreshError);
-    }
+    // A failed refresh has logged the user out by the time it rejects.
+    const { access } = await performRefresh();
+    originalRequest.headers = {
+      ...(originalRequest.headers ?? {}),
+      Authorization: `Bearer ${access}`,
+    };
+    return axiosInstance(originalRequest);
   },
 );
 

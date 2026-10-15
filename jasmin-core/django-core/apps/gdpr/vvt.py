@@ -233,7 +233,9 @@ ACTIVITIES: list[Activity] = [
         ),
         security_measures=(
             "JWT auth; rate limiting on /login (20/min) + /register "
-            "(10/h); axes lockout"
+            "(10/h); failed sign-ins recorded per email and IP address "
+            "(django-axes), with a lockout after 5 that each deployment "
+            "switches on (off by default)"
         ),
         code_locations=["apps/accounts/", "apps/authz/"],
     ),
@@ -306,7 +308,11 @@ TOMS: list[dict[str, str]] = [
     },
     {
         "label": "Brute-force protection",
-        "value": ("django-axes lockout + per-endpoint throttle scopes"),
+        "value": (
+            "Per-endpoint throttle scopes; failed sign-ins recorded per email "
+            "and IP address (django-axes), with a lockout after 5 that each "
+            "deployment switches on (off by default)"
+        ),
     },
     {
         "label": "Bot protection",

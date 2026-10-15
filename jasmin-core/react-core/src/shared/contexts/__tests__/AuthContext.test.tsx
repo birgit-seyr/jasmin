@@ -16,7 +16,7 @@ vi.mock("react-router-dom", async () => {
   return { ...actual, useNavigate: () => navigateMock };
 });
 
-const performRefreshMock = vi.fn<() => Promise<string>>();
+const performRefreshMock = vi.fn<() => Promise<RefreshedSession>>();
 const axiosPostMock = vi.fn();
 
 vi.mock("@shared/services/api", () => ({
@@ -25,6 +25,7 @@ vi.mock("@shared/services/api", () => ({
 }));
 
 import { AuthProvider, useAuth } from "../AuthContext";
+import type { RefreshedSession } from "@shared/services/api";
 import {
   clearAccessToken,
   getAccessToken,
@@ -78,7 +79,7 @@ describe("AuthContext boot", () => {
   it("attempts a silent refresh on mount and clears loading on success", async () => {
     performRefreshMock.mockImplementation(async () => {
       setAccessToken("fresh-access");
-      return "fresh-access";
+      return { access: "fresh-access" };
     });
 
     renderProvider();
@@ -107,7 +108,7 @@ describe("AuthContext boot", () => {
       "auth",
       JSON.stringify({ user: { id: "u-7", roles: ["office"] } }),
     );
-    performRefreshMock.mockResolvedValue("tok");
+    performRefreshMock.mockResolvedValue({ access: "tok" });
 
     renderProvider();
 
@@ -115,6 +116,85 @@ describe("AuthContext boot", () => {
     await waitFor(() =>
       expect(screen.getByTestId("auth-user").textContent).toBe("u-7"),
     );
+  });
+});
+
+describe("AuthContext boot without stored metadata", () => {
+  // The user as the tenant realm's refresh answer carries it.
+  const refreshedMember = {
+    id: "u-9",
+    email: "member@example.com",
+    first_name: "Mia",
+    last_name: "Muster",
+    user_language: "de",
+    theme: "light" as const,
+    roles: ["member"],
+    member_id: "m-9",
+    reseller_id: null,
+  };
+
+  it("takes the user from the refresh answer when the stored metadata is gone", async () => {
+    // Another tab dropped the metadata; the refresh cookie lives on.
+    performRefreshMock.mockImplementation(async () => {
+      setAccessToken("fresh-access");
+      return { access: "fresh-access", user: refreshedMember };
+    });
+
+    renderProvider();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-loading").textContent).toBe("false"),
+    );
+    expect(probedAuth?.isAuthenticated).toBe(true);
+    expect(probedAuth?.user).toMatchObject({
+      id: "u-9",
+      roles: ["member"],
+      member_id: "m-9",
+    });
+    expect(JSON.parse(localStorage.getItem("auth") ?? "{}").user).toEqual(
+      refreshedMember,
+    );
+    // The access token stays in memory only.
+    expect(localStorage.getItem("auth")).not.toContain("fresh-access");
+  });
+
+  it("keeps a stored user, with what only this device knows about them", async () => {
+    localStorage.setItem(
+      "auth",
+      JSON.stringify({
+        user: { id: "u-9", roles: ["member"], edit_mode: "modal" },
+      }),
+    );
+    performRefreshMock.mockImplementation(async () => {
+      setAccessToken("fresh-access");
+      return { access: "fresh-access", user: refreshedMember };
+    });
+
+    renderProvider();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-loading").textContent).toBe("false"),
+    );
+    expect(probedAuth?.user?.edit_mode).toBe("modal");
+    expect(JSON.parse(localStorage.getItem("auth") ?? "{}").user.edit_mode).toBe(
+      "modal",
+    );
+  });
+
+  it("stays without a user when the refresh answer has none (super-admin realm)", async () => {
+    performRefreshMock.mockImplementation(async () => {
+      setAccessToken("admin-access");
+      return { access: "admin-access" };
+    });
+
+    renderProvider();
+
+    await waitFor(() =>
+      expect(screen.getByTestId("auth-loading").textContent).toBe("false"),
+    );
+    expect(probedAuth?.isAuthenticated).toBe(true);
+    expect(probedAuth?.user).toBeNull();
+    expect(localStorage.getItem("auth")).toBeNull();
   });
 });
 
@@ -273,7 +353,7 @@ describe("AuthContext.logout", () => {
   beforeEach(() => {
     performRefreshMock.mockImplementation(async () => {
       setAccessToken("tok");
-      return "tok";
+      return { access: "tok" };
     });
   });
 
@@ -356,10 +436,10 @@ describe("AuthContext.logout", () => {
 });
 
 describe("AuthContext token sync + helpers", () => {
-  it("flips to logged-out when the tokenStore is cleared externally", async () => {
+  it("flips to logged-out when the tokenStore is cleared externally, leaving the shared metadata", async () => {
     performRefreshMock.mockImplementation(async () => {
       setAccessToken("tok");
-      return "tok";
+      return { access: "tok" };
     });
 
     renderProvider();
@@ -369,15 +449,18 @@ describe("AuthContext token sync + helpers", () => {
     act(() => probedAuth!.setSession("tok", { id: "u-1" }));
     expect(localStorage.getItem("auth")).not.toBeNull();
 
-    // Simulate the api response interceptor blowing away the token after a
-    // failed silent refresh.
+    // Simulate api.ts clearing the token after a failed silent refresh.
     act(() => clearAccessToken());
 
     await waitFor(() =>
       expect(screen.getByTestId("auth-isauth").textContent).toBe("false"),
     );
     expect(probedAuth?.user).toBeNull();
-    expect(localStorage.getItem("auth")).toBeNull();
+    // Other tabs share the stored metadata; whether the session is over for
+    // them too is api.ts's call, from the server's answer.
+    expect(JSON.parse(localStorage.getItem("auth") ?? "{}").user.id).toBe(
+      "u-1",
+    );
   });
 
   it("hasRole consults the live user", async () => {
@@ -436,7 +519,7 @@ describe("AuthContext token sync + helpers", () => {
       expect(screen.getByTestId("auth-loading").textContent).toBe("false"),
     );
 
-    performRefreshMock.mockResolvedValueOnce("rotated");
+    performRefreshMock.mockResolvedValueOnce({ access: "rotated" });
     await expect(probedAuth!.refreshAccessToken()).resolves.toBe("rotated");
 
     performRefreshMock.mockRejectedValueOnce(new Error("rotation failed"));

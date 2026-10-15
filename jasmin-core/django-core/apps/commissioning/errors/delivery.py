@@ -230,6 +230,15 @@ class WaitingListOfferMemberHasNoEmail(ConflictError):
     code = "waiting_list_offer.member_has_no_email"
 
 
+class WaitingListOfferEntryClosed(ConflictError):
+    """No spot can be offered to this entry: the subscription was cancelled or
+    rejected, or its member has cancelled the membership or was rejected. The
+    offer would hold a station-day slot for an application the office turned
+    down, or for a member whose subscription the confirm refuses."""
+
+    code = "waiting_list_offer.entry_closed"
+
+
 class DeliveryStationCapacityBelowOccupancy(BadRequestError):
     """Refuse setting a station-day's ``capacity`` below the shares already
     committed (confirmed deliveries + active draft reservations) for any week

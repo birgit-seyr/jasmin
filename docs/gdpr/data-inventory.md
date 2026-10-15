@@ -72,7 +72,7 @@ shares. Most PII concentrates here.
 | `company_name`, `first_name`, `last_name` | Identification | Display, invoice header, salutation | Contract | Membership + 10y | Composite index on `(last_name, first_name)` for search |
 | `pickup_name` | Identification (third party) | Person collecting the share on behalf of the member | Contract | Membership + 10y | Free-text |
 | `address`, `zip_code`, `city`, `country` | Contact | Delivery routing, invoice address | Contract | Membership + 10y | |
-| `email`, `email_2`, `email_3` | Contact | Notifications, invoice delivery | Contract (primary); Consent (secondary) | Membership + 10y | Primary `email` is unique + indexed |
+| `email`, `email_2`, `email_3` | Contact | Notifications, invoice delivery | Contract (primary); Consent (secondary) | Membership + 10y | Not unique: two members may share an inbox. Only the office edits them. The Art. 15 export and Art. 17 erasure find email-log and login records by one only while no other record holds it |
 | `iban` | Financial | SEPA Direct Debit | Contract | Membership + 10y | **Encrypted at rest** (Fernet via `django-encrypted-model-fields`) |
 | `account_owner` | Financial | Named bank-account holder when ≠ member | Contract | Membership + 10y | **Encrypted at rest** |
 | `is_active`, `is_trial`, `is_cancelled`, `is_student` | Membership | Membership status | Contract | Membership + 10y | |
@@ -155,6 +155,13 @@ The full **body** of each email is NOT persisted on `EmailLog` —
 only the metadata above. The template lives in `EmailTemplate`
 (append-only versioned via the audit log) so the historical body
 can be reconstructed.
+
+The Art. 15 export names a row's `recipient` only when the address is on
+the subject's own records. A mail about the subject that went to the farm's
+office or accounting address, or to any other address, carries
+`recipient_category` (`farm_office`, `farm_accounting`, `other`) instead,
+with `provider_message_id` and `error` left blank: the accounting address
+is often a document-upload inbox, and a bounce text can echo the address.
 
 ---
 

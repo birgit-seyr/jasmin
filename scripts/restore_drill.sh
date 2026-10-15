@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Restore drill — restores a backup into a throwaway sandbox postgres and
-# writes a per-table row-count comparison vs the live prod DB, dry-runs the
-# GDPR erasure replay against the restored data, then unpacks the chosen
-# media archive to prove that half restores too.
+# Restore drill — restores a backup into a throwaway sandbox postgres with
+# backups/restore.sh itself and writes a per-table row-count comparison vs
+# the live prod DB, dry-runs the GDPR erasure replay against the restored
+# data, restores the backup once more over a migrated copy of it, then
+# unpacks the chosen media archive to prove that half restores too.
 #
 # Usage:
 #     ./scripts/restore_drill.sh                       # newest file in ./backups/
@@ -24,15 +25,38 @@
 #     path or MEDIA_ARCHIVE always wins. Expect the row-count comparison to
 #     show more drift against live for an older dump.
 #
+# Restores:
+#     Both restores run backups/restore.sh from this checkout in the backup
+#     image, the way a real restore runs: into a new database, then the swap
+#     (confirmed up front), against the sandbox only. Its /backups is a
+#     scratch directory holding just the dump, so its ledger refresh writes
+#     nowhere near the real ledger. A plain .sql is first wrapped the way
+#     backup.sh writes dumps, under a throwaway passphrase, since restore.sh
+#     reads only those.
+#
+#     The first restore goes onto a server without the database, so
+#     restore.sh only renames its copy. The second meets what a real one
+#     meets: a live database that has grown since the dump, which the swap
+#     replaces. The sandbox database plays that part: the restored backup,
+#     migrated by the replay dry run when that ran, plus in every schema a
+#     table with a foreign key into a table of the dump, and a schema the
+#     dump doesn't know with a foreign key into public. These are what a
+#     dump's DROP statements fail on when it is replayed over a database.
+#     The restore has to bring back the dump's tables and nothing else, and
+#     keep the replaced database, added objects included.
+#
 # Requires:
 #     - docker
 #     - the prod stack running (we read POSTGRES_USER/DB from its env and
-#       query the live DB for the comparison column)
+#       query the live DB for the comparison column, and run restore.sh in
+#       the backup container's image; BACKUP_IMAGE=<image> names another)
 #     - for .sql.gz.gpg files: BACKUP_ENCRYPTION_KEY in the environment
 #       (sourced from .env on prod, kept in your password manager)
+#     - room under $TMPDIR for the decrypted dump, which restore.sh stages
+#       next to the dump (point TMPDIR elsewhere if /tmp is small)
 #     - for the media archive: gpg + tar on the host, and room under $TMPDIR
-#       for one unpacked copy of the media tree (point TMPDIR elsewhere if
-#       /tmp is small — the media tree is PDFs and images, not rows)
+#       for one unpacked copy of the media tree (the media tree is PDFs and
+#       images, not rows)
 #
 # Output:
 #     backups/restore-drills/YYYY-MM-DD_HHMMSS.md  (markdown; gitignored, next to
@@ -41,19 +65,20 @@
 #     record of every drill.
 #
 # Exit status:
-#     Non-zero if the media archive was found but failed to restore, or if
-#     the erasure replay could not run against the restored data. A missing
-#     media archive is not a failure — a deployment with no uploads yet
-#     legitimately has none.
+#     Non-zero if either restore failed, if the media archive was found but
+#     failed to restore, or if the erasure replay could not run against the
+#     restored data. A missing media archive is not a failure — a deployment
+#     with no uploads yet legitimately has none.
 #
 # Safety:
 #     The sandbox container is fully isolated (no host port, default
-#     bridge network only) and torn down at the end. Prod is read-only
-#     for the row-count query — no writes anywhere near it. The media
-#     archive is unpacked into a throwaway mktemp dir, removed by the exit
-#     trap, and NEVER into media_volume, which holds the live uploads.
-#     The drill writes only its log, under backups/restore-drills/; no
-#     backup artifact is moved or deleted.
+#     bridge network only) and torn down at the end, with every database
+#     the restores made in it. Prod is read-only for the row-count query —
+#     no writes anywhere near it. The dump is staged and the media
+#     archive unpacked in throwaway mktemp dirs, removed by the exit
+#     trap, and NEVER in ./backups or media_volume, which hold the real
+#     backups and the live uploads. The drill writes only its log, under
+#     backups/restore-drills/; no backup artifact is moved or deleted.
 
 set -euo pipefail
 
@@ -78,6 +103,20 @@ MEDIA_FAILED=0
 APP_ENV_FILE=""
 REPLAY_STATUS="not run"
 REPLAY_FAILED=0
+# Restore state. SCRATCH_DIR is restore.sh's /backups: the dump and, while a
+# restore runs, its decrypted copy. Declared up front for the exit trap.
+RESTORE_SH="$(pwd)/backups/restore.sh"
+SCRATCH_DIR=""
+RESTORE_STATUS="not run"
+MIGRATED_STATUS="not run"
+MIGRATED_FAILED=0
+TABLE_COUNT_SQL="SELECT count(*) FROM pg_tables
+                 WHERE schemaname NOT IN ('pg_catalog', 'information_schema')"
+# The tables the restore over a migrated copy adds, and has to see gone.
+DRILL_OBJECTS_SQL="SELECT count(*) FROM pg_class c
+                   JOIN pg_namespace n ON n.oid = c.relnamespace
+                   WHERE c.relkind = 'r'
+                     AND (c.relname = 'restore_drill_extra' OR n.nspname = 'restore_drill_tenant')"
 # "newest" (default) or "random" — see "Artifact choice" in the header.
 DRILL_PICK="${DRILL_PICK:-newest}"
 case "$DRILL_PICK" in
@@ -125,6 +164,25 @@ if [ -z "$PROD_POSTGRES_CONTAINER" ]; then
     exit 1
 fi
 
+if [ ! -f "$RESTORE_SH" ]; then
+    echo "ERROR: $RESTORE_SH not found. Run the drill from the repo root." >&2
+    exit 1
+fi
+
+# restore.sh needs psql, gpg and backup.sh, which the backup image has.
+BACKUP_IMAGE="${BACKUP_IMAGE:-}"
+if [ -z "$BACKUP_IMAGE" ]; then
+    BACKUP_CONTAINER="$(docker compose ps -q backup 2>/dev/null || true)"
+    if [ -n "$BACKUP_CONTAINER" ]; then
+        BACKUP_IMAGE="$(docker inspect -f '{{.Config.Image}}' "$BACKUP_CONTAINER")"
+    fi
+fi
+if [ -z "$BACKUP_IMAGE" ]; then
+    echo "ERROR: backup container not found, so there is no image to run restore.sh in." >&2
+    echo "Start it (docker compose up -d backup) or name an image: BACKUP_IMAGE=<image> $0" >&2
+    exit 1
+fi
+
 # ── Prep output dir + header ───────────────────────────────────────────────
 mkdir -p "$OUTPUT_DIR"
 BACKUP_MTIME=$(date -r "$BACKUP" '+%Y-%m-%d %H:%M:%S')
@@ -154,6 +212,9 @@ cleanup() {
     if [ -n "$APP_ENV_FILE" ]; then
         rm -f "$APP_ENV_FILE"
     fi
+    if [ -n "$SCRATCH_DIR" ] && [ -d "$SCRATCH_DIR" ]; then
+        rm -rf "$SCRATCH_DIR"
+    fi
     if docker ps -q --filter "name=^${SANDBOX_CONTAINER}$" | grep -q .; then
         echo "Tearing down sandbox container..."
         docker stop "$SANDBOX_CONTAINER" > /dev/null 2>&1 || true
@@ -172,20 +233,23 @@ docker run -d --rm \
     postgres:15-alpine > /dev/null
 
 # Wait for accept-connections. ``pg_isready`` returns 0 once it's ready.
+# Over TCP: on its first start the image runs a temporary server on the
+# socket only, which answers on it too, and stops it again.
 for _ in $(seq 1 30); do
-    if docker exec "$SANDBOX_CONTAINER" pg_isready -U "$SANDBOX_USER" -d "$SANDBOX_DB" > /dev/null 2>&1; then
+    if docker exec "$SANDBOX_CONTAINER" pg_isready -h 127.0.0.1 -U "$SANDBOX_USER" -d "$SANDBOX_DB" > /dev/null 2>&1; then
         break
     fi
     sleep 1
 done
 
-if ! docker exec "$SANDBOX_CONTAINER" pg_isready -U "$SANDBOX_USER" -d "$SANDBOX_DB" > /dev/null 2>&1; then
+if ! docker exec "$SANDBOX_CONTAINER" pg_isready -h 127.0.0.1 -U "$SANDBOX_USER" -d "$SANDBOX_DB" > /dev/null 2>&1; then
     echo "ERROR: sandbox postgres didn't become ready in 30s" >&2
     exit 1
 fi
 
 # ── Restore ────────────────────────────────────────────────────────────────
-echo "Restoring backup into sandbox (this may take a minute)..."
+# Through backups/restore.sh (see "Restores" in the header).
+SCRATCH_DIR="$(mktemp -d)"
 case "$BACKUP" in
     *.sql.gz.gpg)
         if [ -z "${BACKUP_ENCRYPTION_KEY:-}" ]; then
@@ -193,18 +257,20 @@ case "$BACKUP" in
             echo "Source .env on the prod host or paste the passphrase from your password manager." >&2
             exit 1
         fi
-        gpg --batch --yes --decrypt --passphrase "$BACKUP_ENCRYPTION_KEY" "$BACKUP" \
-            | gunzip \
-            | docker exec -i "$SANDBOX_CONTAINER" \
-                psql -v ON_ERROR_STOP=1 --single-transaction \
-                -U "$SANDBOX_USER" -d "$SANDBOX_DB" \
-                > /dev/null
+        DUMP_NAME="$(basename "$BACKUP")"
+        DUMP_SOURCE="$(cd "$(dirname "$BACKUP")" && pwd)/${DUMP_NAME}"
+        RESTORE_KEY="$BACKUP_ENCRYPTION_KEY"
         ;;
     *.sql)
-        docker exec -i "$SANDBOX_CONTAINER" \
-            psql -v ON_ERROR_STOP=1 --single-transaction \
-            -U "$SANDBOX_USER" -d "$SANDBOX_DB" \
-            < "$BACKUP" > /dev/null
+        DUMP_NAME="drill_dump.sql.gz.gpg"
+        DUMP_SOURCE="${SCRATCH_DIR}/${DUMP_NAME}"
+        RESTORE_KEY="drill_$(date +%s)_$RANDOM"
+        RESTORE_KEY="$RESTORE_KEY" docker run --rm -i \
+            -v "${SCRATCH_DIR}:/backups" \
+            -e RESTORE_KEY \
+            --entrypoint sh "$BACKUP_IMAGE" \
+            -c 'gzip | gpg --batch --yes --quiet --symmetric --cipher-algo AES256 --passphrase "$RESTORE_KEY" --output "/backups/$1"' \
+            sh "$DUMP_NAME" < "$BACKUP"
         ;;
     *)
         echo "ERROR: unsupported backup format: $BACKUP" >&2
@@ -212,6 +278,78 @@ case "$BACKUP" in
         exit 1
         ;;
 esac
+
+# Runs restore.sh against the sandbox, the swap confirmed, and prints its
+# output. The encryption key reaches docker through its environment, not
+# its arguments.
+run_restore() {
+    BACKUP_ENCRYPTION_KEY="$RESTORE_KEY" docker run --rm \
+        --network "container:${SANDBOX_CONTAINER}" \
+        -v "${SCRATCH_DIR}:/backups" \
+        -v "${DUMP_SOURCE}:/backups/${DUMP_NAME}:ro" \
+        -v "${RESTORE_SH}:/drill/restore.sh:ro" \
+        -e POSTGRES_HOST=127.0.0.1 \
+        -e POSTGRES_PORT=5432 \
+        -e POSTGRES_DB="$SANDBOX_DB" \
+        -e POSTGRES_USER="$SANDBOX_USER" \
+        -e POSTGRES_PASSWORD="$SANDBOX_PASSWORD" \
+        -e BACKUP_ENCRYPTION_KEY \
+        -e ALLOW_MISSING_GDPR_LEDGER=1 \
+        -e CONFIRM_SWAP=1 \
+        --entrypoint sh "$BACKUP_IMAGE" \
+        /drill/restore.sh "/backups/${DUMP_NAME}" 2>&1
+}
+
+# Prints the result of the query $2 on the sandbox database $1.
+sandbox_query() {
+    docker exec "$SANDBOX_CONTAINER" \
+        psql -X -At -v ON_ERROR_STOP=1 -U "$SANDBOX_USER" -d "$1" -c "$2"
+}
+
+# restore.sh's comparison of the restored copy with the database it replaced,
+# and the swap; its closing banner is for a real restore only.
+restore_report() {
+    sed -n '/^Restored copy,/,/Database restored:/p'
+}
+
+# The first restore goes onto a server without the database and only
+# renames; the second one, over a migrated copy, swaps.
+docker exec "$SANDBOX_CONTAINER" dropdb -U "$SANDBOX_USER" "$SANDBOX_DB"
+
+echo "Restoring backup into sandbox through backups/restore.sh (this may take a minute)..."
+{
+    echo "## Restore"
+    echo ""
+    echo "Through \`backups/restore.sh\`, into a new database that then takes the"
+    echo "sandbox database's name."
+    echo ""
+} >> "$OUTPUT_FILE"
+if RESTORE_OUTPUT="$(run_restore)"; then
+    RESTORE_STATUS="PASS"
+    {
+        echo "- **Result:** PASS"
+        echo ""
+        echo '```'
+        echo "$RESTORE_OUTPUT" | restore_report
+        echo '```'
+        echo ""
+    } >> "$OUTPUT_FILE"
+else
+    RESTORE_STATUS="FAIL"
+    echo "ERROR: the backup did not restore:" >&2
+    echo "$RESTORE_OUTPUT" | tail -n 40 >&2
+    {
+        echo "- **Result:** FAIL — the backup did not restore. Treat this as an incident."
+        echo ""
+        echo '```'
+        echo "$RESTORE_OUTPUT" | tail -n 40
+        echo '```'
+    } >> "$OUTPUT_FILE"
+    echo ""
+    echo "RESTORE FAILED — the drill did NOT pass. See $OUTPUT_FILE" >&2
+    exit 1
+fi
+RESTORED_TABLES="$(sandbox_query "$SANDBOX_DB" "$TABLE_COUNT_SQL")"
 
 echo "Restore complete. Running row-count comparison..."
 
@@ -350,6 +488,101 @@ else
     APP_ENV_FILE=""
 fi
 
+# ── Restore over a migrated copy ───────────────────────────────────────────
+# See "Restores" in the header. The added objects are what a migration or a
+# new tenant adds: a table holding a foreign key into a table of the dump,
+# in every schema, and a schema of its own whose table points into public.
+{
+    echo ""
+    echo "## Restore over a migrated copy"
+    echo ""
+} >> "$OUTPUT_FILE"
+echo "Restoring the backup again, over a migrated copy of it..."
+MIGRATED_OUTPUT=""
+MIGRATED_DETAIL=""
+docker exec -i "$SANDBOX_CONTAINER" \
+    psql -X -q -v ON_ERROR_STOP=1 -U "$SANDBOX_USER" -d "$SANDBOX_DB" <<'SQL' || true
+DO $$
+DECLARE
+    target record;
+BEGIN
+    FOR target IN
+        SELECT DISTINCT ON (n.nspname)
+               n.nspname AS schema_name, c.relname AS table_name,
+               a.attname AS column_name,
+               format_type(a.atttypid, a.atttypmod) AS column_type
+        FROM pg_constraint k
+        JOIN pg_class c ON c.oid = k.conrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.conkey[1]
+        WHERE k.contype = 'p' AND cardinality(k.conkey) = 1
+          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+          AND n.nspname !~ '^pg_'
+        ORDER BY n.nspname, c.relname
+    LOOP
+        EXECUTE format(
+            'CREATE TABLE %I.restore_drill_extra (id integer PRIMARY KEY, ref %s REFERENCES %I.%I (%I))',
+            target.schema_name, target.column_type,
+            target.schema_name, target.table_name, target.column_name);
+        IF target.schema_name = 'public' THEN
+            CREATE SCHEMA restore_drill_tenant;
+            EXECUTE format(
+                'CREATE TABLE restore_drill_tenant.extra (id integer PRIMARY KEY, ref %s REFERENCES public.%I (%I))',
+                target.column_type, target.table_name, target.column_name);
+        END IF;
+    END LOOP;
+END
+$$;
+SQL
+ADDED="$(sandbox_query "$SANDBOX_DB" "$DRILL_OBJECTS_SQL" || echo 0)"
+REPLACED_DB=""
+if [ "$ADDED" = "0" ]; then
+    MIGRATED_DETAIL="no table could be added to restore over"
+elif ! MIGRATED_OUTPUT="$(run_restore)"; then
+    MIGRATED_DETAIL="restore.sh failed over the migrated copy"
+else
+    REPLACED_DB="$(sandbox_query postgres \
+        "SELECT datname FROM pg_database
+         WHERE starts_with(datname, '${SANDBOX_DB}_pre_restore_')
+         ORDER BY datname DESC LIMIT 1" || true)"
+    LEFT="$(sandbox_query "$SANDBOX_DB" "$DRILL_OBJECTS_SQL" || echo ERR)"
+    TABLES="$(sandbox_query "$SANDBOX_DB" "$TABLE_COUNT_SQL" || echo ERR)"
+    KEPT="ERR"
+    if [ -n "$REPLACED_DB" ]; then
+        KEPT="$(sandbox_query "$REPLACED_DB" "$DRILL_OBJECTS_SQL" || echo ERR)"
+    fi
+    if [ "$LEFT" != "0" ]; then
+        MIGRATED_DETAIL="${LEFT} of the added tables are still in ${SANDBOX_DB} after the restore"
+    elif [ "$TABLES" != "$RESTORED_TABLES" ]; then
+        MIGRATED_DETAIL="${SANDBOX_DB} has ${TABLES} tables after the restore, the backup ${RESTORED_TABLES}"
+    elif [ "$KEPT" != "$ADDED" ]; then
+        MIGRATED_DETAIL="the replaced database ${REPLACED_DB:-(none)} holds ${KEPT} of the ${ADDED} added tables"
+    fi
+fi
+if [ -z "$MIGRATED_DETAIL" ]; then
+    MIGRATED_STATUS="PASS"
+    echo "  restore over the migrated copy OK"
+    {
+        echo "- **Result:** PASS — restored over a database holding ${ADDED} tables the"
+        echo "  backup doesn't have, each with a foreign key into it. They are gone from"
+        echo "  \`${SANDBOX_DB}\` and kept in the replaced \`${REPLACED_DB}\`."
+    } >> "$OUTPUT_FILE"
+else
+    MIGRATED_STATUS="FAIL"
+    MIGRATED_FAILED=1
+    echo "ERROR: restore over a migrated copy: ${MIGRATED_DETAIL}" >&2
+    {
+        echo "- **Result:** FAIL — ${MIGRATED_DETAIL}. A real restore meets a live"
+        echo "  database like this one. Treat this as an incident."
+        if [ -n "$MIGRATED_OUTPUT" ]; then
+            echo ""
+            echo '```'
+            echo "$MIGRATED_OUTPUT" | tail -n 40
+            echo '```'
+        fi
+    } >> "$OUTPUT_FILE"
+fi
+
 # ── Media archive verification ─────────────────────────────────────────────
 # backups/backup.sh verifies the media tar only as far as ``tar -t`` (a
 # listing). This step actually unpacks it, so a drill produces evidence that
@@ -443,9 +676,11 @@ fi
     echo ""
     echo "## Summary"
     echo ""
+    echo "- Restore (backups/restore.sh): **$RESTORE_STATUS**"
     echo "- Tables compared: **$TOTAL_TABLES**"
     echo "- Tables with diff > ±1000 rows: **$LARGE_DIFFS** (eyeball these in sign-off)"
     echo "- GDPR erasure replay (dry run): **$REPLAY_STATUS**"
+    echo "- Restore over a migrated copy: **$MIGRATED_STATUS**"
     echo "- Media archive: **$MEDIA_STATUS**"
     echo ""
     echo "## Sign-off"
@@ -461,7 +696,8 @@ echo "Drill complete."
 echo "Log: $OUTPUT_FILE"
 echo ""
 echo "Next steps:"
-echo "  1. Review the row-count table, the erasure replay and the media verification result"
+echo "  1. Review the row-count table, the erasure replay, the restore over a migrated"
+echo "     copy and the media verification result"
 echo "  2. Fill in the sign-off block (Outcome: PASS / FAIL + notes)"
 echo "  3. Mark the \"Restore-from-backup drill\" item of the super-admin ops checklist"
 echo "     done, with the outcome and the log's file name in the notes"
@@ -470,10 +706,14 @@ if [ "$REPLAY_FAILED" -ne 0 ]; then
     echo ""
     echo "GDPR ERASURE REPLAY FAILED — the drill did NOT pass. See $OUTPUT_FILE" >&2
 fi
+if [ "$MIGRATED_FAILED" -ne 0 ]; then
+    echo ""
+    echo "RESTORE OVER A MIGRATED COPY FAILED — the drill did NOT pass. See $OUTPUT_FILE" >&2
+fi
 if [ "$MEDIA_FAILED" -ne 0 ]; then
     echo ""
     echo "MEDIA VERIFICATION FAILED — the drill did NOT pass. See $OUTPUT_FILE" >&2
 fi
-if [ "$REPLAY_FAILED" -ne 0 ] || [ "$MEDIA_FAILED" -ne 0 ]; then
+if [ "$REPLAY_FAILED" -ne 0 ] || [ "$MIGRATED_FAILED" -ne 0 ] || [ "$MEDIA_FAILED" -ne 0 ]; then
     exit 1
 fi

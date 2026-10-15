@@ -65,11 +65,12 @@ class LoginRequestSerializer(serializers.Serializer):
     )
 
     def validate_email(self, value: str) -> str:
-        # Normalize so django-axes keys ONE lockout bucket per account: the DB
-        # lookup is ``email__iexact``, so ``Foo@x`` and ``foo@x`` are the same
-        # user, and axes keys on the credential string handed to
-        # ``authenticate()`` — without normalization, case-variation sidesteps
-        # the (username, ip) lockout entirely.
+        # The lookup is ``email__iexact``, so ``Foo@x`` and ``foo@x`` are the
+        # same user, and the log lines name it in this form. The (email, IP)
+        # lockout doesn't rely on it: it keys every address it is handed
+        # through ``login_lockout.axes_username``, which also folds the letters
+        # ``iexact`` folds beyond ASCII case — the login's typed address and the
+        # stored one that step-up and 2FA report under alike.
         return value.strip().lower()
 
 
@@ -99,6 +100,7 @@ class LoginResponseSerializer(serializers.Serializer):
 
 class RefreshResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
+    user = LoginUserSerializer()
     tenant = LoginTenantSerializer(required=False)
 
 
