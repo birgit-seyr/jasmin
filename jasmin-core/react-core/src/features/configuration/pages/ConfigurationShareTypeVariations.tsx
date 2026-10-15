@@ -35,6 +35,7 @@ import {
   useActiveStatusColumn,
   useInvalidateAfterTableMutation,
   useShareTypeVariationSizeOptions,
+  useTenant,
   useTimeBoundColumns,
 } from "@hooks/index";
 import { getDateRangeStatus, isFieldDisabled, notify } from "@shared/utils";
@@ -289,6 +290,11 @@ export default function ConfigurationShareTypeVariations() {
   const activeStatusColumn = useActiveStatusColumn({
     defaultSortOrder: "descend",
   });
+  const { getSetting } = useTenant();
+  const weeklyUpload = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
 
   const shareTypeColumns = useMemo(
     () =>
@@ -374,40 +380,46 @@ export default function ConfigurationShareTypeVariations() {
             <>{getShareTypeVariationSizeLabel(value)}</>
           ),
         },
-        {
-          title: (
-            <div className="checkbox-column-title">
-              {t("commissioning.amount_of_jokers")}
-            </div>
-          ),
-          dataIndex: "amount_of_jokers",
-          key: "amount_of_jokers",
-          inputType: "integer",
-          width: "3em",
-          align: "center",
-          // Always editable; the "may only increase while in use" floor is
-          // enforced in ``customSave`` (mirrors the capacity floor).
-          render: (_: unknown, record: TableRecord) =>
-            record.amount_of_jokers == 0 ? "-" : record.amount_of_jokers,
-        },
-        {
-          title: (
-            <div className="checkbox-column-title">
-              {t("commissioning.amount_of_donation_jokers")}
-            </div>
-          ),
-          dataIndex: "amount_of_donation_jokers",
-          key: "amount_of_donation_jokers",
-          inputType: "integer",
-          align: "center",
-          width: "3em",
-          // Always editable; the "may only increase while in use" floor is
-          // enforced in ``customSave`` (mirrors the capacity floor).
-          render: (_: unknown, record: TableRecord) =>
-            record.amount_of_donation_jokers == 0
-              ? "-"
-              : record.amount_of_donation_jokers,
-        },
+        // Jokers are a subscription's skipped weeks; a tenant that uploads
+        // its weekly share amounts runs no subscriptions.
+        ...(weeklyUpload
+          ? []
+          : [
+              {
+                title: (
+                  <div className="checkbox-column-title">
+                    {t("commissioning.amount_of_jokers")}
+                  </div>
+                ),
+                dataIndex: "amount_of_jokers",
+                key: "amount_of_jokers",
+                inputType: "integer",
+                width: "3em",
+                align: "center",
+                // Always editable; the "may only increase while in use" floor
+                // is enforced in ``customSave`` (mirrors the capacity floor).
+                render: (_: unknown, record: TableRecord) =>
+                  record.amount_of_jokers == 0 ? "-" : record.amount_of_jokers,
+              },
+              {
+                title: (
+                  <div className="checkbox-column-title">
+                    {t("commissioning.amount_of_donation_jokers")}
+                  </div>
+                ),
+                dataIndex: "amount_of_donation_jokers",
+                key: "amount_of_donation_jokers",
+                inputType: "integer",
+                align: "center",
+                width: "3em",
+                // Always editable; the "may only increase while in use" floor
+                // is enforced in ``customSave`` (mirrors the capacity floor).
+                render: (_: unknown, record: TableRecord) =>
+                  record.amount_of_donation_jokers == 0
+                    ? "-"
+                    : record.amount_of_donation_jokers,
+              },
+            ]),
         {
           title: (
             <>
@@ -468,6 +480,7 @@ export default function ConfigurationShareTypeVariations() {
       validUntilColumn,
       getShareTypeVariationSizeLabel,
       t,
+      weeklyUpload,
     ],
   );
 

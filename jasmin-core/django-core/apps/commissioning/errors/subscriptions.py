@@ -60,6 +60,13 @@ class SubscriptionAlreadyConfirmed(ConflictError):
     code = "subscription.already_confirmed"
 
 
+class SubscriptionAlreadyRejected(ConflictError):
+    """Confirm called on a subscription the office has rejected. Confirmed, it
+    would be materialised and billed while it shows as rejected."""
+
+    code = "subscription.already_rejected"
+
+
 class SubscriptionMemberNotAdmitted(BadRequestError):
     """In onboarding mode, a subscription of a member who has already left is
     confirmed before the member. Confirming a subscription doesn't admit a

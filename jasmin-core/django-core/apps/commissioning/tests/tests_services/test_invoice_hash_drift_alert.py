@@ -8,7 +8,7 @@ import pytest
 
 from apps.commissioning.tasks import nightly_invoice_hash_check
 
-FIND_DRIFTED = "apps.commissioning.tasks.InvoiceService.find_drifted_invoices"
+FIND_DRIFTED = "apps.commissioning.tasks.find_drifted_invoices"
 
 
 @pytest.mark.django_db

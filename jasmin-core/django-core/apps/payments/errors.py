@@ -42,6 +42,16 @@ class NoValidSepaMandates(BadRequestError):
     code = "billing_run.no_valid_mandates"
 
 
+class BillingRunChargesBeingReplanned(ConflictError):
+    """A re-plan (a subscription change, a pause edit, "Regenerate charges")
+    holds charges of the run being created, exported or deleted. Created anyway,
+    the run would leave them out without a word; an export or a delete would
+    have to wait for the re-plan, which can deadlock. Trying again once the
+    re-plan has committed goes through."""
+
+    code = "billing_run.charges_being_replanned"
+
+
 class BillingRunNotDraft(ConflictError):
     """Tried to export a run that is no longer DRAFT — a state conflict,
     not bad input. Re-exporting an EXPORTED run would re-issue charges."""
@@ -179,6 +189,7 @@ __all__ = [
     "BillingRunInvalidCollectionDate",
     "NoEligibleCharges",
     "NoValidSepaMandates",
+    "BillingRunChargesBeingReplanned",
     "BillingRunNotDraft",
     "BillingRunHasNoCharges",
     "SepaExportInvalid",

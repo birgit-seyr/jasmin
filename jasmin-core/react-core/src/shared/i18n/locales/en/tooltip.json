@@ -76,7 +76,7 @@
   "price_sum_articles": "Sum of the article prices (for plausibility check).",
   "solidarity_min_price": "The lowest price a member may choose under solidarity pricing. Empty = the reference price is the floor.",
   "share_type_variation_price_brutto": "Reference prices",
-  "variation_type": "Type of variant (pcs, bunch, weight …)",
+  "variation_type": "A composite variant is made up of other variants, e.g. an L of 1 M and 1 S.",
   "support_button": "Report a problem or ask for help",
   "auto_renewal": "If active, the subscription automatically renews at the end of the term.",
   "allowed_for_trial_subscription": "If enabled, this size can be chosen for trial subscriptions.",

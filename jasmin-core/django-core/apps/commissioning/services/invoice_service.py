@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -28,6 +26,7 @@ from ..utils.iso_week_utils import coerce_document_date
 from .delivery_note_invoices import current_invoices_by_delivery_note
 from .email_dispatch import load_pdf_attachments, send_document_email
 from .finalize_utils import finalize_children
+from .invoice_hash import compute_document_hash
 
 logger = logging.getLogger(__name__)
 
@@ -197,108 +196,6 @@ class InvoiceService:
         return content
 
     @staticmethod
-    def build_hash_payload(invoice: InvoiceReseller) -> dict:
-        """Canonical snapshot used to derive ``document_hash``.
-
-        Covers every field that legally affects the invoice's monetary
-        position: parent identity (number / prefix / date / reseller) and,
-        per line, ``amount`` / ``price_per_unit`` / ``rabatt`` / ``tax_rate``
-        — for both article items AND crate items.
-
-        Lines are sorted by pk so the payload is deterministic regardless
-        of fetch order; ``json.dumps(sort_keys=True)`` only sorts dict keys.
-        """
-        payload = {
-            "number": invoice.number,
-            "prefix": invoice.prefix,
-            "date": invoice.date.isoformat() if invoice.date else None,
-            "reseller_id": str(invoice.reseller.id),
-            "items": [
-                {
-                    "amount": str(item.amount),
-                    "price_per_unit": str(item.price_per_unit),
-                    "rabatt": item.rabatt,
-                    "tax_rate": str(item.tax_rate),
-                }
-                for item in invoice.items.order_by("pk")
-            ],
-            "crate_items": [
-                {
-                    "amount": str(crate.amount),
-                    "price_per_unit": (
-                        str(crate.price_per_unit)
-                        if crate.price_per_unit is not None
-                        else None
-                    ),
-                    "rabatt": crate.rabatt,
-                    "tax_rate": str(crate.tax_rate),
-                }
-                for crate in invoice.crate_items.order_by("pk")
-            ],
-        }
-        # v2 extends the sealed surface to the resolved §14/§14a recipient
-        # block and the document-type / cancellation identity, so a
-        # post-finalize edit to the reseller/contact row (or a forged
-        # document_type / storno linkage) shows up as drift. v1 documents
-        # keep the original payload so their stored hash still validates —
-        # legacy invoices must not all suddenly report as tampered.
-        if invoice.document_hash_version >= 2:
-            recipient = invoice.resolved_recipient()
-            payload["recipient"] = {
-                key: (str(value) if value is not None else None)
-                for key, value in recipient.items()
-            }
-            payload["document_type"] = invoice.document_type
-            payload["cancels_invoice_id"] = (
-                str(invoice.cancels_invoice_id) if invoice.cancels_invoice_id else None
-            )
-        return payload
-
-    @staticmethod
-    def compute_document_hash(invoice: InvoiceReseller) -> str:
-        """SHA-256 of the canonical payload (see ``build_hash_payload``)."""
-        payload = InvoiceService.build_hash_payload(invoice)
-        data_string = json.dumps(payload, sort_keys=True, default=str)
-        return hashlib.sha256(data_string.encode()).hexdigest()
-
-    @staticmethod
-    def find_drifted_invoices() -> list[dict]:
-        """Iterate every finalized invoice and return drift records for
-        any whose stored hash no longer matches the recomputed hash.
-
-        Returns ``[{"id", "number", "prefix", "stored", "recomputed"}, ...]``.
-        Used for tamper detection on commercial documents by the nightly
-        ``nightly_invoice_hash_check`` Huey task and the
-        ``check_invoice_hashes`` management command.
-        """
-        drift: list[dict] = []
-        finalized = (
-            InvoiceReseller.objects.filter(is_finalized=True)
-            .exclude(document_hash__isnull=True)
-            .exclude(document_hash="")
-            # build_hash_payload reads invoice.reseller per row. (items /
-            # crate_items are intentionally NOT prefetched: build_hash_payload
-            # iterates them via .order_by("pk"), and that SQL ordering is part
-            # of the deterministic GoBD hash — switching to a prefetched/
-            # Python-sorted list could change the order under a different
-            # collation and invalidate every stored hash.)
-            .select_related("reseller")
-        )
-        for invoice in finalized.iterator():
-            recomputed = InvoiceService.compute_document_hash(invoice)
-            if invoice.document_hash != recomputed:
-                drift.append(
-                    {
-                        "id": str(invoice.id),
-                        "number": invoice.number,
-                        "prefix": invoice.prefix,
-                        "stored": invoice.document_hash,
-                        "recomputed": recomputed,
-                    }
-                )
-        return drift
-
-    @staticmethod
     @transaction.atomic
     def create_from_delivery_note(
         delivery_note: DeliveryNoteReseller,
@@ -435,12 +332,6 @@ class InvoiceService:
 
         invoice.assign_final_number()
 
-        # Seal the wider v2 surface (recipient block + document-type /
-        # cancellation identity). Set the version BEFORE computing the hash
-        # so the payload and the stored version agree. This runs while the
-        # invoice is still unfinalized, so the finalized-update guard is not
-        # engaged yet.
-        invoice.document_hash_version = 2
         # Freeze the §14/§14a recipient from the live Reseller/Contact NOW, so
         # the hash (and any later re-render) reads the snapshot instead of the
         # live row — a subsequent edit or GDPR anonymization of the reseller
@@ -454,11 +345,10 @@ class InvoiceService:
         # even if the reseller's billing address was edited in between.
         if invoice.recipient_snapshot is None:
             invoice.recipient_snapshot = invoice._live_recipient()
-        invoice.document_hash = InvoiceService.compute_document_hash(invoice)
+        invoice.document_hash = compute_document_hash(invoice)
         invoice.save(
             update_fields=[
                 "document_hash",
-                "document_hash_version",
                 "recipient_snapshot",
                 "number",
                 "prefix",
@@ -566,13 +456,11 @@ class InvoiceService:
         # A storno must reproduce the EXACT §14/§14a recipient of the
         # invoice it cancels (a legally-paired Rechnung/Storno set), NOT a
         # re-resolved live address. resolved_recipient() returns the original's
-        # frozen v2 snapshot (or, for a legacy v1 original with no snapshot, a
-        # live fallback). Freeze it onto the still-unfinalized storno and mark it
-        # v2 so finalize_invoice seals THIS inherited block into the storno's
+        # frozen snapshot. Freeze it onto the still-unfinalized storno, so
+        # finalize_invoice seals THIS inherited block into the storno's
         # document_hash instead of overwriting it from the live reseller.
         storno.recipient_snapshot = invoice.resolved_recipient()
-        storno.document_hash_version = 2
-        storno.save(update_fields=["recipient_snapshot", "document_hash_version"])
+        storno.save(update_fields=["recipient_snapshot"])
 
         # A storno negates each line, copies the tax verbatim, and wires NO
         # provenance M2M; the snapshot mirrors the (negated) storno line so the

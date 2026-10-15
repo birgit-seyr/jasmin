@@ -6,7 +6,7 @@ import type { SettingConfig } from "./SettingsRenderer";
 
 const { Text } = Typography;
 
-// Mirror of the backend ``_render_remittance`` (apps/payments/services.py):
+// Mirror of the backend ``render_remittance`` (apps/payments/sepa_export.py):
 // same placeholders + German month names, so the office's live preview matches
 // the text actually written into the pain.008 ``Ustrd`` at export.
 const DE_MONTHS = [

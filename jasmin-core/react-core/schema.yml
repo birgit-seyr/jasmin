@@ -1673,6 +1673,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Subscription'
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -12106,6 +12112,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Member'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           description: ''
         '401':
           content:
@@ -24077,6 +24089,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/payments/billing_runs/{id}/:
     get:
       operationId: payments_billing_runs_retrieve
@@ -31572,9 +31590,6 @@ components:
           type: string
           readOnly: true
           nullable: true
-        document_hash_version:
-          type: integer
-          readOnly: true
         recipient_snapshot:
           readOnly: true
           nullable: true
@@ -35840,9 +35855,6 @@ components:
           type: string
           readOnly: true
           nullable: true
-        document_hash_version:
-          type: integer
-          readOnly: true
         recipient_snapshot:
           readOnly: true
           nullable: true

@@ -42,8 +42,10 @@ command -v docker >/dev/null 2>&1 || die "docker not found — run scripts/boots
 docker info >/dev/null 2>&1 || die "can't talk to docker (add your user to the 'docker' group and re-login)."
 [ -f "$ENV_FILE" ] || die ".env not found — restore the production .env from the password manager."
 
-# Read a value from .env (keeps everything after the first '=').
-envval() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2-; }
+# Read a value from .env (keeps everything after the first '='). A missing key
+# reads as empty: under pipefail, grep finding no line would fail the
+# assignment, and set -e would end the script without a message.
+envval() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- || true; }
 
 # 1a. no unfilled placeholders (the platform SMTP is a hard boot requirement).
 # Match "=CHANGE_ME" (value assignments) only — the file's comments mention the

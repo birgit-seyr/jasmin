@@ -29,8 +29,7 @@ from core.errors import InvalidQueryParam
 from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
 
-from .constants import OPEN_CHARGE_STATUSES, BillingRunStatus, ChargeStatus
-from .errors import BillingRunNotDraft
+from .constants import OPEN_CHARGE_STATUSES, ChargeStatus
 from .models import BillingProfile, BillingRun, ChargeSchedule
 from .scoping import scope_to_member
 from .serializers import (
@@ -560,6 +559,7 @@ class ChargeScheduleViewSet(RolePermissionsMixin, viewsets.ReadOnlyModelViewSet)
         responses={
             204: None,
             # BillingRunNotDraft — only DRAFT runs may be deleted.
+            # BillingRunChargesBeingReplanned — retry once the re-plan is done.
             409: ErrorResponseSerializer,
         },
     ),
@@ -610,6 +610,8 @@ class BillingRunViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             400: ErrorResponseSerializer,
             401: ErrorResponseSerializer,
             403: ErrorResponseSerializer,
+            # BillingRunChargesBeingReplanned — retry once the re-plan is done.
+            409: ErrorResponseSerializer,
         },
     )
     def create(self, request, *args, **kwargs):
@@ -618,11 +620,11 @@ class BillingRunViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # ``BillingRunService.create_run`` is the single enforcement point for
         # the run's own invariants — period order, a collection_date in the past
         # (SEPA can't settle a debit before today, so the bank would bounce the
-        # whole pain.008 batch), no eligible charges, no valid mandates — so a
-        # management command or bulk job is held to exactly the same rules as
-        # this endpoint. It raises payments JasminErrors, which carry stable
-        # dotted codes and reach the canonical handler on their own, no
-        # ``ValidationError`` re-wrap needed.
+        # whole pain.008 batch), no eligible charges, no valid mandates, charges
+        # a re-plan still holds — so a management command or bulk job is held
+        # to exactly the same rules as this endpoint. It raises payments
+        # JasminErrors, which carry stable dotted codes and reach the canonical
+        # handler on their own, no ``ValidationError`` re-wrap needed.
         run = BillingRunService.create_run(
             period_start=serializer.validated_data["period_start"],
             period_end=serializer.validated_data["period_end"],
@@ -636,19 +638,7 @@ class BillingRunViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         )
 
     def destroy(self, request, *args, **kwargs):
-        # ``get_object()`` is an unlocked snapshot — a concurrent ``export`` can
-        # flip the run DRAFT→EXPORTED between the status check and the delete,
-        # letting an exported SEPA run (with its pain.008 + ISSUED charges) be
-        # deleted. Re-fetch under a row lock and re-check inside the transaction,
-        # same pattern as ``BillingRunService.export``.
-        from django.db import transaction
-
-        run = self.get_object()
-        with transaction.atomic():
-            locked = BillingRun.objects.select_for_update().get(pk=run.pk)
-            if locked.status != BillingRunStatus.DRAFT:
-                raise BillingRunNotDraft("Only DRAFT billing runs can be deleted.")
-            locked.delete()
+        BillingRunService.delete_draft(self.get_object())
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(

@@ -239,12 +239,13 @@ class MemberService:
              subscriptions along with the member and frees what they hold:
              station-day reservations, waiting-list places and open offers,
              and the variation slot an accepted offer holds. It runs before
-             the member row is written: a subscription confirm locks its
-             subscription and then writes the member, so both take the locks
-             in the same order.
+             the member row is locked and written: a subscription confirm
+             locks its subscription and then writes the member, so both take
+             the locks in the same order.
           2. ``Member.reject()`` stamps ``admin_rejected_at`` +
              ``admin_rejection_reason`` and clears any stale
-             ``admin_confirmed_at``.
+             ``admin_confirmed_at``, on the member row re-read under its lock;
+             a member confirmed in the meantime is refused instead.
           3. ``accounts.application_rejected`` email scheduled via
              on_commit. It renders in the language of the login linked to
              the member, so it is scheduled before step 4 can unlink it.
@@ -270,6 +271,18 @@ class MemberService:
             )
 
         self._reject_open_subscriptions(member, admin_user=admin_user, reason=reason)
+        # Decide on the member row under the lock ``confirm`` takes, after the
+        # subscriptions' locks above. A member confirm committed since the
+        # caller read the row would otherwise be undone: its member number and
+        # entry date reset, the login it activated deactivated again, and a
+        # rejection mail sent after the approval mail. The refusal rolls the
+        # subscriptions' rejection back with it.
+        member = Member.objects.select_for_update().get(pk=member.pk)
+        if member.admin_confirmed:
+            raise MemberAlreadyConfirmed(
+                "Confirmed members cannot be rejected — they must be "
+                "offboarded instead."
+            )
         member.reject(admin_user=admin_user, reason=reason, save=True)
 
         if member.email:

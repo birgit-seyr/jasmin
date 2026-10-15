@@ -5,7 +5,7 @@ from django.utils import timezone
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task, db_task
 
-from apps.commissioning.services import InvoiceService
+from apps.commissioning.services.invoice_hash import find_drifted_invoices
 from apps.shared.display_formats import DisplayFormats
 from apps.shared.ops_alerts import alert_operator
 from apps.shared.retention import IMPORT_BATCH_RETENTION_DAYS
@@ -27,7 +27,7 @@ def nightly_invoice_hash_check():
     drifted: list[str] = []
 
     def check(tenant):
-        for inv in InvoiceService.find_drifted_invoices():
+        for inv in find_drifted_invoices():
             log.warning(
                 "invoice.hash_drift tenant=%s invoice_id=%s prefix=%s number=%s",
                 tenant.schema_name,

@@ -257,13 +257,11 @@ class TestInvoiceRecipientSnapshotLock:
     ):
         invoice = InvoiceResellerFactory()
         assert invoice.recipient_snapshot is None
-        original_hash_version = invoice.document_hash_version
 
         resp = api_client.patch(
             reverse("invoices-detail", kwargs={"pk": invoice.pk}),
             {
                 "recipient_snapshot": {"name": "Forged Recipient GmbH"},
-                "document_hash_version": original_hash_version + 5,
                 "note": "edited",
             },
             format="json",
@@ -273,7 +271,6 @@ class TestInvoiceRecipientSnapshotLock:
         invoice.refresh_from_db()
         assert invoice.note == "edited"
         assert invoice.recipient_snapshot is None
-        assert invoice.document_hash_version == original_hash_version
 
 
 # ---------------------------------------------------------------------------

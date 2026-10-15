@@ -67,6 +67,99 @@ interface ShareTypeVariationRecord extends TableRecord {
   [key: string]: unknown;
 }
 
+/**
+ * The columns only subscriptions use: the capacity, whether a trial
+ * subscription may take the variation, and the button to its prices. A tenant
+ * that uploads its weekly share amounts runs no subscriptions, so it gets none
+ * of them.
+ */
+function useSubscriptionColumns(
+  onOpenPriceModal: (record: ShareTypeVariationRecord) => void,
+): {
+  capacityColumns: EditableColumnConfig[];
+  trialColumns: EditableColumnConfig[];
+  priceColumns: EditableColumnConfig<ShareTypeVariationRecord>[];
+} {
+  const { t } = useTranslation();
+  const { getSetting } = useTenant();
+  const weeklyUpload = getSetting(
+    "uploads_weekly_share_amount",
+    false,
+  ) as boolean;
+  const allowsTrialSubscriptions = getSetting(
+    "allows_trial_subscriptions",
+    false,
+  ) as boolean;
+  return useMemo(() => {
+    if (weeklyUpload) {
+      return { capacityColumns: [], trialColumns: [], priceColumns: [] };
+    }
+    return {
+      capacityColumns: [
+        {
+          title: (
+            <>
+              {t("commissioning.capacity")}
+              <ToolTipIcon
+                title={t("tooltip.capacity_share_type_variations")}
+              />
+            </>
+          ),
+          dataIndex: "capacity",
+          key: "capacity",
+          inputType: "positive_integer",
+          width: "7em",
+          align: "center",
+        },
+      ] as EditableColumnConfig[],
+      trialColumns: allowsTrialSubscriptions
+        ? ([
+            {
+              title: (
+                <div className="text-xs">
+                  {t("commissioning.allowed_for_trial_subscription")}
+                  <ToolTipIcon
+                    title={t("tooltip.allowed_for_trial_subscription")}
+                  />
+                </div>
+              ),
+              dataIndex: "allowed_for_trial_subscription",
+              key: "allowed_for_trial_subscription",
+              inputType: "checkbox",
+              required: false,
+              width: "6em",
+              align: "center",
+            },
+          ] as EditableColumnConfig[])
+        : [],
+      priceColumns: [
+        {
+          title: "",
+          dataIndex: "action",
+          key: "action",
+          inputType: "select",
+          required: false,
+          disabled: true,
+          readOnly: true,
+          render: (_: unknown, record: ShareTypeVariationRecord) => (
+            <>
+              {record.key !== -1 && (
+                <Button
+                  type="primary"
+                  size="small"
+                  onClick={() => onOpenPriceModal(record)}
+                >
+                  {t("commissioning.configure_prices")}
+                </Button>
+              )}
+            </>
+          ),
+        },
+      ] as EditableColumnConfig<ShareTypeVariationRecord>[],
+    };
+  }, [weeklyUpload, allowsTrialSubscriptions, onOpenPriceModal, t]);
+}
+
 interface ShareTypeVariationModalProps {
   visible: boolean;
   onClose: () => void;
@@ -124,19 +217,13 @@ export default function ShareTypeVariationModal({
   const { format } = useNumberFormat();
   const { getSetting } = useTenant();
   const packing_mode = getSetting("packing_mode", "BOXES") as
-    | "BOXES"
-    | "BULK"
-    | "MIXED";
+    "BOXES" | "BULK" | "MIXED";
   // Tenant-wide gate for on-off (per-delivery opt-in) variations.
   // When False, the three opt-in configuration columns are hidden;
   // backend also refuses to persist ``requires_optin=True`` in that
   // state (see ``ShareTypeVariation.clean``).
   const allows_share_type_variation_optin = getSetting(
     "allows_share_type_variation_optin",
-    false,
-  ) as boolean;
-  const allows_trial_subscriptions = getSetting(
-    "allows_trial_subscriptions",
     false,
   ) as boolean;
   // Jokers (per-share-type opt-OUT) and per-delivery opt-IN are mutually
@@ -243,6 +330,8 @@ export default function ShareTypeVariationModal({
     },
     [],
   );
+  const { capacityColumns, trialColumns, priceColumns } =
+    useSubscriptionColumns(handleOpenPriceModal);
 
   const handleClosePriceModal = useCallback(() => {
     setPriceModalVisible(false);
@@ -414,21 +503,7 @@ export default function ShareTypeVariationModal({
           render: (text: unknown) =>
             text ? `${format(parseFloat(text as string), 2)} kg` : text,
         },
-        {
-          title: (
-            <>
-              {t("commissioning.capacity")}
-              <ToolTipIcon
-                title={t("tooltip.capacity_share_type_variations")}
-              />
-            </>
-          ),
-          dataIndex: "capacity",
-          key: "capacity",
-          inputType: "positive_integer",
-          width: "7em",
-          align: "center",
-        },
+        ...capacityColumns,
         {
           title: t("commissioning.description"),
           dataIndex: "description",
@@ -505,26 +580,7 @@ export default function ShareTypeVariationModal({
             displayField: "used_crate_name",
           },
         },
-        ...(allows_trial_subscriptions
-          ? [
-              {
-                title: (
-                  <div className="text-xs">
-                    {t("commissioning.allowed_for_trial_subscription")}
-                    <ToolTipIcon
-                      title={t("tooltip.allowed_for_trial_subscription")}
-                    />
-                  </div>
-                ),
-                dataIndex: "allowed_for_trial_subscription",
-                key: "allowed_for_trial_subscription",
-                inputType: "checkbox",
-                required: false,
-                width: "6em",
-                align: "center" as const,
-              },
-            ]
-          : []),
+        ...trialColumns,
         ...(packing_mode === "MIXED"
           ? [
               {
@@ -589,28 +645,7 @@ export default function ShareTypeVariationModal({
               },
             ]
           : []),
-        {
-          title: "",
-          dataIndex: "action",
-          key: "action",
-          inputType: "select",
-          required: false,
-          disabled: true,
-          readOnly: true,
-          render: (_: unknown, record: ShareTypeVariationRecord) => (
-            <>
-              {record.key !== -1 && (
-                <Button
-                  type="primary"
-                  size="small"
-                  onClick={() => handleOpenPriceModal(record)}
-                >
-                  {t("commissioning.configure_prices")}
-                </Button>
-              )}
-            </>
-          ),
-        },
+        ...priceColumns,
       ] as EditableColumnConfig[],
     [
       t,
@@ -621,13 +656,14 @@ export default function ShareTypeVariationModal({
       format,
       handleOpenDescriptionModal,
       handleOpenPictureModal,
-      handleOpenPriceModal,
+      priceColumns,
       handleOpenVirtualComponentModal,
       validFromColumn,
       validUntilColumn,
       packing_mode,
       showOptinColumns,
-      allows_trial_subscriptions,
+      capacityColumns,
+      trialColumns,
     ],
   );
 

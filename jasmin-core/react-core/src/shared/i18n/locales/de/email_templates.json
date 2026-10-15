@@ -11,6 +11,7 @@
   "status_default": "Standard",
   "status_custom": "Angepasst",
   "editor": "Vorlage bearbeiten",
+  "editor_title": "E-Mail-Vorlage {{label}}",
   "subject": "Betreff",
   "body_html": "HTML-Inhalt",
   "body_text": "Text-Version (Fallback)",

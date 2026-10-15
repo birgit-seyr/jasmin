@@ -54,6 +54,7 @@ from ..errors import (
     CoopShareNotFromTransfer,
     MemberConfirmedImmutable,
     SubscriptionAlreadyConfirmed,
+    SubscriptionAlreadyRejected,
     SubscriptionConfirmedImmutable,
     SubscriptionPriceInvalid,
 )
@@ -103,10 +104,8 @@ from ..services.onboarding_policy import (
     onboarding_mode_enabled,
 )
 from ..services.renewal import term_predecessor
-from ..services.waiting_list_offer_service import (
-    offer_price_fits_column,
-    release_rejected_subscription,
-)
+from ..services.subscription_rejection import reject_subscription
+from ..services.waiting_list_offer_service import offer_price_fits_column
 from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import parse_body_date, parse_bulk_ids
@@ -586,7 +585,11 @@ class MemberViewSet(
                 },
             }
         },
-        responses={200: MemberSerializer},
+        responses={
+            200: MemberSerializer,
+            # ``MemberAlreadyConfirmed``.
+            409: ErrorResponseSerializer,
+        },
     )
     @action(detail=True, methods=["post"])
     def reject(self, request: Request, pk: str | None = None) -> Response:
@@ -1184,7 +1187,8 @@ class SubscriptionViewSet(
             # Onboarding mode: ``SubscriptionMemberNotAdmitted`` /
             # ``SubscriptionEndsAfterMemberExit``.
             400: ErrorResponseSerializer,
-            # ``SubscriptionAlreadyConfirmed`` / ``DeliveryStationOverCapacity``.
+            # ``SubscriptionAlreadyConfirmed`` / ``SubscriptionAlreadyRejected`` /
+            # ``DeliveryStationOverCapacity``.
             409: ErrorResponseSerializer,
         },
     )
@@ -1211,6 +1215,10 @@ class SubscriptionViewSet(
 
             if subscription.admin_confirmed:
                 raise SubscriptionAlreadyConfirmed("Subscription is already confirmed")
+            # A reject that took the lock first has decided it: confirmed, the
+            # subscription would be billed while it shows as rejected.
+            if subscription.admin_rejected_at is not None:
+                raise SubscriptionAlreadyRejected("Subscription has been rejected")
 
             # A member who has initiated their exit gets no new deliveries or
             # PLANNED charges. Onboarding mode records subscriptions that
@@ -1299,42 +1307,20 @@ class SubscriptionViewSet(
                 },
             }
         },
-        responses={200: SubscriptionSerializer},
+        responses={
+            200: SubscriptionSerializer,
+            # ``SubscriptionAlreadyConfirmed``.
+            409: ErrorResponseSerializer,
+        },
     )
     @action(detail=True, methods=["post"])
     def reject(self, request: Request, pk: str | None = None) -> Response:
         enforce_privileged(request, "Only office staff may reject subscriptions.")
-        subscription: Subscription = self.get_object()
-
-        # ``reject`` is for PENDING applications only. Rejecting an already
-        # CONFIRMED subscription would merely un-flip the flag while leaving
-        # its materialised ShareDeliveries and PLANNED ChargeSchedule rows
-        # intact — those are still SEPA-debited (create_run filters on
-        # status=PLANNED, not admin_confirmed). Genuine revocation of a
-        # confirmed subscription must route through ``cancel`` (which drops
-        # future deliveries + PLANNED charges and re-plans). Already-rejected
-        # rows stay idempotent (admin_confirmed is False).
-        if subscription.admin_confirmed:
-            raise SubscriptionAlreadyConfirmed(
-                "Confirmed subscriptions cannot be rejected — cancel them instead."
-            )
-
-        reason: str | None = body(request).get("reason")
-
-        # Mirrors ``MembersViewSet.reject``: no email side-effect today
-        # — subscriptions don't ship a ``subscription.application_
-        # rejected`` template yet. Add the email wiring alongside the
-        # template if product asks. For now ``reject()`` just stamps
-        # the audit fields and saves.
-        subscription.reject(admin_user=auth_user(request), reason=reason, save=True)
-
-        # Free what the rejected draft holds. The reject stamps flags but does
-        # NOT delete the row, so the CASCADE that would otherwise drop the
-        # CapacityReservation never fires — without this, the rejected applicant
-        # keeps blocking the slot until the 14-day TTL lapses, and the link of
-        # an open waiting-list offer keeps working.
-        release_rejected_subscription(subscription)
-
+        subscription = reject_subscription(
+            self.get_object(),
+            admin_user=auth_user(request),
+            reason=body(request).get("reason"),
+        )
         updated = self.refetch_for_response(subscription)
         return Response(self.get_serializer(updated).data, status=status.HTTP_200_OK)
 

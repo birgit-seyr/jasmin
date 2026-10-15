@@ -40,7 +40,7 @@ import sys
 
 from django.core.management.base import BaseCommand
 
-from apps.commissioning.services import InvoiceService
+from apps.commissioning.services.invoice_hash import find_drifted_invoices
 
 logger = logging.getLogger("django.security")
 
@@ -52,7 +52,7 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options) -> None:
-        drifts = InvoiceService.find_drifted_invoices()
+        drifts = find_drifted_invoices()
 
         if not drifts:
             self.stdout.write(

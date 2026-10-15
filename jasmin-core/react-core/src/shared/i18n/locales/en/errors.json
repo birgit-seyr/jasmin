@@ -30,6 +30,7 @@
     "additional_requires_base": "This is an additional share and can only be added when the member already has a base share active for the same period.",
     "additional_exceeds_base": "An additional share cannot run longer than the base share it is packed into. Set the end date to {{suggested_valid_until}} (the base share's end) to continue.",
     "already_confirmed": "This subscription is already confirmed.",
+    "already_rejected": "This subscription has been rejected and can no longer be confirmed.",
     "member_not_admitted": "Confirm the member first: a member who has already left isn't admitted through a subscription.",
     "ends_after_member_exit": "The subscription ends after the member's exit date. Please set its end to the exit date or earlier.",
     "confirmed_immutable": "A confirmed subscription can no longer be edited or deleted — end it via cancellation instead.",
@@ -411,7 +412,8 @@
     "not_draft": "This billing run has already been exported and cannot be re-exported.",
     "no_charges": "This billing run has no charges.",
     "invalid_collection_date": "The collection date must not be in the past.",
-    "mixed_currency": "The due charges have different currencies. A billing run must use a single currency."
+    "mixed_currency": "The due charges have different currencies. A billing run must use a single currency.",
+    "charges_being_replanned": "Some charges due in this period are being regenerated right now. Try again in a moment."
   },
   "sepa": {
     "export_invalid": "Cannot export SEPA file: required creditor or debtor fields are missing.",

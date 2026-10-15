@@ -143,8 +143,9 @@ class TestCreateRun:
         self, tenant, tenant_settings, billing_profile, subscription, member
     ):
         """Bundling must not fire a per-charge immutability-reload SELECT. The
-        only SELECT against the charge table should be the single eligible
-        select_for_update — regardless of how many charges bundle."""
+        only SELECTs against the charge table should be the single eligible
+        select_for_update and the one count of charges a re-plan holds —
+        regardless of how many charges bundle."""
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
 
@@ -166,11 +167,14 @@ class TestCreateRun:
             if q["sql"].lstrip().upper().startswith("SELECT")
             and "chargeschedule" in q["sql"].lower()
         ]
-        # Only the single eligible select_for_update. The bundling uses
-        # bulk_update (not a per-charge save()), so there is no per-charge
-        # immutability reload and no per-charge auditlog old-row fetch — a
-        # per-row save() would add several SELECTs per bundled charge.
-        assert len(charge_selects) == 1, charge_selects
+        # Only the single eligible select_for_update and the count of the
+        # charges it had to skip. The bundling uses bulk_update (not a
+        # per-charge save()), so there is no per-charge immutability reload and
+        # no per-charge auditlog old-row fetch — a per-row save() would add
+        # several SELECTs per bundled charge.
+        assert len(charge_selects) == 2, charge_selects
+        assert sum("FOR UPDATE" in sql for sql in charge_selects) == 1, charge_selects
+        assert sum("COUNT(*)" in sql for sql in charge_selects) == 1, charge_selects
 
     def test_skips_charges_outside_period(
         self, tenant, tenant_settings, billing_profile, subscription, member

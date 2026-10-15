@@ -692,7 +692,6 @@ class InvoiceResellerSerializer(
             # keeps a pre-populated snapshot, so a client-written one would
             # become the recipient sealed into the legal invoice.
             "recipient_snapshot",
-            "document_hash_version",
         ]
 
     def get_cancels_invoice_number(self, obj) -> str | None:

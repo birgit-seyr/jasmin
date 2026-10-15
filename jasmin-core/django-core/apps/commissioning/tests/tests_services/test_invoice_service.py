@@ -7,8 +7,11 @@ from decimal import Decimal
 
 import pytest
 
+from apps.commissioning.models import CrateContentInvoiceReseller
+from apps.commissioning.services.invoice_hash import find_drifted_invoices
 from apps.commissioning.services.invoice_service import InvoiceService
 from apps.commissioning.tests.factories import (
+    CrateFactory,
     DeliveryNoteContentFactory,
     JasminUserFactory,
     OrderFactory,
@@ -140,7 +143,7 @@ class TestFinalizeInvoice:
 
 
 # ---------------------------------------------------------------------------
-# recipient_snapshot (document_hash v2)
+# recipient_snapshot
 # ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestRecipientSnapshot:
@@ -159,10 +162,9 @@ class TestRecipientSnapshot:
 
         # The §14 recipient is frozen onto the invoice at finalize, and the
         # sealed hash is self-consistent right after issue.
-        assert invoice.document_hash_version == 2
         assert invoice.recipient_snapshot is not None
         assert invoice.recipient_snapshot["name"] == "ACME GmbH"
-        assert InvoiceService.find_drifted_invoices() == []
+        assert find_drifted_invoices() == []
 
         # GDPR anonymization scrubs the LIVE reseller's billing fields...
         reseller.invoice_name = None
@@ -178,7 +180,7 @@ class TestRecipientSnapshot:
         # is exactly the drift the snapshot prevents.
         assert invoice._live_recipient()["name"] != "ACME GmbH"
         assert invoice.resolved_recipient()["name"] == "ACME GmbH"
-        assert InvoiceService.find_drifted_invoices() == []
+        assert find_drifted_invoices() == []
 
     def test_draft_invoice_resolves_recipient_live(self, tenant):
         from apps.commissioning.models import InvoiceReseller
@@ -240,26 +242,92 @@ class TestCreateSummaryInvoice:
 
 
 def _corrupt_document_hash(invoice, value: str) -> None:
-    """Overwrite a finalized invoice's stored ``document_hash`` OUT OF BAND.
+    """Overwrite a finalized invoice's stored ``document_hash`` OUT OF BAND."""
+    _write_out_of_band(invoice, "document_hash", value)
 
-    ``document_hash`` is FinalizedProtected at BOTH the Python save() layer and
-    the Postgres trigger, so an honest write can't tamper it — that's the point.
-    ``session_replication_role = replica`` disables the trigger for this one
-    statement, simulating exactly the superuser-SQL tampering the nightly hash
-    sweep exists to catch.
+
+def _write_out_of_band(row, column: str, value) -> None:
+    """Change one column of a finalized row past its protection.
+
+    A finalized invoice and its lines are FinalizedProtected at BOTH the Python
+    save() layer and the Postgres trigger, so an honest write can't tamper them
+    — that's the point. ``session_replication_role = replica`` disables the
+    trigger for this one statement, simulating exactly the superuser-SQL
+    tampering the nightly hash sweep exists to catch.
     """
     from django.db import connection
 
-    table = invoice._meta.db_table
+    table = row._meta.db_table
     with connection.cursor() as cursor:
         cursor.execute("SET session_replication_role = replica;")
         try:
             cursor.execute(
-                f"UPDATE {table} SET document_hash = %s WHERE id = %s",  # noqa: S608
-                [value, str(invoice.id)],
+                f"UPDATE {table} SET {column} = %s WHERE id = %s",  # noqa: S608
+                [value, str(row.id)],
             )
         finally:
             cursor.execute("SET session_replication_role = DEFAULT;")
+
+
+def _finalized_invoice(tenant):
+    dn = _finalized_delivery_note(tenant)
+    invoice = InvoiceService.create_from_delivery_note(dn)
+    InvoiceService.finalize_invoice(invoice, user=JasminUserFactory())
+    invoice.refresh_from_db()
+    return invoice
+
+
+@pytest.mark.django_db
+class TestWhatTheInvoicePrintsIsSealed:
+    """The hash seals what the invoice prints from its own rows: each line's
+    article, sort, size and unit, each crate line's crate type, and a storno's
+    reason. A change to any of them past the protection shows as drift."""
+
+    @pytest.mark.parametrize(
+        "column, value", [("sort", "Tampered"), ("size", "L"), ("unit", "ST")]
+    )
+    def test_a_changed_line_is_reported(self, tenant, column, value):
+        invoice = _finalized_invoice(tenant)
+        assert find_drifted_invoices() == []
+
+        _write_out_of_band(invoice.items.get(), column, value)
+
+        assert [drift["id"] for drift in find_drifted_invoices()] == [str(invoice.id)]
+
+    def test_a_line_moved_to_another_article_is_reported(self, tenant):
+        invoice = _finalized_invoice(tenant)
+
+        _write_out_of_band(
+            invoice.items.get(), "share_article_id", ShareArticleFactory().pk
+        )
+
+        assert [drift["id"] for drift in find_drifted_invoices()] == [str(invoice.id)]
+
+    def test_a_changed_crate_type_is_reported(self, tenant):
+        dn = _finalized_delivery_note(tenant)
+        invoice = InvoiceService.create_from_delivery_note(dn)
+        crate_line = CrateContentInvoiceReseller.objects.create(
+            invoice=invoice,
+            crate_type=CrateFactory(),
+            amount=2,
+            price_per_unit=Decimal("1.50"),
+            tax_rate=Decimal("19.00"),
+        )
+        InvoiceService.finalize_invoice(invoice, user=JasminUserFactory())
+        assert find_drifted_invoices() == []
+
+        _write_out_of_band(crate_line, "crate_type_id", CrateFactory().pk)
+
+        assert [drift["id"] for drift in find_drifted_invoices()] == [str(invoice.id)]
+
+    def test_a_changed_storno_reason_is_reported(self, tenant):
+        invoice = _finalized_invoice(tenant)
+        storno = InvoiceService.create_storno(invoice, reason="Wrong reseller")
+        assert find_drifted_invoices() == []
+
+        _write_out_of_band(storno, "correction_reason", "Something else")
+
+        assert [drift["id"] for drift in find_drifted_invoices()] == [str(storno.id)]
 
 
 @pytest.mark.django_db
@@ -277,12 +345,12 @@ class TestFindDriftedInvoices:
         genuine_hash = invoice.document_hash
 
         # Clean right after issue.
-        assert InvoiceService.find_drifted_invoices() == []
+        assert find_drifted_invoices() == []
 
         # Tamper the sealed hash out of band.
         _corrupt_document_hash(invoice, "deadbeef" * 8)
 
-        drift = InvoiceService.find_drifted_invoices()
+        drift = find_drifted_invoices()
         assert len(drift) == 1
         record = drift[0]
         assert record["id"] == str(invoice.id)
@@ -299,7 +367,7 @@ class TestFindDriftedInvoices:
         invoice = InvoiceService.create_from_delivery_note(dn)
         InvoiceService.finalize_invoice(invoice, user=user)
 
-        assert InvoiceService.find_drifted_invoices() == []
+        assert find_drifted_invoices() == []
 
 
 @pytest.mark.django_db

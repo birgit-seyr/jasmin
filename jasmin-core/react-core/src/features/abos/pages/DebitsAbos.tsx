@@ -88,8 +88,8 @@ export default function DebitsAbos() {
       await paymentsBillingRunsDestroy(run.id);
       notify.success(t("abos.debits_run_deleted"));
       await invalidateRuns();
-    } catch {
-      notify.error(t("abos.debits_run_delete_error"));
+    } catch (err: unknown) {
+      notify.error(getErrorMessage(err, t("abos.debits_run_delete_error")));
     }
   };
 

@@ -11,6 +11,7 @@
   "status_default": "Default",
   "status_custom": "Customized",
   "editor": "Edit template",
+  "editor_title": "Email template – {{label}}",
   "subject": "Subject",
   "body_html": "HTML body",
   "body_text": "Plain-text body (fallback)",

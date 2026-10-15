@@ -219,8 +219,11 @@ function SecondaryNavigation() {
           <nav> generates no box — the Menu stays the flex child between the
           spacers and the layout is unchanged. */}
       <nav aria-label={t("nav.main")} style={{ display: "contents" }}>
+        {/* ``disabledOverflow``: every section stays visible instead of
+            folding into a "…" menu when the bar is narrow. */}
         <Menu
           mode="horizontal"
+          disabledOverflow
           selectedKeys={[activeSection]}
           items={topMenuItems}
           onSelect={({ key }) => switchSection(key as typeof activeSection)}

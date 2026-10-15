@@ -180,16 +180,22 @@ export default function ConfigurationSidebar({
             </Link>
           ),
         },
-        {
-          key: "configuration-delivery-exceptions",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/delivery-exceptions">
-              {t("commissioning.delivery_exceptions")}
-            </Link>
-          ),
-        },
+        // Delivery exceptions pause subscriptions' deliveries; a tenant that
+        // uploads its weekly share amounts has none to pause.
+        ...(weeklyUpload
+          ? []
+          : [
+              {
+                key: "configuration-delivery-exceptions",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/delivery-exceptions">
+                    {t("commissioning.delivery_exceptions")}
+                  </Link>
+                ),
+              },
+            ]),
 
         {
           key: "configuration-reseller-documents",

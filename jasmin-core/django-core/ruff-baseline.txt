@@ -2,7 +2,7 @@
 # Managed by scripts/ruff_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/ruff_baseline.py freeze
-# 187 finding(s).
+# 184 finding(s).
 
 apps/accounts/backends.py: N806 Variable `UserModel` in function should be lowercase
 apps/accounts/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
@@ -163,10 +163,7 @@ apps/cultivation/models/basics.py: N806 Variable `CHUNK_SIZE` in function should
 apps/gdpr/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
 apps/gdpr/tests/test_field_classification_guard.py: C901 `_gather_pii_field_violations` is too complex (11 > 10)
 apps/payments/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
-apps/payments/services.py: C901 `_build_pain008_xml` is too complex (12 > 10)
-apps/payments/services.py: C901 `create_run` is too complex (12 > 10)
 apps/payments/services.py: C901 `export` is too complex (11 > 10)
-apps/payments/services.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/payments/services.py: PLR0913 Too many arguments in function definition (8 > 5)
 apps/payments/tests/test_cancel_subscription.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/payments/tests/test_cancel_subscription.py: PLR0913 Too many arguments in function definition (6 > 5)

@@ -42,6 +42,7 @@ from apps.commissioning.models import (
     OrderContent,
 )
 from apps.commissioning.services.delivery_note_service import DeliveryNoteService
+from apps.commissioning.services.invoice_hash import compute_document_hash
 from apps.commissioning.services.invoice_service import InvoiceService
 from apps.commissioning.tests.factories import (
     CrateFactory,
@@ -451,6 +452,5 @@ class TestStornoRecipientMirror:
         # The storno reproduces the ORIGINAL recipient, not the edited live one.
         assert storno.recipient_snapshot == invoice.recipient_snapshot
         assert storno.recipient_snapshot["name"] == "Alt GmbH"
-        assert storno.document_hash_version == 2
         # And the storno's hash validates against its inherited recipient block.
-        assert storno.document_hash == InvoiceService.compute_document_hash(storno)
+        assert storno.document_hash == compute_document_hash(storno)

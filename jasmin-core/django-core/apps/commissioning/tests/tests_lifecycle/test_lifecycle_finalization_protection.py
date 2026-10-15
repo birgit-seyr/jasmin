@@ -50,6 +50,10 @@ from apps.commissioning.models import (
     OrderContent,
 )
 from apps.commissioning.services.delivery_note_service import DeliveryNoteService
+from apps.commissioning.services.invoice_hash import (
+    build_hash_payload,
+    compute_document_hash,
+)
 from apps.commissioning.services.invoice_service import InvoiceService
 from apps.commissioning.tests.factories import (
     CrateFactory,
@@ -145,7 +149,7 @@ def _raw_delete(table: str, pk: str) -> None:
 @pytest.mark.django_db
 class TestInvoiceDocumentHash:
     """``InvoiceService.finalize_invoice`` records a SHA-256 of the canonical
-    payload (see ``InvoiceService.build_hash_payload``). It is set exactly
+    payload (see ``invoice_hash.build_hash_payload``). It is set exactly
     once, on finalize, and covers article AND crate line items including
     each row's ``tax_rate``."""
 
@@ -165,7 +169,7 @@ class TestInvoiceDocumentHash:
         _ensure_settings(connection.tenant)
         _, _, invoice = _build_finalized_chain()
 
-        recomputed = InvoiceService.compute_document_hash(invoice)
+        recomputed = compute_document_hash(invoice)
         assert recomputed == invoice.document_hash
 
     def test_hash_is_deterministic(self, tenant):
@@ -176,8 +180,8 @@ class TestInvoiceDocumentHash:
         _, _, invoice = _build_finalized_chain()
 
         assert (
-            InvoiceService.compute_document_hash(invoice)
-            == InvoiceService.compute_document_hash(invoice)
+            compute_document_hash(invoice)
+            == compute_document_hash(invoice)
             == invoice.document_hash
         )
 
@@ -185,7 +189,7 @@ class TestInvoiceDocumentHash:
         _ensure_settings(connection.tenant)
         _, _, invoice = _build_finalized_chain()
 
-        payload = InvoiceService.build_hash_payload(invoice)
+        payload = build_hash_payload(invoice)
         assert payload["items"], "expected at least one article line in payload"
         for item in payload["items"]:
             assert "tax_rate" in item
@@ -196,7 +200,7 @@ class TestInvoiceDocumentHash:
         _ensure_settings(connection.tenant)
         _, _, invoice = _build_finalized_chain()
 
-        payload = InvoiceService.build_hash_payload(invoice)
+        payload = build_hash_payload(invoice)
         assert payload["crate_items"], "expected crate items in the payload"
         for crate in payload["crate_items"]:
             assert "tax_rate" in crate
@@ -206,7 +210,7 @@ class TestInvoiceDocumentHash:
         """Two invoices that differ ONLY in line ``tax_rate`` produce
         different ``document_hash`` values. Tax_rate is a hash-relevant
         field, so mutating it after finalization shows up as drift in
-        ``InvoiceService.find_drifted_invoices`` (the nightly hash check)."""
+        ``invoice_hash.find_drifted_invoices`` (the nightly hash check)."""
         _ensure_settings(connection.tenant)
 
         # Finalise a baseline invoice with tax_rate=7 on the article line.
@@ -228,7 +232,7 @@ class TestInvoiceDocumentHash:
 
         assert invoice_a.document_hash != invoice_b.document_hash
 
-        payload_b = InvoiceService.build_hash_payload(invoice_b)
+        payload_b = build_hash_payload(invoice_b)
         assert any(item["tax_rate"] == "19.00" for item in payload_b["items"])
 
     def test_hash_is_not_overwritten_after_finalization(self, tenant):

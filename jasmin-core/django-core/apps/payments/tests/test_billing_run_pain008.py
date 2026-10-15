@@ -500,15 +500,17 @@ class TestRenderRemittance:
     so ``{unknown}`` tokens are visible here)."""
 
     def _render(self, template):
-        from apps.payments.services import _render_remittance
+        from apps.payments.sepa_export import render_remittance
 
-        return _render_remittance(
+        return render_remittance(
             template,
             creditor="Marillenhof",
             member="Anna Huber",
-            period_start=datetime.date(2026, 6, 22),
-            period_end=datetime.date(2026, 6, 28),
-            amount=Decimal("25.00"),
+            charge=ChargeSchedule(
+                period_start=datetime.date(2026, 6, 22),
+                period_end=datetime.date(2026, 6, 28),
+                expected_amount=Decimal("25.00"),
+            ),
         )
 
     def test_all_placeholders(self):

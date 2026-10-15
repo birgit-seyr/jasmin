@@ -17,7 +17,9 @@ cd "$REPO_ROOT"
 ENV_FILE="${REPO_ROOT}/.env"
 [ -f "$ENV_FILE" ] || { echo "❌ .env not found"; exit 1; }
 
-envval() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2-; }
+# A missing key reads as empty, so the defaults below apply: under pipefail,
+# grep finding no line would otherwise end the script without a message.
+envval() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- || true; }
 
 PROJECT="$(envval COMPOSE_PROJECT_NAME)"; PROJECT="${PROJECT:-jasmin-platform}"
 FRONTEND_DOMAIN="$(envval FRONTEND_DOMAIN)"

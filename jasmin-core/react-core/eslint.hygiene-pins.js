@@ -55,7 +55,7 @@ export const functionLengthPins = {
   "src/features/commissioning/hooks/useOrdersData.ts": 612,
   "src/features/commissioning/modals/DeliveryStationDetailModal.tsx": 413,
   "src/features/commissioning/modals/InvoiceModal.tsx": 401,
-  "src/features/commissioning/modals/ShareTypeVariationModal.tsx": 601,
+  "src/features/commissioning/modals/ShareTypeVariationModal.tsx": 544,
   "src/features/commissioning/pages/DeliveryNotes.tsx": 457,
   "src/features/commissioning/pages/Forecast.tsx": 428,
   "src/features/commissioning/pages/Invoices.tsx": 717,

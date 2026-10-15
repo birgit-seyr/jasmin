@@ -114,8 +114,10 @@ vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
         enabled: options?.query?.enabled,
       }),
     commissioningShareTypeVariationsCreate: (data: unknown) => api.create(data),
-    commissioningShareTypeVariationsPartialUpdate: (id: string, data: unknown) =>
-      api.update(id, data),
+    commissioningShareTypeVariationsPartialUpdate: (
+      id: string,
+      data: unknown,
+    ) => api.update(id, data),
     commissioningShareTypeVariationsDestroy: (id: string) => api.destroy(id),
     getCommissioningShareTypesRetrieveQueryOptions: (id: string) => ({
       queryKey: ["/api/commissioning/share_types/", id],
@@ -129,15 +131,18 @@ vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
   };
 });
 
-vi.mock("@features/commissioning/modals/prices/ShareTypeVariationPriceModal", () => ({
-  default: (props: {
-    visible: boolean;
-    share_type_variation: string | null;
-  }) =>
-    props.visible ? (
-      <div data-testid="price-modal">{props.share_type_variation}</div>
-    ) : null,
-}));
+vi.mock(
+  "@features/commissioning/modals/prices/ShareTypeVariationPriceModal",
+  () => ({
+    default: (props: {
+      visible: boolean;
+      share_type_variation: string | null;
+    }) =>
+      props.visible ? (
+        <div data-testid="price-modal">{props.share_type_variation}</div>
+      ) : null,
+  }),
+);
 
 vi.mock("../VirtualComponentModal", () => ({
   default: (props: {
@@ -179,7 +184,11 @@ function variation(overrides: Partial<Variation> & { id: string }): Variation {
 }
 
 // M runs all year and is in use.
-const MEDIUM = variation({ id: "v-m", can_be_deleted: false, description: "<p>Medium box</p>" });
+const MEDIUM = variation({
+  id: "v-m",
+  can_be_deleted: false,
+  description: "<p>Medium box</p>",
+});
 // S ran until next week and comes back a week after that.
 const SMALL_SPRING = variation({
   id: "v-s-spring",
@@ -266,7 +275,9 @@ function editingRow(): HTMLElement {
 function openCalendar(): HTMLElement {
   const open = Array.from(
     document.querySelectorAll<HTMLElement>(".ant-picker-dropdown"),
-  ).filter((dropdown) => !dropdown.classList.contains("ant-picker-dropdown-hidden"));
+  ).filter(
+    (dropdown) => !dropdown.classList.contains("ant-picker-dropdown-hidden"),
+  );
   const calendar = open[open.length - 1];
   if (!calendar) throw new Error("No date picker is open");
   return calendar;
@@ -274,7 +285,9 @@ function openCalendar(): HTMLElement {
 
 async function pickDate(label: string, isoDate: string) {
   await userEvent.click(within(editingRow()).getByLabelText(label));
-  const cell = openCalendar().querySelector<HTMLElement>(`td[title="${isoDate}"]`);
+  const cell = openCalendar().querySelector<HTMLElement>(
+    `td[title="${isoDate}"]`,
+  );
   if (!cell) throw new Error(`No calendar cell for ${isoDate}`);
   await userEvent.click(cell);
 }
@@ -335,9 +348,11 @@ beforeEach(() => {
     amount_of_jokers: 0,
     amount_of_donation_jokers: 0,
   });
-  api.crates.mockReset().mockResolvedValue([
-    { id: "crate-euro", name: "Euro crate", short_name: "Euro" },
-  ]);
+  api.crates
+    .mockReset()
+    .mockResolvedValue([
+      { id: "crate-euro", name: "Euro crate", short_name: "Euro" },
+    ]);
   api.create.mockReset().mockImplementation(async (data: Variation) => {
     const saved = { ...variation({ id: "v-new" }), ...data, id: "v-new" };
     // The backend closes the size's open variation the day before a later one.
@@ -353,10 +368,14 @@ beforeEach(() => {
     ];
     return saved;
   });
-  api.update.mockReset().mockImplementation(async (id: string, data: Variation) => {
-    serverRows = serverRows.map((row) => (row.id === id ? { ...row, ...data, id } : row));
-    return serverRows.find((row) => row.id === id);
-  });
+  api.update
+    .mockReset()
+    .mockImplementation(async (id: string, data: Variation) => {
+      serverRows = serverRows.map((row) =>
+        row.id === id ? { ...row, ...data, id } : row,
+      );
+      return serverRows.find((row) => row.id === id);
+    });
   api.destroy.mockReset().mockImplementation(async (id: string) => {
     serverRows = serverRows.filter((row) => row.id !== id);
   });
@@ -375,19 +394,25 @@ describe("ShareTypeVariationModal loading", () => {
 
     expect(api.list).toHaveBeenCalledWith({ share_type: "st-veg" });
     expect(
-      within(screen.getByRole("dialog")).getByText("commissioning.variations Vegetables"),
+      within(screen.getByRole("dialog")).getByText(
+        "commissioning.variations Vegetables",
+      ),
     ).toBeInTheDocument();
     const medium = rowWithCapacity(100);
     expect(within(medium).getByText("commissioning.M")).toBeInTheDocument();
     expect(within(medium).getByText("Euro")).toBeInTheDocument();
-    expect(within(rowWithCapacity(40)).getByText("28.12.2025")).toBeInTheDocument();
+    expect(
+      within(rowWithCapacity(40)).getByText("28.12.2025"),
+    ).toBeInTheDocument();
   });
 
   it("shows the trial, bulk-packing and opt-in columns only where they apply", async () => {
     renderModal();
     await loaded();
     const headers = () =>
-      screen.getAllByRole("columnheader").map((header) => header.textContent ?? "");
+      screen
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent ?? "");
 
     expect(headers().join("|")).not.toMatch(
       /allowed_for_trial_subscription|is_packed_bulk|requires_optin/,
@@ -410,6 +435,34 @@ describe("ShareTypeVariationModal loading", () => {
     expect(headers).toMatch(/commissioning\.allowed_for_trial_subscription/);
     expect(headers).toMatch(/commissioning\.is_packed_bulk/);
     expect(headers).toMatch(/commissioning\.requires_optin/);
+  });
+
+  it("shows a tenant that uploads its weekly share amounts no capacity, trial or prices", async () => {
+    tenantSettings.values = {
+      uploads_weekly_share_amount: true,
+      allows_trial_subscriptions: true,
+    };
+    renderModal();
+    // ``loaded`` finds the rows by their capacity, which this tenant doesn't see.
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", {
+          name: "commissioning.configure_virtual_components",
+        }),
+      ).toHaveLength(serverRows.length),
+    );
+
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent ?? "")
+      .join("|");
+    expect(headers).not.toMatch(/commissioning\.capacity/);
+    expect(headers).not.toMatch(
+      /commissioning\.allowed_for_trial_subscription/,
+    );
+    expect(
+      screen.queryByRole("button", { name: "commissioning.configure_prices" }),
+    ).not.toBeInTheDocument();
   });
 
   it("hides the opt-in columns for a share type with jokers", async () => {
@@ -466,7 +519,9 @@ describe("ShareTypeVariationModal sizes over time", () => {
       }),
     );
     await waitFor(() =>
-      expect(within(rowWithCapacity(100)).getByText("01.11.2026")).toBeInTheDocument(),
+      expect(
+        within(rowWithCapacity(100)).getByText("01.11.2026"),
+      ).toBeInTheDocument(),
     );
   });
 
@@ -482,7 +537,11 @@ describe("ShareTypeVariationModal sizes over time", () => {
 
     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
     expect(api.create.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ size: "L", valid_from: "2026-10-12", sort_order: "3" }),
+      expect.objectContaining({
+        size: "L",
+        valid_from: "2026-10-12",
+        sort_order: "3",
+      }),
     );
   });
 
@@ -496,7 +555,9 @@ describe("ShareTypeVariationModal sizes over time", () => {
     await save();
 
     expect(
-      await screen.findAllByText(/errors\.time_bound\.succession_start_before_predecessor/),
+      await screen.findAllByText(
+        /errors\.time_bound\.succession_start_before_predecessor/,
+      ),
     ).not.toHaveLength(0);
     expect(api.create).not.toHaveBeenCalled();
   });
@@ -510,7 +571,9 @@ describe("ShareTypeVariationModal sizes over time", () => {
     await pickDate(VALID_FROM, "2026-10-19");
     await save();
 
-    expect(await screen.findAllByText(/errors\.time_bound\.overlap/)).not.toHaveLength(0);
+    expect(
+      await screen.findAllByText(/errors\.time_bound\.overlap/),
+    ).not.toHaveLength(0);
     expect(api.create).not.toHaveBeenCalled();
   });
 
@@ -541,7 +604,9 @@ describe("ShareTypeVariationModal sizes over time", () => {
     await pickDate(VALID_UNTIL, "2026-10-25");
     await save();
 
-    expect(await screen.findAllByText(/errors\.time_bound\.overlap/)).not.toHaveLength(0);
+    expect(
+      await screen.findAllByText(/errors\.time_bound\.overlap/),
+    ).not.toHaveLength(0);
     expect(api.update).not.toHaveBeenCalled();
   });
 });
@@ -559,7 +624,9 @@ describe("ShareTypeVariationModal sort order", () => {
     await typeInto(SORT_ORDER, "2");
     await save();
 
-    expect(await screen.findAllByText(/validation\.unique\.sort_order/)).not.toHaveLength(0);
+    expect(
+      await screen.findAllByText(/validation\.unique\.sort_order/),
+    ).not.toHaveLength(0);
     expect(within(editingRow()).getByLabelText(SORT_ORDER)).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -619,7 +686,9 @@ describe("ShareTypeVariationModal details", () => {
         name: "commissioning.edit_description",
       }),
     );
-    const editor = await screen.findByRole("textbox", { name: "Description text" });
+    const editor = await screen.findByRole("textbox", {
+      name: "Description text",
+    });
     expect(editor).toHaveValue("<p>Medium box</p>");
     await userEvent.clear(editor);
     await userEvent.type(editor, "Medium box, about 3 kg");
@@ -648,15 +717,17 @@ describe("ShareTypeVariationModal details", () => {
         name: "commissioning.edit_description",
       }),
     );
-    const editor = await screen.findByRole("textbox", { name: "Description text" });
+    const editor = await screen.findByRole("textbox", {
+      name: "Description text",
+    });
     await userEvent.clear(editor);
     await userEvent.type(editor, "Medium box, about 3 kg");
     await userEvent.click(screen.getByRole("button", { name: /common\.save/ }));
 
     await waitFor(() => expect(notify.error).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole("textbox", { name: "Description text" })).toHaveValue(
-      "Medium box, about 3 kg",
-    );
+    expect(
+      screen.getByRole("textbox", { name: "Description text" }),
+    ).toHaveValue("Medium box, about 3 kg");
   });
 });
 
@@ -668,12 +739,16 @@ describe("ShareTypeVariationModal deleting and roles", () => {
     await loaded();
 
     expect(
-      within(rowWithCapacity(100)).queryByRole("button", { name: "table.delete" }),
+      within(rowWithCapacity(100)).queryByRole("button", {
+        name: "table.delete",
+      }),
     ).not.toBeInTheDocument();
     await userEvent.click(
       within(rowWithCapacity(40)).getByRole("button", { name: "table.delete" }),
     );
-    await userEvent.click(await screen.findByRole("button", { name: "table.yes" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "table.yes" }),
+    );
 
     await waitFor(() => expect(api.destroy).toHaveBeenCalledWith("v-l-2025"));
     await waitFor(() =>
@@ -689,7 +764,11 @@ describe("ShareTypeVariationModal deleting and roles", () => {
     expect(
       screen.queryByRole("button", { name: /table\.add_record/ }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "table.edit" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "table.edit" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "table.delete" }),
+    ).not.toBeInTheDocument();
   });
 });

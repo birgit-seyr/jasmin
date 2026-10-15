@@ -79,7 +79,6 @@ export interface InvoiceReseller {
   readonly xml_file?: string | null;
   /** @nullable */
   readonly document_hash?: string | null;
-  readonly document_hash_version?: number;
   /** @nullable */
   readonly recipient_snapshot?: InvoiceResellerRecipientSnapshot;
   /** @nullable */
