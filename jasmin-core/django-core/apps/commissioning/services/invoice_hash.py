@@ -1,13 +1,19 @@
 """The tamper hash sealed into a finalized reseller invoice.
 
-``document_hash`` is a SHA-256 of a canonical payload of the invoice: what it
-prints from its own rows, and the recipient block frozen at finalization.
+``document_hash`` is an HMAC-SHA256 of a canonical payload of the invoice
+(what it prints from its own rows, and the recipient block frozen at
+finalization), keyed with ``settings.INVOICE_HASH_KEY``. The key lives outside
+the database: a change that gets past an invoice's protection can't be given a
+matching hash without the server's secrets, so the nightly check reports it.
 """
 
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
+
+from django.conf import settings
 
 from ..models import (
     CrateContentInvoiceReseller,
@@ -85,10 +91,18 @@ def _crate_payload(crate: CrateContentInvoiceReseller) -> dict:
 
 
 def compute_document_hash(invoice: InvoiceReseller) -> str:
-    """SHA-256 of the canonical payload (see ``build_hash_payload``)."""
+    """The hash ``invoice`` is sealed with: the canonical payload (see
+    ``build_hash_payload``) under the current ``INVOICE_HASH_KEY``."""
+    return _seal(_canonical_bytes(invoice), settings.INVOICE_HASH_KEY)
+
+
+def _canonical_bytes(invoice: InvoiceReseller) -> bytes:
     payload = build_hash_payload(invoice)
-    data_string = json.dumps(payload, sort_keys=True, default=str)
-    return hashlib.sha256(data_string.encode()).hexdigest()
+    return json.dumps(payload, sort_keys=True, default=str).encode()
+
+
+def _seal(canonical: bytes, key: str) -> str:
+    return hmac.new(key.encode(), canonical, hashlib.sha256).hexdigest()
 
 
 def find_drifted_invoices() -> list[dict]:
@@ -114,14 +128,23 @@ def find_drifted_invoices() -> list[dict]:
         .select_related("reseller")
     )
     for invoice in finalized.iterator():
-        recomputed = compute_document_hash(invoice)
-        if invoice.document_hash != recomputed:
+        stored = invoice.document_hash
+        if not stored:  # the query leaves unsealed invoices out
+            continue
+        canonical = _canonical_bytes(invoice)
+        recomputed = _seal(canonical, settings.INVOICE_HASH_KEY)
+        # An invoice sealed before a key rotation verifies under the key it
+        # was sealed with, which the rotation keeps among the fallbacks.
+        if not hmac.compare_digest(stored, recomputed) and not any(
+            hmac.compare_digest(stored, _seal(canonical, key))
+            for key in settings.INVOICE_HASH_KEY_FALLBACKS
+        ):
             drift.append(
                 {
                     "id": str(invoice.id),
                     "number": invoice.number,
                     "prefix": invoice.prefix,
-                    "stored": invoice.document_hash,
+                    "stored": stored,
                     "recomputed": recomputed,
                 }
             )

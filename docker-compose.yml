@@ -35,6 +35,11 @@ x-backend-env: &backend-env
   DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
   CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
   FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:?FIELD_ENCRYPTION_KEY is required}
+  # Key of the tamper hash sealed into finalized invoices (an HMAC). Keep a
+  # copy with the other secrets: without it no sealed hash can be verified.
+  # During a rotation the FALLBACKS hold the old key(s), comma-separated.
+  INVOICE_HASH_KEY: ${INVOICE_HASH_KEY:?INVOICE_HASH_KEY is required}
+  INVOICE_HASH_KEY_FALLBACKS: ${INVOICE_HASH_KEY_FALLBACKS:-}
   # First-boot SuperAdmin bootstrap — docker_entrypoint.sh runs
   # ``createsuperadmin --bootstrap``, which creates the account from these only
   # while no SuperAdmin exists and never touches an existing one (so a rotated

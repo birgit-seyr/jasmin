@@ -113,6 +113,7 @@ gen_alnum()  {                                                # human-typable su
 
 DJANGO_SECRET_KEY="$(gen_django)"
 FIELD_ENCRYPTION_KEY="$(gen_fernet)"
+INVOICE_HASH_KEY="$(gen_hex)"
 POSTGRES_PASSWORD="$(gen_hex)"
 APP_DB_PASSWORD="$(gen_hex)"
 REDIS_PASSWORD="$(gen_hex)"
@@ -144,6 +145,9 @@ TRUSTED_PROXY_COUNT=1
 # --- core secrets (generated) ---
 DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
 FIELD_ENCRYPTION_KEY=${FIELD_ENCRYPTION_KEY}
+# Key of the invoices' tamper hash. Store it with the other secrets: losing it
+# leaves every sealed invoice hash unverifiable.
+INVOICE_HASH_KEY=${INVOICE_HASH_KEY}
 POSTGRES_DB=jasmin
 POSTGRES_USER=jasmin
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

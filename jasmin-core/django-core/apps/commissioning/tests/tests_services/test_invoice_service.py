@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import date
 from decimal import Decimal
 
 import pytest
 
-from apps.commissioning.models import CrateContentInvoiceReseller
-from apps.commissioning.services.invoice_hash import find_drifted_invoices
+from apps.commissioning.models import CrateContentInvoiceReseller, InvoiceReseller
+from apps.commissioning.services.invoice_hash import (
+    build_hash_payload,
+    compute_document_hash,
+    find_drifted_invoices,
+)
 from apps.commissioning.services.invoice_service import InvoiceService
 from apps.commissioning.tests.factories import (
     CrateFactory,
@@ -275,6 +281,51 @@ def _finalized_invoice(tenant):
     InvoiceService.finalize_invoice(invoice, user=JasminUserFactory())
     invoice.refresh_from_db()
     return invoice
+
+
+@pytest.mark.django_db
+class TestTheHashIsKeyed:
+    """The hash is an HMAC keyed with ``INVOICE_HASH_KEY``, which lives outside
+    the database: a change past an invoice's protection can't be given a
+    matching hash without the key. A key rotation keeps the invoices sealed
+    with the old key verifying, as long as it stays among the fallbacks."""
+
+    def test_a_change_with_a_hash_recomputed_without_the_key_is_reported(self, tenant):
+        invoice = _finalized_invoice(tenant)
+        _write_out_of_band(invoice.items.get(), "sort", "Tampered")
+        changed = InvoiceReseller.objects.get(pk=invoice.pk)
+        recomputed_without_the_key = hashlib.sha256(
+            json.dumps(
+                build_hash_payload(changed), sort_keys=True, default=str
+            ).encode()
+        ).hexdigest()
+        _write_out_of_band(invoice, "document_hash", recomputed_without_the_key)
+
+        assert [drift["id"] for drift in find_drifted_invoices()] == [str(invoice.id)]
+
+    def test_another_key_gives_another_hash(self, tenant, settings):
+        invoice = _finalized_invoice(tenant)
+
+        settings.INVOICE_HASH_KEY = "another-key"
+
+        assert compute_document_hash(invoice) != invoice.document_hash
+
+    def test_an_invoice_sealed_before_a_rotation_still_verifies(self, tenant, settings):
+        _finalized_invoice(tenant)
+        sealed_with = settings.INVOICE_HASH_KEY
+
+        settings.INVOICE_HASH_KEY = "the-new-key"
+        settings.INVOICE_HASH_KEY_FALLBACKS = [sealed_with]
+
+        assert find_drifted_invoices() == []
+
+    def test_without_the_old_key_its_invoices_are_reported(self, tenant, settings):
+        invoice = _finalized_invoice(tenant)
+
+        settings.INVOICE_HASH_KEY = "the-new-key"
+        settings.INVOICE_HASH_KEY_FALLBACKS = []
+
+        assert [drift["id"] for drift in find_drifted_invoices()] == [str(invoice.id)]
 
 
 @pytest.mark.django_db

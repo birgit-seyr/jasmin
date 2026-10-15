@@ -5,6 +5,8 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
+from config.spectacular import SPECTACULAR_SETTINGS  # noqa: F401
+
 # Force the process timezone so log timestamps (which use time.localtime via
 # the logging module) are in our local zone instead of UTC.
 os.environ.setdefault("TZ", os.environ.get("TIME_ZONE", "Europe/Berlin"))
@@ -58,6 +60,10 @@ if not DEBUG:
     ):
         raise ValueError(
             "FIELD_ENCRYPTION_KEY must be set in production (and must not be the dev default)."
+        )
+    if os.environ.get("INVOICE_HASH_KEY", "").strip() in ("", "dev-invoice-hash-key"):
+        raise ValueError(
+            "INVOICE_HASH_KEY must be set in production (and must not be the dev default)."
         )
     # Ops-alert email: ``mail_admins()`` and ``AdminEmailHandler`` send
     # to whatever's in ADMINS. If EMAIL_ADMIN is unset or still points
@@ -381,6 +387,20 @@ FIELD_ENCRYPTION_KEY = [
     for _key in os.environ.get(
         "FIELD_ENCRYPTION_KEY", "HeQ7tkqHP7nVB1hA7VkX0SVIan3y_NUFrjyeDnfzcXk="
     ).split(",")
+    if _key.strip()
+]
+
+# The key of the tamper hash sealed into a finalized invoice (an HMAC, see
+# ``apps.commissioning.services.invoice_hash``). It lives outside the database,
+# so a change that gets past an invoice's protection can't be given a matching
+# hash without the server's secrets. Losing it leaves every sealed hash
+# unverifiable, so keep a copy with the other secrets. To rotate it, set the
+# new key here and the old one in INVOICE_HASH_KEY_FALLBACKS (comma-separated):
+# invoices sealed with an old key keep verifying.
+INVOICE_HASH_KEY = os.environ.get("INVOICE_HASH_KEY", "dev-invoice-hash-key")
+INVOICE_HASH_KEY_FALLBACKS = [
+    _key.strip()
+    for _key in os.environ.get("INVOICE_HASH_KEY_FALLBACKS", "").split(",")
     if _key.strip()
 ]
 
@@ -1248,67 +1268,6 @@ else:
         "REDIS_URL must be set when DEBUG=False — it backs the shared cache and "
         "throttle counters across gunicorn workers."
     )
-
-
-# DRF Spectacular
-SPECTACULAR_SETTINGS = {
-    "TITLE": "Jasmin Platform API",
-    "DESCRIPTION": "CSA Management Platform API",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-    # THE KEY SETTING - Don't split request/response into separate schemas
-    "COMPONENT_SPLIT_REQUEST": False,
-    "COMPONENT_SPLIT_PATCH": True,  # all-optional ``Patched…`` PATCH bodies
-    # Map your enum classes to prevent duplicates
-    "ENUM_NAME_OVERRIDES": {
-        "MovementTypeEnum": "apps.commissioning.models.choices.MovementTypeOptions",
-        "CultivationOriginEnum": "apps.commissioning.models.choices.CultivationOriginOptions",
-        "DeliveryCycleEnum": "apps.commissioning.models.choices.DeliveryCycleOptions",
-        "ShareTypeVariationSizeEnum": "apps.commissioning.models.choices.ShareTypeVariationSizeOptions",
-        "UnitEnum": "apps.commissioning.models.choices.UnitOptions",
-        "PaymentCycleEnum": "apps.commissioning.models.choices.PaymentCycleOptions",
-        "VegetableSizeEnum": "apps.commissioning.models.choices.VegetableSizeOptions",
-        "ShareTypeEnum": "apps.commissioning.models.choices.ShareOptions",
-        # All the *_day fields across SharesDeliveryDay / OrdersDeliveryDay /
-        # Order / Share / etc. use the same DayNumberOptions choice set.
-        # Without this override, spectacular auto-generates ~8 distinct
-        # enum names (HarvestingDayEnum, WashingDayEnum, etc.) that all
-        # describe the same Monday-to-Sunday set — one shared
-        # ``DayNumberEnum`` keeps the generated TS client cleaner.
-        "DayNumberEnum": "apps.commissioning.models.choices.DayNumberOptions",
-        # Three unrelated models each have a ``kind`` CharField with its
-        # own choice set; without these overrides spectacular falls back
-        # to hash-suffixed names like ``Kind085Enum``.
-        "OpsChecklistKindEnum": "apps.shared.super_admin.models.OpsChecklistItem.KIND_CHOICES",
-        "ExternalCodeMappingKindEnum": "apps.commissioning.models.imports.ExternalCodeMapping.KIND_CHOICES",
-        "ConsentKindEnum": "apps.commissioning.models.choices.ConsentKind",
-        "TicketStatusEnum": "apps.shared.support.models.TicketStatus",
-        "TicketPriorityEnum": "apps.shared.support.models.TicketPriority",
-        "AuthorKindEnum": "apps.shared.support.models.AuthorKind",
-        # Two request bodies have a ``model`` ChoiceField with different choice
-        # sets: bulk (un)finalize and bulk documents. Once a field name carries
-        # two sets, spectacular hash-suffixes every set that has no override,
-        # so both are named here — keeping the existing ``ModelEnum`` (bulk
-        # documents, ``BulkDocumentRequestSerializer.model``) stable.
-        "BulkFinalizeRequestModelEnum": "apps.commissioning.serializers.finalize_serializer.FINALIZABLE_MODEL_NAMES",
-        "ModelEnum": ["delivery_note", "invoice"],
-    },
-    "COMPONENT_NO_READ_ONLY_REQUIRED": True,
-    "SCHEMA_PATH_PREFIX": "/api/",
-    "ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE": False,
-    "SCHEMA_COERCE_PATH_PK": True,
-    # Postprocessing to handle any remaining edge cases
-    "POSTPROCESSING_HOOKS": [
-        "drf_spectacular.hooks.postprocess_schema_enums",
-        # Auto-inject canonical 4xx error responses (400/401/403/404)
-        # into every operation so the orval-generated frontend client
-        # carries a typed ErrorResponse for every endpoint without us
-        # having to litter every viewset with ``responses={400: ...}``.
-        # Explicit per-view declarations always win — the hook uses
-        # setdefault. See ``core.openapi`` for the rules.
-        "core.openapi.inject_canonical_error_responses",
-    ],
-}
 
 
 # Security Headers

@@ -1324,8 +1324,10 @@ across all three + `tsconfig.json`.
 **Environment** — `.env.dev.example` (dev template — `cp .env.dev.example
 .env.dev`) and `.env.example` (prod template → `.env`)
 
-- Required in prod: `DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY`, `POSTGRES_*`,
-  `FRONTEND_DOMAIN`
+- Required in prod: `DJANGO_SECRET_KEY`, `FIELD_ENCRYPTION_KEY`, `INVOICE_HASH_KEY`
+  (the key of the invoices' tamper hash, an HMAC; losing it leaves every sealed
+  hash unverifiable, and `INVOICE_HASH_KEY_FALLBACKS` keeps an old one during a
+  rotation), `POSTGRES_*`, `FRONTEND_DOMAIN`
 - Development defaults use insecure values (for convenience)
 
 ## Common workflows

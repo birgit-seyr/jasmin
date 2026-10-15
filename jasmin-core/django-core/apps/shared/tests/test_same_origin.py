@@ -103,6 +103,7 @@ PRODUCTION_ENV = {
     "RUNNING_IN_DOCKER": "True",
     "DJANGO_SECRET_KEY": "test-only-secret-key",
     "FIELD_ENCRYPTION_KEY": "test-only-field-key",
+    "INVOICE_HASH_KEY": "test-only-invoice-hash-key",
     "EMAIL_ADMIN": "ops@farm.example",
     "EMAIL_HOST": "smtp.farm.example",
     "FRONTEND_DOMAIN": "farm.example",
