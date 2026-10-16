@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import {
   organicStatusLabel,
 } from "@hooks/configuration/useOrganicGate";
+import { todayApiDate } from "@shared/utils/apiDate";
 import {
   isCreditNote,
   organicMarksPresent,
@@ -120,22 +121,24 @@ function normalizeIban(iban: string): string {
   return iban.replace(/\s+/g, "").toUpperCase();
 }
 
+/** The invoice's ``YYYY-MM-DD`` date at UTC midnight, the calendar day the CII
+ * dates carry. ZUGFeRD requires an IssueDateTime, so an empty or unparseable
+ * value (e.g. a storno PDF built from a stripped-down invoice record with no
+ * invoice_date) falls back to today's local date. */
+function invoiceDay(dateString: string): Date {
+  const date = new Date(dateString);
+  return Number.isNaN(date.getTime()) ? new Date(todayApiDate()) : date;
+}
+
 function formatDate(dateString: string): string {
-  // ZUGFeRD requires an IssueDateTime, so fall back to today when the caller
-  // passes an empty or unparseable value (e.g. a storno PDF built from a
-  // stripped-down invoice record with no invoice_date).
-  const date = dateString ? new Date(dateString) : new Date();
-  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
-  return safeDate.toISOString().split("T")[0].replace(/-/g, "");
+  return invoiceDay(dateString).toISOString().split("T")[0].replace(/-/g, "");
 }
 
 function formatDueDate(dateString: string, daysToAdd: number): string {
   // BT-9 DueDateDateTime = invoice_date + payment_terms_reseller_in_days.
   // Use UTC ms arithmetic so DST transitions can't shift the result by a
   // day; ZUGFeRD dates are calendar-day (qualifier 102) anyway.
-  const base = dateString ? new Date(dateString) : new Date();
-  const safeDate = Number.isNaN(base.getTime()) ? new Date() : base;
-  const due = new Date(safeDate.getTime() + daysToAdd * 86_400_000);
+  const due = new Date(invoiceDay(dateString).getTime() + daysToAdd * 86_400_000);
   return due.toISOString().split("T")[0].replace(/-/g, "");
 }
 

@@ -21,6 +21,7 @@ import type {
 } from "@shared/api/generated/models";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { EmptyHint, ExplainerText, PastWarningMessage } from "@shared/ui";
+import { ReadOnlyReportTable } from "@shared/tables";
 import {
   activeAtDateForWeek,
   formatDayLabel,
@@ -28,7 +29,7 @@ import {
   generatePdfFilename,
   getDayName,
 } from "@shared/utils";
-import { Spin, Table } from "antd";
+import { Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useEffect, useMemo, useState } from "react";
@@ -155,15 +156,13 @@ function TourTable({
   return (
     <div className="delivery-stations-overview__tour">
       <h3>{t("commissioning.tour_number", { number: tourNumber })}</h3>
-      <Table
+      <ReadOnlyReportTable
         columns={columns}
         dataSource={stations}
         pagination={false}
-        size="small"
         className="custom-jasmin-table w-max"
         rowKey="delivery_station_day_id"
         bordered
-        locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />
     </div>
   );

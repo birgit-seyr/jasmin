@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { notify } from "@shared/utils";
+import { notify, todayApiDate } from "@shared/utils";
 
 interface UsePaperReceivedToggleOptions {
   /** Current stored value (true once the ``*_paper_received_at`` field is set). */
@@ -38,7 +38,7 @@ export function usePaperReceivedToggle({
     if (!id) return;
     setPaperReceived(checked); // optimistic
     try {
-      await patch(id, checked ? new Date().toISOString().slice(0, 10) : null);
+      await patch(id, checked ? todayApiDate() : null);
       onPatched();
     } catch {
       setPaperReceived(!checked); // revert on failure

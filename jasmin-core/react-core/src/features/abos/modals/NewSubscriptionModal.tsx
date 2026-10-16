@@ -289,7 +289,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
         !dayjs(p.valid_until).isBefore(validFrom, "day")
       );
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates keyed by their timestamps
   }, [exceptionPeriods, validFromMs, validUntilMs]);
 
   // Every ``"<iso-year>-<iso-week>"`` key in the term — via the SHARED
@@ -298,7 +298,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // math that could disagree). Open-ended terms span a one-year window.
   const periodWeekKeys = useMemo(
     () => termWeekKeys(validFrom ?? dayjs(), validUntil ?? null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates keyed by their timestamps
     [validFromMs, validUntilMs],
   );
 
@@ -314,8 +314,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       active_at_date: formatDateForAPI(start)!,
       ...capacityWindowParams(),
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validFromMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates keyed by their timestamps
+  }, [validFromMs, formatDateForAPI]);
 
   const { deliveryStationDays, loading: stationsLoading } =
     useDeliveryStationDays(deliveryStationDayParams);
@@ -393,7 +393,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
       cycle: variationCycle,
     });
     form.setFieldsValue({ valid_until: until ?? undefined });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates keyed by their timestamps
   }, [lockValidUntil, validFromMs, effectiveIsTrial, variationCycle]);
 
   // Trial end preview for the is_trial helper text.

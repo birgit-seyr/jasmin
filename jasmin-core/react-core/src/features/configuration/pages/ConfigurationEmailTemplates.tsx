@@ -1,5 +1,6 @@
 import { EditOutlined } from "@ant-design/icons";
-import { Button, Card, Space, Table, Tag, Typography } from "antd";
+import { Button, Card, Space, Tag, Typography } from "antd";
+import { ReadOnlyReportTable } from "@shared/tables";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -159,7 +160,7 @@ export default function ConfigurationEmailTemplates({
             title={categoryLabel(category)}
             className="settings-card-header"
           >
-            <Table<EmailTemplateListItem>
+            <ReadOnlyReportTable<EmailTemplateListItem>
               rowKey="slug"
               loading={isLoading}
               dataSource={rows}

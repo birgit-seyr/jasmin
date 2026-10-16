@@ -109,7 +109,9 @@ function escapeCsvValue(
   if (typeof cell === "string" && CSV_FORMULA_LEAD.test(str)) {
     str = `'${str}`;
   }
-  if (str.includes(dialect.delimiter) || str.includes('"') || str.includes("\n")) {
+  // A bare ``\r`` ends the row as well: spreadsheets read it as a line break,
+  // so a value holding one must be quoted like one holding ``\n``.
+  if (str.includes(dialect.delimiter) || /["\r\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;

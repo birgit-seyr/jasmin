@@ -16,3 +16,12 @@ export function toApiDate(value: ConfigType): string | null {
   if (!value) return null;
   return dayjs(value).format("YYYY-MM-DD");
 }
+
+/**
+ * Today's local calendar date in the same wire format. Not
+ * ``new Date().toISOString().slice(0, 10)``: that is the date in UTC, which is
+ * still the previous day for the first hour or two after local midnight.
+ */
+export function todayApiDate(): string {
+  return dayjs().format("YYYY-MM-DD");
+}

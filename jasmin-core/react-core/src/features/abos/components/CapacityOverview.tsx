@@ -49,6 +49,56 @@ interface CapacityRow extends TableRecord {
   status: "full" | "tight" | "ok" | "unknown";
 }
 
+function buildCapacityRows(
+  keyPrefix: string,
+  entities: {
+    value: string | number;
+    label: string;
+    capacity?: number | null;
+    capacity_by_week?: Parameters<typeof termCapacity>[1];
+  }[],
+  weekKeys: string[],
+  rangeInWindow: boolean,
+): CapacityRow[] {
+  return entities.map((e) => {
+    const base = {
+      key: `${keyPrefix}-${e.value}`,
+      id: `${keyPrefix}-${e.value}`,
+      name: e.label,
+      capacity: e.capacity ?? null,
+    };
+    if (!rangeInWindow) {
+      return {
+        ...base,
+        peak_occupied: 0,
+        free: null,
+        peak_week: null,
+        status: "unknown" as const,
+      };
+    }
+    const cap = termCapacity(e.capacity, e.capacity_by_week, weekKeys);
+    const free =
+      cap.total == null ? null : Math.max(0, cap.total - cap.peakOccupied);
+    // "tight" = ≤10% (min 1 slot) of the cap left but not yet full — an early
+    // warning so the office can raise capacity before the waiting_list kicks in.
+    const tight =
+      cap.total != null &&
+      free != null &&
+      free > 0 &&
+      free <= Math.max(1, cap.total * 0.1);
+    return {
+      key: `${keyPrefix}-${e.value}`,
+      id: `${keyPrefix}-${e.value}`,
+      name: e.label,
+      capacity: cap.total,
+      peak_occupied: cap.peakOccupied,
+      free,
+      peak_week: cap.peakWeekKey,
+      status: cap.isFull ? "full" : tight ? "tight" : "ok",
+    };
+  });
+}
+
 export function CapacityOverview({
   variations,
   stationDays,
@@ -84,63 +134,15 @@ export function CapacityOverview({
     [weekKeys, windowKeys],
   );
 
-  const buildRows = (
-    keyPrefix: string,
-    entities: {
-      value: string | number;
-      label: string;
-      capacity?: number | null;
-      capacity_by_week?: Parameters<typeof termCapacity>[1];
-    }[],
-  ): CapacityRow[] =>
-    entities.map((e) => {
-      const base = {
-        key: `${keyPrefix}-${e.value}`,
-        id: `${keyPrefix}-${e.value}`,
-        name: e.label,
-        capacity: e.capacity ?? null,
-      };
-      if (!rangeInWindow) {
-        return {
-          ...base,
-          peak_occupied: 0,
-          free: null,
-          peak_week: null,
-          status: "unknown" as const,
-        };
-      }
-      const cap = termCapacity(e.capacity, e.capacity_by_week, weekKeys);
-      const free =
-        cap.total == null ? null : Math.max(0, cap.total - cap.peakOccupied);
-      // "tight" = ≤10% (min 1 slot) of the cap left but not yet full — an early
-      // warning so the office can raise capacity before the waiting_list kicks in.
-      const tight =
-        cap.total != null &&
-        free != null &&
-        free > 0 &&
-        free <= Math.max(1, cap.total * 0.1);
-      return {
-        key: `${keyPrefix}-${e.value}`,
-        id: `${keyPrefix}-${e.value}`,
-        name: e.label,
-        capacity: cap.total,
-        peak_occupied: cap.peakOccupied,
-        free,
-        peak_week: cap.peakWeekKey,
-        status: cap.isFull ? "full" : tight ? "tight" : "ok",
-      };
-    });
-
   const variationRows = useMemo(
-    () => buildRows("variation", variations),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [variations, weekKeys],
+    () => buildCapacityRows("variation", variations, weekKeys, rangeInWindow),
+    [variations, weekKeys, rangeInWindow],
   );
 
   const stationRows = useMemo(
-    () => buildRows("station_day", stationDays),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stationDays, weekKeys],
+    () =>
+      buildCapacityRows("station_day", stationDays, weekKeys, rangeInWindow),
+    [stationDays, weekKeys, rangeInWindow],
   );
 
   const columns = useMemo<EditableColumnConfig<CapacityRow>[]>(

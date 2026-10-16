@@ -51,7 +51,7 @@ export { hasTierPrice, pickTierPrice, pickTierPriceFromAmount } from './tierPric
 export { isSepaMandateActiveForTerm } from './sepaMandate';
 export { variationAllowsTrial, filterVariationsForTrial } from './trialVariations';
 export type { TrialAllowable } from './trialVariations';
-export { toApiDate } from './apiDate';
+export { toApiDate, todayApiDate } from './apiDate';
 export { unwrapList } from './unwrapList';
 export { buildMonthAxis } from './monthAxis';
 export type { MonthAxis } from './monthAxis';

@@ -394,7 +394,7 @@ export default function Orders() {
         (item) =>
           showCratesOnDocuments || dataCratesCount > 0 || item.key !== "crates",
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- canModify stands for the permission memos built from it
     [
       showCratesOnDocuments,
       t,

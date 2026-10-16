@@ -49,8 +49,7 @@ export default function SuperAdminSupportTickets() {
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated || !isSuperAdmin) navigate("/login");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isAuthenticated, isSuperAdmin]);
+  }, [authLoading, isAuthenticated, isSuperAdmin, navigate]);
 
   const listQuery = useQuery<Paginated<AdminTicketListRow>>({
     queryKey: ["super-admin", "support-tickets", statusFilter],

@@ -69,6 +69,8 @@ export default function StepConfirmEmail({ data, update, next, back }: StepProps
     if (captchaEnabled && !captchaSolution) return;
     sentForEmail.current = email;
     doSend();
+    // doSend is a new function every render; the effect keys on what decides
+    // an auto-send, and sentForEmail keeps it to one send per address.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email, captchaEnabled, captchaSolution]);
 

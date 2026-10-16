@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Spin, Table } from "antd";
+import { Alert, Button, Card, Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import type {
   CommissioningListResellersEntry,
 } from "@shared/api/generated/models";
 import { PastWarningMessage } from "@shared/ui";
+import { ReadOnlyReportTable } from "@shared/tables";
 import { ResellerOrderMobileCards } from "@features/commissioning/components/mobileCards";
 import { CommissioningListResellersPDFGenerator } from "@features/commissioning/pdfs";
 import { orderLineArticleLabel } from "@features/commissioning/utils/orderLineLabel";
@@ -277,20 +278,13 @@ export default function CommissioningListResellers() {
               {isMobile ? (
                 <ResellerOrderMobileCards lines={reseller.order.contents} />
               ) : (
-                <Table
+                <ReadOnlyReportTable
                   className="custom-jasmin-table"
                   columns={columns}
                   dataSource={reseller.order.contents}
                   rowKey="id"
                   pagination={false}
-                  size="small"
-                  locale={{
-                    emptyText: (
-                      <div style={{ height: "4em" }}>
-                        {t("common.no_orders_available")}
-                      </div>
-                    ),
-                  }}
+                  emptyText={t("common.no_orders_available")}
                 />
               )}
             </Card>

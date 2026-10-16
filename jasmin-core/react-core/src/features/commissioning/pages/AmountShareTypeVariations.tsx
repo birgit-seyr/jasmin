@@ -11,12 +11,11 @@ import type {
 } from "@shared/api/generated/models";
 import { WeekSelector } from "@shared/selectors";
 import {
-  EmptyHint,
   ExplainerText,
   LabeledSwitch,
   PastWarningMessage,
 } from "@shared/ui";
-import { Table } from "antd";
+import { ReadOnlyReportTable } from "@shared/tables";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
@@ -188,16 +187,14 @@ export default function AmountShareTypeVariations({
               withEyeIcons
             />
           </div>
-          <Table
+          <ReadOnlyReportTable
             columns={boxColumns}
             dataSource={boxRows}
             pagination={false}
-            size="small"
             loading={matrixLoading}
             className="custom-jasmin-table w-max"
             rowKey="id"
             bordered
-            locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
           />
         </>
       )}

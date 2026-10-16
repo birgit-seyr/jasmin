@@ -8,7 +8,6 @@ import {
   Flex,
   Space,
   Spin,
-  Table,
   Tag,
   Upload,
 } from "antd";
@@ -18,6 +17,7 @@ import type { UploadFile } from "antd/es/upload/interface";
 import { WeekSelector } from "@shared/selectors";
 import { useYearWeekState } from "@hooks/useYearWeekState";
 import { ExplainerText } from "@shared/ui";
+import { ReadOnlyReportTable } from "@shared/tables";
 import { ExternalCodeMappingsModal } from "@features/commissioning/modals";
 import {
   commissioningShareImportBatchesApplyCreate,
@@ -235,8 +235,7 @@ export default function ImportShares() {
         title={`${title} (${rows.length})`}
         style={{ marginTop: 12 }}
       >
-        <Table
-          size="small"
+        <ReadOnlyReportTable
           className="custom-jasmin-table"
           rowKey={(r) => `${r.variation_id}|${r.delivery_station_day_id}`}
           columns={cols}
@@ -346,8 +345,7 @@ export default function ImportShares() {
 
           {errorRows.length > 0 && (
             <Card size="small" title={t("import_shares.errors")}>
-              <Table
-                size="small"
+              <ReadOnlyReportTable
                 className="custom-jasmin-table"
                 rowKey="row"
                 columns={[
@@ -396,8 +394,7 @@ export default function ImportShares() {
 
       <Card title={t("import_shares.history")} style={{ marginTop: 16 }}>
         <Spin spinning={loading}>
-          <Table
-            size="small"
+          <ReadOnlyReportTable
             className="custom-jasmin-table"
             rowKey="id"
             dataSource={batches}

@@ -41,8 +41,7 @@ export default function SuperAdminDashboard() {
     if (!isAuthenticated || !isSuperAdmin) {
       navigate("/login");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, isAuthenticated, isSuperAdmin]);
+  }, [authLoading, isAuthenticated, isSuperAdmin, navigate]);
 
   // The super-admin endpoints aren't part of the tenant-scoped orval
   // schema, so we hit them through ``axiosService`` directly while

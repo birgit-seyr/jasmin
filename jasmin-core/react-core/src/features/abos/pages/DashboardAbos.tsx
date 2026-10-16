@@ -1,6 +1,7 @@
-import { Card, DatePicker, Divider, Spin, Table, Typography } from "antd";
+import { Card, DatePicker, Divider, Spin, Typography } from "antd";
 import dayjs from "dayjs";
 import { ExplainerText, StatsAreaChart } from "@shared/ui";
+import { ReadOnlyReportTable } from "@shared/tables";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -196,15 +197,14 @@ export default function DashboardAbos() {
             title={t("statistics.solidarity_title")}
             style={{ marginTop: "1em" }}
           >
-            <Table<PriceRow>
-              size="small"
+            <ReadOnlyReportTable<PriceRow>
               rowKey="id"
               pagination={false}
               columns={priceColumns}
               dataSource={priceRows}
               style={{ width: "40%" }}
               className="custom-jasmin-table"
-              locale={{ emptyText: t("statistics.no_subscription_data") }}
+              emptyText={t("statistics.no_subscription_data")}
             />
           </Card>
         )}

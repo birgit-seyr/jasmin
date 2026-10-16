@@ -90,6 +90,11 @@ describe("escapeCsvValue", () => {
     expect(escapeCsvValue("line1\nline2", de)).toBe('"line1\nline2"');
   });
 
+  it("quotes when the value contains a bare carriage return", () => {
+    // Unquoted, the \r would start a new row whose first cell is a live formula.
+    expect(escapeCsvValue("0761\r=1+1", de)).toBe('"0761\r=1+1"');
+  });
+
   it("does not quote a comma in DE dialect (delimiter is ;)", () => {
     expect(escapeCsvValue("a,b", de)).toBe("a,b");
   });

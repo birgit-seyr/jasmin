@@ -59,6 +59,7 @@ vi.mock("@shared/ui", () => ({
   ExplainerText: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="explainer">{children}</div>
   ),
+  EmptyHint: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@features/commissioning/modals", () => ({

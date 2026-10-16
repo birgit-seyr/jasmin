@@ -1,5 +1,4 @@
 import { useQueries } from "@tanstack/react-query";
-import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +22,7 @@ import { DaySelector, WeekSelector } from "@shared/selectors";
 import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import type { TableRecord } from "@shared/tables/BasicEditableTable/types";
 import { ExplainerText, PastWarningMessage, ToolTipIcon } from "@shared/ui";
+import { ReadOnlyReportTable } from "@shared/tables";
 import {
   useVegetableSizeOptions,
   useTenant,
@@ -531,26 +531,21 @@ export default function DeliveryStationsDetails() {
           {t("commissioning.packing_list_no_columns")}
         </PastWarningMessage>
       ) : (
-        <Table
+        <ReadOnlyReportTable
           columns={columns}
           dataSource={matrixRows}
           pagination={false}
-          size="small"
           loading={loading}
           className="custom-jasmin-table w-max mt-2em"
           rowKey="id"
           bordered
-          locale={{
-            emptyText: (
-              <div className="delivery-stations-details__empty">
-                {matrixFailed
-                  ? t("common.error_loading_data")
-                  : selectedDeliveryStation
-                    ? t("table.no_data")
-                    : t("commissioning.select_delivery_station")}
-              </div>
-            ),
-          }}
+          emptyText={
+            matrixFailed
+              ? t("common.error_loading_data")
+              : selectedDeliveryStation
+                ? t("table.no_data")
+                : t("commissioning.select_delivery_station")
+          }
         />
       )}
 

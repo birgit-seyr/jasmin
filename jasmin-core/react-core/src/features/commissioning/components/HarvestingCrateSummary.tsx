@@ -5,8 +5,9 @@
  */
 
 import type { CrateSummaryEntry } from "@features/commissioning/hooks/useHarvestingListData";
-import { EmptyHint, ToolTipIcon } from "@shared/ui";
-import { Card, Table } from "antd";
+import { ToolTipIcon } from "@shared/ui";
+import { ReadOnlyReportTable } from "@shared/tables";
+import { Card } from "antd";
 import { useTranslation } from "react-i18next";
 
 export default function HarvestingCrateSummary({
@@ -85,14 +86,12 @@ export default function HarvestingCrateSummary({
 
   return (
     <div style={{ marginBottom: "2em", marginTop: "2em" }}>
-      <Table
+      <ReadOnlyReportTable
         columns={columns}
         dataSource={crateSummary}
         pagination={false}
-        size="small"
         className="compact-table custom-jasmin-table"
         style={{ width: "22em", marginTop: "1em" }}
-        locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
       />
     </div>
   );

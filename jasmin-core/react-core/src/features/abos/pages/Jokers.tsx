@@ -10,8 +10,8 @@ import type {
   WeeklyComboMatrixRow,
 } from "@shared/api/generated/models";
 import { WeekSelector } from "@shared/selectors";
-import { EmptyHint, ExplainerText, LabeledSwitch } from "@shared/ui";
-import { Table } from "antd";
+import { ExplainerText, LabeledSwitch } from "@shared/ui";
+import { ReadOnlyReportTable } from "@shared/tables";
 import type { ColumnsType } from "antd/es/table";
 import type { TFunction } from "i18next";
 import { useMemo, useState } from "react";
@@ -159,16 +159,14 @@ export default function Jokers() {
     rows: BoxMatrixRow[],
     loading: boolean,
   ) => (
-    <Table
+    <ReadOnlyReportTable
       columns={columns}
       dataSource={rows}
       pagination={false}
-      size="small"
       loading={loading}
       className="custom-jasmin-table w-max"
       rowKey="id"
       bordered
-      locale={{ emptyText: <EmptyHint>{t("table.no_data")}</EmptyHint> }}
     />
   );
 

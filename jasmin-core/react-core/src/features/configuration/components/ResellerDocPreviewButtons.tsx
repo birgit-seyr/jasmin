@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useCurrency, useDateFormat, useTenant } from "@hooks/index";
+import { todayApiDate } from "@shared/utils";
 import DeliveryNotePDF, {
   type DeliveryNotePDFData,
 } from "@features/commissioning/pdfs/forResellers/DeliveryNotePDF";
@@ -195,7 +196,7 @@ export default function ResellerDocPreviewButtons({
       deliveryNote: {
         prefix: "LS",
         delivery_note_number: 42,
-        delivery_note_date: new Date().toISOString().slice(0, 10),
+        delivery_note_date: todayApiDate(),
         ...sampleReseller,
         is_finalized: false,
       },
@@ -234,7 +235,7 @@ export default function ResellerDocPreviewButtons({
       invoice: {
         prefix: "RE",
         invoice_number: 1234,
-        invoice_date: new Date().toISOString().slice(0, 10),
+        invoice_date: todayApiDate(),
         ...sampleReseller,
         is_finalized: false,
         document_type: "invoice",
