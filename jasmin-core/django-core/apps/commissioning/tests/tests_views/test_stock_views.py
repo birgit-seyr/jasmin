@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 import time_machine
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from apps.commissioning.models import MovementShareArticle
@@ -899,6 +900,97 @@ class TestStorageLoggingView:
         assert [row["running_balance"] for row in resp.data] == [11.0, 10.7, 10.5]
         # amount stays a JSON number on the wire (floated only at the boundary).
         assert [row["amount"] for row in resp.data] == [0.3, 0.2, 10.5]
+
+    def test_the_running_balance_starts_from_the_movements_before_the_window(
+        self, api_client, tenant
+    ):
+        """Each group's balance carries what its movements before the window add
+        up to, an inventory correction included; a movement at the window's first
+        instant counts once, and other sizes and storages don't reach it."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        other_storage = StorageFactory()
+        harvest = HarvestFactory(share_article=article, storage=storage)
+        before = datetime.datetime(2026, 1, 5, 12, tzinfo=datetime.UTC)
+        window_start = timezone.make_aware(datetime.datetime(2026, 3, 1))
+        for size, amount, when in (
+            ("M", Decimal("10"), before),
+            ("L", Decimal("5"), before),
+            ("M", Decimal("2"), window_start),
+            ("L", Decimal("1"), datetime.datetime(2026, 3, 2, 12, tzinfo=datetime.UTC)),
+        ):
+            MovementShareArticleFactory(
+                share_article=article,
+                storage=storage,
+                harvest=harvest,
+                unit="KG",
+                size=size,
+                amount=amount,
+                date=when,
+            )
+        # A count of 8 against the 10 harvested.
+        MovementShareArticleFactory(
+            share_article=article,
+            storage=storage,
+            movement_type=MovementTypeOptions.INVENTORY,
+            unit="KG",
+            size="M",
+            amount=Decimal("-2"),
+            date=datetime.datetime(2026, 1, 12, 22, tzinfo=datetime.UTC),
+        )
+        MovementShareArticleFactory(
+            share_article=article,
+            storage=other_storage,
+            harvest=HarvestFactory(share_article=article, storage=other_storage),
+            unit="KG",
+            size="M",
+            amount=Decimal("100"),
+            date=before,
+        )
+
+        resp = api_client.get(
+            URL_STORAGE_LOGGING,
+            {
+                "storage": str(storage.id),
+                "start_date": "2026-03-01",
+                "end_date": "2026-12-31",
+            },
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert {row["size"]: row["running_balance"] for row in resp.data} == {
+            "M": 10.0,
+            "L": 6.0,
+        }
+
+    def test_the_default_window_starts_from_the_older_movements_too(
+        self, api_client, tenant
+    ):
+        """Without a start date the ledger shows the last two weeks, and its
+        balance still counts what came before them."""
+        article = ShareArticleFactory()
+        storage = StorageFactory()
+        harvest = HarvestFactory(share_article=article, storage=storage)
+        for amount, when in (
+            (Decimal("10"), datetime.datetime(2026, 3, 2, 12, tzinfo=datetime.UTC)),
+            (Decimal("4"), datetime.datetime(2026, 4, 1, 12, tzinfo=datetime.UTC)),
+        ):
+            MovementShareArticleFactory(
+                share_article=article,
+                storage=storage,
+                harvest=harvest,
+                unit="KG",
+                size="M",
+                amount=amount,
+                date=when,
+            )
+
+        resp = api_client.get(URL_STORAGE_LOGGING, {"storage": str(storage.id)})
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert [(row["amount"], row["running_balance"]) for row in resp.data] == [
+            (4.0, 14.0)
+        ]
 
 
 # ---------------------------------------------------------------------------

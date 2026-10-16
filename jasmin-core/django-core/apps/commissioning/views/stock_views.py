@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
@@ -573,7 +574,9 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
             start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
         events = self._build_event_list(storage, share_article_id, start_date, end_date)
-        self._compute_running_balances(events)
+        self._compute_running_balances(
+            events, self._opening_balances(storage, share_article_id, start_date)
+        )
 
         events.reverse()
         return Response(events, status=status.HTTP_200_OK)
@@ -670,11 +673,34 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
         return events
 
     @staticmethod
-    def _compute_running_balances(events: list[dict]) -> None:
+    def _opening_balances(
+        storage: Storage, share_article_id: str | None, start_date: datetime
+    ) -> dict[tuple, Decimal]:
+        """Each group's balance when the window opens: the sum of its movements
+        before ``start_date``, which the ledger leaves out but its running
+        balance builds on."""
+        movement_qs = MovementShareArticle.objects.filter(
+            storage=storage, date__lt=start_date
+        )
+        if share_article_id:
+            movement_qs = movement_qs.filter(share_article_id=share_article_id)
+        balances: dict[tuple, Decimal] = {}
+        for group in movement_qs.values("share_article_id", "unit", "size").annotate(
+            total=Sum("amount")
+        ):
+            key = (str(group["share_article_id"]), group["unit"], group["size"])
+            balances[key] = group["total"]
+        return balances
+
+    @staticmethod
+    def _compute_running_balances(
+        events: list[dict], opening_balances: dict[tuple, Decimal]
+    ) -> None:
         """Add ``running_balance`` to each event.
 
         ALL movement rows (including INVENTORY) change the balance, because
-        INVENTORY amounts are stored as correction deltas.
+        INVENTORY amounts are stored as correction deltas. Each group starts
+        from its balance before the window (``opening_balances``), not from 0.
 
         ``events`` must be sorted by date ascending.
         """
@@ -682,6 +708,7 @@ class StorageLoggingView(APIViewRolePermissionsMixin, APIView):
         # the running balance stays exact; float() only at the per-row response
         # boundary below — mirrors StockService's Decimal-end-to-end pattern.
         balances: dict[tuple, Decimal] = defaultdict(lambda: Decimal("0"))
+        balances.update(opening_balances)
         for event in events:
             key = (event["share_article"], event["unit"], event["size"])
             balances[key] += event["amount"]
