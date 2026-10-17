@@ -34,7 +34,7 @@ time-machine = "^3.2.0"
 django-axes = "^8.3.1"
 django-zxcvbn-password-validator = "^1.6.0"
 django-auditlog = "^3.4.1"
-ruff = ">=0.15.13,<0.17.0"
+ruff = ">=0.15.13,<0.18.0"
 jwcrypto = ">=1.5.7"
 # Transitive (pulled in by djangorestframework-simplejwt + redis[jwt]).
 # Pinned to the security floor that fixes CVE-2026-101918 present on 2.14.0
@@ -95,7 +95,7 @@ pytest-cov = "^7.1.0"
 pytest-django = "^4.5"
 black = "^26.3.1"
 factory-boy = "^3.3"
-ruff = ">=0.15.13,<0.17.0"
+ruff = ">=0.15.13,<0.18.0"
 pip-audit = "^2.10.0"
 pre-commit = "^4.6.0"
 # Transitive (pulled in by pre-commit). Pinned to the security floor that
