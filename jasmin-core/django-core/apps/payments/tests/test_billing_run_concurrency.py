@@ -108,8 +108,7 @@ def _create_run_in_thread(schema_name, period_start, period_end, collection_date
     Returns ``(run_pk, charge_count)`` for the run it created, or
     ``(None, 0)`` when it found nothing to bundle (a run before it had already
     claimed the charges — a legitimate outcome, NOT an error). Closes
-    thread-local connections in a finally so pytest-django's post-test flush
-    isn't blocked by a lingering lock-holding connection.
+    thread-local connections in a finally, so none outlives the test.
     """
     from django_tenants.utils import schema_context
 
@@ -232,11 +231,10 @@ def _with_sepa_creditor(tenant):
     """The export reads ``tenant.sepa_creditor_*`` off the IN-MEMORY tenant
     (``tenant_context(tenant)`` in the worker), so they are set directly instead
     of via the shared ``tenant_settings`` fixture: that fixture also INSERTs a
-    public ``TenantSettings`` row, and under ``transaction=True`` a prior test's
-    flush can truncate the session tenant's public ``tenants_tenant`` row, making
-    that FK insert fail. ``create_run`` / ``export`` don't need a persisted
-    TenantSettings — ``_billing_config`` safely falls back to EXACT when none
-    exists."""
+    public ``TenantSettings`` row, which ``transaction=True`` commits and leaves
+    in place for every later transactional test. ``create_run`` / ``export``
+    don't need a persisted TenantSettings — ``_billing_config`` safely falls
+    back to EXACT when none exists."""
     tenant.iban = "DE89370400440532013000"
     tenant.sepa_creditor_id = "DE98ZZZ09999999999"
     tenant.sepa_creditor_name = "Test Farm e.G."
@@ -252,7 +250,7 @@ def _export_in_thread(tenant, run_pk):
     produced the file, ``"not_draft"`` for the one that lost the race (the
     run was already EXPORTED by the time it acquired the row lock), or
     ``"busy"`` when a re-plan held one of the run's charges. Closes
-    thread-local connections in a finally so the post-test flush isn't blocked.
+    thread-local connections in a finally, so none outlives the test.
     """
     from django_tenants.utils import tenant_context
 

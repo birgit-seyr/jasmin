@@ -648,12 +648,18 @@ Fixing copy changes the value; the key never changes.
 ### Backend testing
 
 **Tests run in random order** (pytest-randomly), so a test may rely on nothing
-another test leaves behind. Two traps catch it:
+another test leaves behind. Three traps catch it:
 
-- `@pytest.mark.django_db(transaction=True)` commits, and the shared
-  `test_pytest` schema isn't flushed between tests, so those rows outlive the
-  test. Don't assume an empty table — measure from what is there, as
-  `test_member_numbering_concurrency.py` does.
+- `@pytest.mark.django_db(transaction=True)` commits, and nothing is flushed
+  after it — the commissioning conftest turns pytest-django's flush off, which
+  would otherwise wipe the session tenants on the public schema — so those
+  rows outlive the test. Don't assume an empty table — measure from what is
+  there, as `test_member_numbering_concurrency.py` does.
+- A routed request leaves the connection on the schema its host resolved
+  (`TenantMainMiddleware` never switches back). `apps/conftest.py` puts every
+  test back on the public schema afterwards, so a test that touches tenant
+  data asks for the `tenant` fixture instead of inheriting a schema from the
+  test before.
 - Change settings through `override_settings` or through pytest-django's
   `settings` fixture, never both in one test: the fixture's teardown restores
   the decorator's layer, whose value then stays for every later test

@@ -34,7 +34,7 @@ def _demote_in_thread(tenant, target_pk, actor_pk):
 
     Returns ``"demoted"`` when the role was removed, or ``"refused"`` when the
     last-admin guard (AdminUserError) blocked it. Closes thread-local
-    connections in a finally so the post-test flush isn't blocked.
+    connections in a finally, so none outlives the test.
     """
     from django_tenants.utils import tenant_context
 

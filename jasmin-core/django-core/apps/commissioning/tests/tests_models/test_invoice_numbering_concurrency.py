@@ -50,7 +50,7 @@ def _create_one_invoice(reseller_id: str, schema_name: str) -> int:
     pool gives each thread its own connection — but we still have to
     re-set the schema on that connection (the tenant context is per-
     connection, not per-thread). Closes the thread-local connection in
-    a finally block so pytest-django's post-test flush isn't blocked.
+    a finally block, so none outlives the test.
     """
     from django_tenants.utils import schema_context
 
@@ -66,9 +66,7 @@ def _create_one_invoice(reseller_id: str, schema_name: str) -> int:
             invoice.save()  # triggers save_with_number_retry → numbering
             return invoice.number
     finally:
-        # Without this, the thread's connection lingers and the
-        # subsequent pytest flush fails with "Database test_jasmin
-        # couldn't be flushed" because the thread still holds locks.
+        # Django never closes a worker thread's connections itself.
         for conn in connections.all():
             conn.close()
 

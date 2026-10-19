@@ -27,36 +27,30 @@ from apps.shared.tenants.models import Domain, Tenant
 
 from .factories import JasminUserFactory
 
+
 # ---------------------------------------------------------------------------
-# Force CASCADE on the post-test ``flush`` triggered by
-# ``@pytest.mark.django_db(transaction=True)``.
+# Make the post-test ``flush`` of ``@pytest.mark.django_db(transaction=True)``
+# truncate nothing.
 #
-# django-tenants puts ``django.contrib.contenttypes`` in SHARED_APPS (its
-# table lives in the public schema) and ``django.contrib.auth`` in
-# TENANT_APPS (``auth_permission`` lives in every tenant schema). The
-# auth_permission → django_content_type FK is therefore cross-schema.
-#
-# Django's default ``flush`` issues ``TRUNCATE <tables>`` without CASCADE,
-# which Postgres refuses for any table that has a cross-schema referrer.
-# CASCADE is harmless during test teardown — the contract of ``flush`` is
-# already "wipe everything", and CASCADE just extends that to dependents.
+# ``flush`` truncates the tables of the schema the connection is on, and every
+# test ends on the public schema, so it never reaches the ``test_pytest`` rows a
+# transactional test commits. What it would truncate is the suite's own state:
+# the session tenants and their domains, the seeded ops checklist, and
+# ``django_content_type``, whose truncation cascades into every tenant schema's
+# ``auth_permission`` and audit log. A transactional test's rows outlive it, and
+# the next one measures from what is there.
 #
 # Patch the Postgres-specific override (the base class is shadowed by
 # ``django.db.backends.postgresql.operations.DatabaseOperations.sql_flush``,
 # so patching the base does nothing for real connections).
 # ---------------------------------------------------------------------------
-_original_sql_flush = PostgresDatabaseOperations.sql_flush
-
-
-def _sql_flush_with_cascade(
+def _sql_flush_nothing(
     self, style, tables, *, reset_sequences=False, allow_cascade=False
 ):
-    return _original_sql_flush(
-        self, style, tables, reset_sequences=reset_sequences, allow_cascade=True
-    )
+    return []
 
 
-PostgresDatabaseOperations.sql_flush = _sql_flush_with_cascade
+PostgresDatabaseOperations.sql_flush = _sql_flush_nothing
 
 
 @pytest.fixture(scope="session")
@@ -190,8 +184,12 @@ def member_user(tenant):
 
 
 @pytest.fixture()
-def anon_client():
-    """Unauthenticated DRF APIClient."""
+def anon_client(_tenant_schema):
+    """Unauthenticated DRF APIClient.
+
+    Its requests go to ``testserver``, so it needs the tenant that owns that
+    host to exist, even when no other fixture of the test has created it yet.
+    """
     return APIClient()
 
 

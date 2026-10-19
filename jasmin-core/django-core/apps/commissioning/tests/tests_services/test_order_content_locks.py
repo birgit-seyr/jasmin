@@ -192,8 +192,7 @@ class _CommittedLine:
 def _in_own_connection(schema_name: str, write: Callable[[], Any]) -> Any:
     """Run ``write`` on this thread's own connection in the tenant schema.
 
-    Closes the thread's connections afterwards, so none of them keeps a lock
-    the post-test flush would wait for.
+    Closes the thread's connections afterwards, so none outlives the test.
     """
     from django_tenants.utils import schema_context
 

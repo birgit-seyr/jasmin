@@ -56,8 +56,8 @@ def _create_one_member_and_generate_number(schema_name: str, email: str) -> int:
     A fresh connection is needed because Django's per-thread connection
     pool gives each thread its own connection — but the tenant context
     is per-connection, not per-thread, so we re-set the schema inside
-    the worker. Closes the thread-local connection in a finally block
-    so pytest-django's post-test flush isn't blocked by lingering locks.
+    the worker. Closes the thread-local connection in a finally block,
+    so none outlives the test.
     """
     from django_tenants.utils import schema_context
 
