@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 308 finding(s).
+# 305 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -102,9 +102,6 @@ apps/commissioning/services/documentation_summary_service.py: "type[JasminModel]
 apps/commissioning/services/documentation_summary_service.py: "type[JasminModel]" has no attribute "active"  [attr-defined]
 apps/commissioning/services/documentation_summary_service.py: "type[JasminModel]" has no attribute "objects"  [attr-defined]
 apps/commissioning/services/documentation_summary_service.py: Argument "harvest_sums" to "_build_result_entry" of "DocumentationSummaryService" has incompatible type "tuple[float | None, float | None, float | None, float | None] | None"; expected "tuple[float, float, float, float] | None"  [arg-type]
-apps/commissioning/services/documentation_summary_service.py: Argument "share_article_id" to "_build_result_entry" of "DocumentationSummaryService" has incompatible type "int"; expected "str"  [arg-type]
-apps/commissioning/services/documentation_summary_service.py: Argument 1 to "_calculate_theoretical_stock" of "DocumentationSummaryService" has incompatible type "int"; expected "str"  [arg-type]
-apps/commissioning/services/documentation_summary_service.py: Argument 5 to "_calculate_theoretical_stock" of "DocumentationSummaryService" has incompatible type "dict[tuple[int, str, str | None, int | None], dict[str, Any]]"; expected "dict[tuple[str, str, str | None, str | None], dict[str, Any]]"  [arg-type]
 apps/commissioning/services/forecast_service.py: Argument 2 to "split_forecast_amount_by_weight" has incompatible type "dict[str, Decimal | None]"; expected "dict[Any, Decimal | int | float | None]"  [arg-type]
 apps/commissioning/services/invoice_service.py: Item "None" of "OrderContent | None" has no attribute "order_id"  [union-attr]
 apps/commissioning/services/member_email.py: List item 0 has incompatible type "str | None"; expected "str"  [list-item]

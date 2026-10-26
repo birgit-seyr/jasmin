@@ -9,8 +9,6 @@ from django.db import transaction
 from django.db.models import Q, QuerySet
 from isoweek import Week
 
-from apps.shared.money import to_decimal
-
 from ..constants import PURCHASE_DAY
 from ..models import (
     AdditionalTheoreticalCleanAmount,
@@ -33,6 +31,7 @@ from ..models import (
 )
 from ..models.choices import MovementTypeOptions
 from ..services.documentation_service import GenericDocumentationService
+from ..services.documentation_stock import StockKey, calculate_theoretical_stock
 from ..services.stock_service import StockService
 from ..utils import (
     build_storage_fields,
@@ -43,7 +42,7 @@ from ..utils.iso_week_utils import previous_day_stock_coordinates
 # Type definitions
 ModelType = Literal["harvest", "purchase", "washamount", "cleanamount"]
 GroupingKey = tuple[
-    int, str, str | None, int | None, str
+    str, str, str | None, int | None, str
 ]  # (share_article_id, unit, size, day_number, storage_id)
 
 
@@ -237,7 +236,7 @@ class DocumentationSummaryService:
         day_number: int | None,
         single_id: str | None,
         actual_manager: Any,
-    ) -> dict[tuple[int, str, str | None, int | None], dict[str, Any]]:
+    ) -> dict[StockKey, dict[str, Any]]:
         """Get theoretical current stock map for entities."""
         if model not in ["harvest", "purchase", "washamount"]:
             return {}
@@ -397,63 +396,6 @@ class DocumentationSummaryService:
             )
         except AttributeError:
             return None, None, None
-
-    @staticmethod
-    def _calculate_theoretical_stock(
-        share_article_id: str,
-        unit: str,
-        size: str | None,
-        storage_id: str,
-        theoretical_stock_map: dict[
-            tuple[str, str, str | None, str | None], dict[str, Any]
-        ],
-        theoretical_sum_share: Decimal | float = 0,
-    ) -> tuple[Decimal, Decimal, Decimal]:
-        """Calculate theoretical current stock for an entry.
-
-        Returns (total, share_stock, order_stock).
-        Uses for_shares / for_resellers flags from the stock entries to split.
-        Falls back from current_stock_amount to theoretical_current_stock.
-        Negative values are clamped to 0.
-        """
-        candidate = (share_article_id, unit, size, storage_id)
-        matching_keys = [candidate] if candidate in theoretical_stock_map else []
-
-        if not matching_keys:
-            return Decimal("0"), Decimal("0"), Decimal("0")
-
-        share_stock = Decimal("0")
-        order_stock = Decimal("0")
-        theoretical_sum_share = to_decimal(theoretical_sum_share)
-
-        for key in matching_keys:
-            entry = theoretical_stock_map[key]
-            stock = entry.get("current_stock_amount")
-            if stock is None:
-                stock = entry.get("theoretical_current_stock") or 0
-            stock = max(to_decimal(stock), Decimal("0"))
-
-            is_share = entry.get("for_shares")
-            is_order = entry.get("for_resellers")
-
-            if is_share and is_order:
-                # Both flags: assign up to theoretical_sum_share to share,
-                # remainder to order
-                to_share = min(
-                    stock, max(theoretical_sum_share - share_stock, Decimal("0"))
-                )
-                share_stock += to_share
-                order_stock += stock - to_share
-            elif is_share:
-                share_stock += stock
-            elif is_order:
-                order_stock += stock
-            else:
-                share_stock += stock
-
-        total = share_stock + order_stock
-
-        return total, share_stock, order_stock
 
     @staticmethod
     def _build_result_entry(
@@ -665,11 +607,8 @@ class DocumentationSummaryService:
                 theoretical_current_stock,
                 theoretical_current_stock_share,
                 theoretical_current_stock_order,
-            ) = DocumentationSummaryService._calculate_theoretical_stock(
-                share_article_id,
-                unit,
-                size,
-                storage_id,
+            ) = calculate_theoretical_stock(
+                (share_article_id, unit, size, storage_id),
                 theoretical_stock_map,
                 theoretical_sum_share=theoretical_sum_share or 0,
             )

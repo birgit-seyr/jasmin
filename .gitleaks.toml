@@ -42,4 +42,7 @@ regexes = [
   # as high-entropy by the generic-api-key rule; identical in every
   # ``*/constants.py`` (commissioning, staff, …), never a credential.
   '''ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789''',
+  # A table column's ``key`` (``ListVegetables.tsx``), which the generic-api-key
+  # rule reads as ``key: <secret>``; it names a model field, never a credential.
+  '''default_yield_kg_per_m2''',
 ]

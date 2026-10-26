@@ -7,6 +7,9 @@ from unittest.mock import patch
 
 import pytest
 
+from apps.commissioning.services.documentation_stock import (
+    calculate_theoretical_stock,
+)
 from apps.commissioning.services.documentation_summary_service import (
     DocumentationSummaryService,
 )
@@ -115,7 +118,7 @@ class TestGetForecastFields:
 
 
 # ---------------------------------------------------------------------------
-# _calculate_theoretical_stock
+# calculate_theoretical_stock
 # ---------------------------------------------------------------------------
 class TestCalculateTheoreticalStock:
     def test_empty_map_returns_zeros(self):
@@ -123,9 +126,7 @@ class TestCalculateTheoreticalStock:
             total,
             share_stock,
             order_stock,
-        ) = DocumentationSummaryService._calculate_theoretical_stock(
-            1, "KG", "M", "stor-1", {}
-        )
+        ) = calculate_theoretical_stock((1, "KG", "M", "stor-1"), {})
         assert total == 0
         assert share_stock == 0.0
         assert order_stock == 0.0
@@ -142,9 +143,7 @@ class TestCalculateTheoreticalStock:
             total,
             share_stock,
             order_stock,
-        ) = DocumentationSummaryService._calculate_theoretical_stock(
-            1, "KG", "M", "stor-1", stock_map
-        )
+        ) = calculate_theoretical_stock((1, "KG", "M", "stor-1"), stock_map)
         assert total == 50
         assert share_stock == 50
         assert order_stock == 0
@@ -161,9 +160,7 @@ class TestCalculateTheoreticalStock:
             total,
             share_stock,
             order_stock,
-        ) = DocumentationSummaryService._calculate_theoretical_stock(
-            1, "KG", "M", "stor-1", stock_map
-        )
+        ) = calculate_theoretical_stock((1, "KG", "M", "stor-1"), stock_map)
         assert total == 30
         assert order_stock == 30
         assert share_stock == 0

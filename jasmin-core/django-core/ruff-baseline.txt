@@ -2,7 +2,7 @@
 # Managed by scripts/ruff_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/ruff_baseline.py freeze
-# 184 finding(s).
+# 183 finding(s).
 
 apps/accounts/backends.py: N806 Variable `UserModel` in function should be lowercase
 apps/accounts/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
@@ -48,7 +48,6 @@ apps/commissioning/services/default_share_content_service.py: PLR0913 Too many a
 apps/commissioning/services/documentation_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/documentation_summary_service.py: C901 `get_summary` is too complex (11 > 10)
 apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (15 > 5)
-apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/documentation_summary_service.py: PLR0913 Too many arguments in function definition (7 > 5)
