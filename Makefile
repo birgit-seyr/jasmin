@@ -47,6 +47,18 @@ dev-logs:
 dev-rebuild:
 	$(COMPOSE_DEV) build --no-cache
 
+# The backend's venv and the frontend's node_modules live in named volumes that
+# a rebuild never touches, so a lock change has to be installed into them.
+# The services stop for it: installing under a running dev server makes its
+# reloader restart on half-installed packages. Keeps the dev database;
+# `make deps-check` says when this is needed.
+.PHONY: dev-sync-deps
+dev-sync-deps:
+	$(COMPOSE_DEV) stop backend huey frontend
+	$(COMPOSE_DEV) run --rm --no-deps -T --entrypoint poetry backend sync
+	$(COMPOSE_DEV) run --rm --no-deps -T --entrypoint npm frontend ci
+	$(COMPOSE_DEV) up -d backend huey frontend
+
 dev-shell:
 	$(COMPOSE_DEV) exec backend python manage.py shell
 
@@ -173,11 +185,11 @@ pytest:
 
 .PHONY: black
 black:
-	$(COMPOSE_DEV) exec backend black --check apps core config
+	$(COMPOSE_DEV) exec backend black --check apps config core scripts
 
 .PHONY: black-fix
 black-fix:
-	$(COMPOSE_DEV) exec backend black apps core config
+	$(COMPOSE_DEV) exec backend black apps config core scripts
 
 # ruff runs against a frozen baseline, same shape as mypy below: the strict
 # rules (E,F,B,BLE,UP,I) have no baseline entries so they still fail hard, while
@@ -250,13 +262,18 @@ lint-pins:
 type-check:
 	$(COMPOSE_DEV) exec frontend npm run type-check
 
+# The dev container sets NODE_ENV=development for Vite's dev server; vitest only
+# sets "test" when nothing is set, and under "development" AntD's styles build
+# selectors jsdom rejects. CI sets nothing, so pin the value it effectively runs.
 .PHONY: test-frontend
 test-frontend:
-	$(COMPOSE_DEV) exec frontend npm run test:run
+	$(COMPOSE_DEV) exec -e NODE_ENV=test frontend npm run test:run
 
+# Likewise a production build: `vite build` keeps an inherited NODE_ENV, so the
+# container's "development" would bundle development React and skew `size`.
 .PHONY: build
 build:
-	$(COMPOSE_DEV) exec frontend npm run build
+	$(COMPOSE_DEV) exec -e NODE_ENV=production frontend npm run build
 
 # The bundle-size budgets can only be measured on built output, and vitest
 # never runs Rollup — so a chunking regression is invisible to every other
@@ -300,6 +317,57 @@ e2e-ui:
 tunables:
 	cd $(DJANGO_DIR) && $(PYTHON) scripts/tunables.py $(TUNABLES_ARGS)
 
+# --- The rest of what CI checks ----------------------------------------------
+# $(call poetry-in-sync,<command prefix>,<which venv>,<fix>): fails, listing the
+# pending changes, when that venv differs from poetry.lock.
+define poetry-in-sync
+@out=$$($(1) poetry sync --dry-run 2>&1) || { echo "$$out"; exit 1; }; \
+echo "$$out" | grep -qE "No dependencies to install or update|0 installs, 0 updates, 0 removals" || { \
+  echo "$$out" | grep -E "^  - (Installing|Updating|Removing)" | grep -v Skipped; \
+  echo "✗ $(2) differs from poetry.lock. Run: $(3)"; exit 1; }
+endef
+
+# The packages every gate runs on must match the locks, or they test the old
+# versions: the containers' venv and node_modules (see dev-sync-deps), and the
+# host venv test-local runs the suite in.
+.PHONY: deps-check
+deps-check:
+	$(call poetry-in-sync,$(COMPOSE_DEV) exec -T backend,The backend container's venv,make dev-sync-deps)
+	$(call poetry-in-sync,cd $(DJANGO_DIR) &&,The host venv (test-local),cd $(DJANGO_DIR) && poetry sync)
+	$(COMPOSE_DEV) exec -T frontend node scripts/check-installed-deps.mjs
+
+.PHONY: lock-check
+lock-check:
+	$(COMPOSE_DEV) exec -T backend poetry check --lock
+
+.PHONY: migrations-check
+migrations-check:
+	$(COMPOSE_DEV) exec -T backend python manage.py makemigrations --check --dry-run
+
+# Regenerates the OpenAPI schema and compares it with the committed one,
+# without overwriting it. Fix a difference with `make generate-api`.
+.PHONY: schema-check
+schema-check:
+	@$(COMPOSE_DEV) exec -T backend python manage.py spectacular 2>/dev/null \
+	  | diff -u $(REACT_DIR)/schema.yml - \
+	  || { echo "✗ schema.yml is out of date. Run: make generate-api"; exit 1; }
+
+# The same advisory gates as CI's two "Security audit" steps; each ignored
+# advisory carries its reason there and in scripts/check-prod-audit.mjs.
+.PHONY: audit
+audit:
+	$(COMPOSE_DEV) exec -T backend python -m pip_audit --strict --ignore-vuln PYSEC-2025-183
+	$(COMPOSE_DEV) exec -T frontend node scripts/check-prod-audit.mjs
+
+# CI's gitleaks scan, over the files a commit would carry (scripts/secret_scan.sh).
+.PHONY: secrets
+secrets:
+	./scripts/secret_scan.sh
+
 # --- Run the whole CI gate in one shot ---------------------------------------
+# Everything CI runs except the image builds and the nginx config check, in
+# roughly the order of their cost, so a cheap failure stops it early. The suite
+# runs on the host (test-local), as in CI's checkout: some tests read repo files
+# outside django-core (scripts/, backups/), which the backend container lacks.
 .PHONY: check
-check: black ruff import-contracts module-length mypy pytest type-check lint lint-pins test-frontend size
+check: deps-check lock-check secrets black ruff import-contracts module-length mypy migrations-check schema-check type-check lint lint-pins audit test-local test-frontend size

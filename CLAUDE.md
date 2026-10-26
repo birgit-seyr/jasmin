@@ -1004,6 +1004,7 @@ make dev-up                      # Start dev stack (postgres, redis, backend, fr
 make dev-down                    # Stop dev stack
 make dev-logs                    # Tail logs
 make dev-rebuild                 # Rebuild images without cache
+make dev-sync-deps               # Install lock changes into the dev containers' venv / node_modules
 make dev-reset                   # Full reset (down -v, then up -d --build)
 make dev-seed                    # Re-seed the test tenant
 make dev-bash                    # Shell into backend container
@@ -1129,8 +1130,16 @@ README holds the details; the rules:
 
 ### Linting & code quality
 
-`make check` runs the whole CI gate in one shot: black, ruff, import-contracts,
-module-length, mypy, pytest, type-check, lint, lint-pins, test-frontend, size.
+`make check` runs everything CI checks except the image builds and the nginx
+config check, in the dev containers (`make dev-up` first): deps-check, lock-check,
+secrets, black, ruff, import-contracts, module-length, mypy, migrations-check,
+schema-check, type-check, lint, lint-pins, audit, test-local, test-frontend, size.
+The backend suite runs on the host (`test-local`), as in CI's checkout: some
+tests read repo files outside `django-core` that the backend container doesn't
+mount. `deps-check` comes first because the containers' venv and `node_modules`
+are named volumes a lock change never reaches; when it fails, `make
+dev-sync-deps` installs the locks into them (the host venv: `poetry sync`). `secrets` (`scripts/secret_scan.sh`) runs CI's
+gitleaks over the files a commit would carry, not the gitignored ones.
 
 Much of it also runs on `git commit` through pre-commit (once you have run
 `pre-commit install`): gitleaks secret scanning, `ruff --fix` and `black` over
