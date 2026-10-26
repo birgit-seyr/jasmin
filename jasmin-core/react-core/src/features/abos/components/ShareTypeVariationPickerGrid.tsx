@@ -87,7 +87,7 @@ export default function ShareTypeVariationPickerGrid({
                 <Col xs={24} sm={12} key={variation.value}>
                   <Badge
                     count={activeQty > 0 ? `${activeQty}×` : 0}
-                    color="#226c47"
+                    color="var(--color-primary-solid)"
                     offset={[-8, 8]}
                   >
                     <Card

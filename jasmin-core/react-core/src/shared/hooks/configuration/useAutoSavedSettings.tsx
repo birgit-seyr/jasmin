@@ -139,7 +139,7 @@ export const useAutoSavedSettings = ({
     }
     // `tenant?.id` IS the dep — the body reads via ref to avoid touching
     // `tenant` identity, but we still want a fresh fetch when the id changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetches per tenant id, not tenant identity
   }, [tenant?.id]);
 
   // Handle setting change. ``fieldType`` is the renderer ``type``

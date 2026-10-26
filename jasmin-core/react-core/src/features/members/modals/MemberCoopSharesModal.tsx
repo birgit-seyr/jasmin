@@ -40,7 +40,7 @@ export default function MemberCoopSharesModal({
 }: MemberCoopSharesModalProps) {
   const { t, i18n } = useTranslation();
   const { getSetting } = useTenant();
-  const { currencySymbol } = useCurrency();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const locale = i18n.language || "de";
 
@@ -187,8 +187,7 @@ export default function MemberCoopSharesModal({
         {!!amount && amount > 0 && valueOne > 0 && (
           <Text type="secondary">
             {t("members.coop_subscribe_new_total", { total: newTotal })} —{" "}
-            {currencySymbol}
-            {(currentValue + amount * valueOne).toFixed(2)}
+            {formatCurrency(currentValue + amount * valueOne)}
           </Text>
         )}
 

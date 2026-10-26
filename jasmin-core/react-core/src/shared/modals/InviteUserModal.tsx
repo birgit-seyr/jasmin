@@ -103,7 +103,7 @@ export default function InviteUserModal({
         roles: [...initialRoles],
         ...(initialValues ?? {}),
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-seeds only when the modal opens
   }, [open]);
 
   const lockedRolesSet = new Set(lockedRoles);

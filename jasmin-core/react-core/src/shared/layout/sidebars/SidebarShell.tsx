@@ -115,7 +115,7 @@ export default function SidebarShell({
       (key) => !(openKeys ?? []).includes(key),
     );
     if (missing.length) onOpenChange?.([...(openKeys ?? []), ...missing]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- syncs only on route change
   }, [match?.key]);
 
   return (

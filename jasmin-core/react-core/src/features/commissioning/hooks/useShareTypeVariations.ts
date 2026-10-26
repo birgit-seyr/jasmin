@@ -12,7 +12,7 @@ export const useShareTypeVariations = (params: CommissioningShareTypeVariationsL
   );
 
   const shareTypeVariations: ShareTypeVariationOption[] = useMemo(
-    () => toOptions(data, (stv) => stv.size!),
+    () => toOptions(data, (variation) => variation.size!),
     [data],
   );
 

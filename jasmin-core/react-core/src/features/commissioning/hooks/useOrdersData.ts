@@ -40,7 +40,11 @@ import {
   computeTaxBreakdown,
   totalsFromBreakdown,
 } from "@features/commissioning/pdfs/forResellers/pdfBase";
-import { computeLineNetto, type LineNettoInput } from "@shared/utils/lineNetto";
+import {
+  computeLineNetto,
+  roundHalfUp,
+  type LineNettoInput,
+} from "@shared/utils/lineNetto";
 // Direct module path (not the ``components/tables`` barrel): the barrel
 // pulls in ``EditableTable``, which imports the ``hooks`` barrel — and that
 // barrel re-exports this very module, forming a Rollup chunk cycle.
@@ -211,9 +215,7 @@ export function useOrdersData() {
         item.crate_type ||
         item.crate_type_name
       ) {
-        return Number(
-          computeLineNetto(item as unknown as LineNettoInput).toFixed(2),
-        );
+        return computeLineNetto(item as unknown as LineNettoInput);
       }
       return 0;
     },
@@ -225,7 +227,7 @@ export function useOrdersData() {
       const netto = parseFloat(String(item.line_netto ?? calculateLineNetto(item))) || 0;
       const tax = parseFloat(String(item.tax_rate));
       const rate = Number.isFinite(tax) ? tax : defaultTaxRate;
-      return Number((netto * (1 + rate / 100)).toFixed(2));
+      return roundHalfUp(netto * (1 + rate / 100));
     },
     [calculateLineNetto],
   );

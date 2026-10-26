@@ -15,6 +15,7 @@ import type {
 import { ToolTipIcon } from "@shared/ui";
 import { editableOnlyOnCreate, renderNumber } from "@shared/utils";
 import { parseDecimalInput } from "@shared/utils/numberFormat";
+import { roundHalfUp } from "@shared/utils/lineNetto";
 import { useCurrency } from "@hooks/configuration/useCurrency";
 import type { useOffersData } from "../useOffersData";
 import { useCrates } from "../useCrates";
@@ -30,7 +31,7 @@ type OffersData = ReturnType<typeof useOffersData>;
 
 /** A tier price: the base less the offer group's discount percent, in cents. */
 const discountedPrice = (base: number, discountPercent: number): number =>
-  Math.round(base * (100 - discountPercent)) / 100;
+  roundHalfUp((base * (100 - discountPercent)) / 100);
 
 export function useOffersColumns({
   shareArticleFilters,

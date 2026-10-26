@@ -521,7 +521,7 @@ export default function ConfigurationShareTypeVariations() {
               ? "3px solid var(--color-success)"
               : "3px solid transparent",
             background: isActive
-              ? "linear-gradient(90deg, rgba(82,196,26,0.03) 0%, transparent 40%)"
+              ? "linear-gradient(90deg, color-mix(in srgb, var(--color-success) 3%, transparent) 0%, transparent 40%)"
               : undefined,
             transition: "border-color 0.3s, background 0.3s",
           },

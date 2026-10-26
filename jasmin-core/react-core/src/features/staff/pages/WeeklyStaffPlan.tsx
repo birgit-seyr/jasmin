@@ -220,7 +220,7 @@ export default function WeeklyStaffPlan() {
         },
       },
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- saves only on a user edit, reading the week as of it
   }, [cells]);
 
   const handlePlace = useCallback(

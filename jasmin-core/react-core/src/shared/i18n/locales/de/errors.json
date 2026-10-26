@@ -606,8 +606,7 @@
   },
   "support": {
     "ticket_not_found": "Support-Anfrage nicht gefunden.",
-    "reply_empty": "Die Antwort darf nicht leer sein — bitte einen Text eingeben.",
-    "invalid_status": "Ungültiger Status für diese Support-Anfrage."
+    "reply_empty": "Die Antwort darf nicht leer sein — bitte einen Text eingeben."
   },
   "super_admin": {
     "tenant_not_found": "Mandant nicht gefunden.",

@@ -50,7 +50,7 @@ export default function SendOffersModal({
     if (open) {
       setSelectedIds(resellers.filter((r) => !r.sent).map((r) => r.id));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resellers read as of the open
   }, [open]);
 
   const notSentResellers = useMemo(

@@ -1,6 +1,6 @@
-import { Table } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import ReadOnlyReportTable from "@shared/tables/ReadOnlyReportTable";
 
 export interface CsvColumnHelp {
   /** The CSV header exactly as the importer expects it. */
@@ -17,8 +17,7 @@ export interface CsvColumnHelp {
 export default function CsvColumnsTable({ rows }: { rows: CsvColumnHelp[] }) {
   const { t } = useTranslation();
   return (
-    <Table<CsvColumnHelp>
-      size="small"
+    <ReadOnlyReportTable<CsvColumnHelp>
       pagination={false}
       rowKey="field"
       dataSource={rows}

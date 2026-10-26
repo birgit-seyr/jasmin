@@ -15,8 +15,6 @@
   "list_members": "Member list",
   "member_number": "#",
   "status": "Status",
-  "status_active": "Active",
-  "status_trial": "Trial",
   "status_cancelled": "Cancelled",
   "status_rejected": "Rejected",
   "status_pending": "Pending",

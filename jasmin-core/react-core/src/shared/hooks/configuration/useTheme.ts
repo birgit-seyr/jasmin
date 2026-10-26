@@ -10,14 +10,17 @@ export const useTheme = () => {
   // theme changes, so this memo must rebuild on a theme switch.
   const themeTokens = useMemo(
     () => ({
-      colorPrimary: getCSSVariable('--color-primary'),
+      colorPrimary: getCSSVariable('--color-primary-solid'),
+      colorLink: getCSSVariable('--color-primary'),
+      colorLinkHover: getCSSVariable('--color-primary-hover'),
+      colorLinkActive: getCSSVariable('--color-primary-active'),
       colorSuccess: getCSSVariable('--color-success'),
       colorWarning: getCSSVariable('--color-warning'),
       colorError: getCSSVariable('--color-error'),
       colorInfo: getCSSVariable('--color-info'),
       borderRadius: getCSSVariableAsNumber('--border-radius'),
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the CSS variables change with the theme
     [theme],
   );
 

@@ -24,7 +24,7 @@ from django.http import StreamingHttpResponse
 from django.utils import timezone
 
 from apps.shared.csv_safety import CsvEchoBuffer, escape_csv_row
-from apps.shared.money import CENT
+from apps.shared.money import round_money
 
 from ..models import CoopShare, Member
 from ..utils.csv_format import get_csv_dialect
@@ -179,7 +179,7 @@ def build_member_register_csv_response(
                         dialect.format(member.entry_date),
                         dialect.format(member.cancelled_effective_at),
                         dialect.format(count),
-                        dialect.format(capital.quantize(CENT)),
+                        dialect.format(round_money(capital)),
                     ]
                 )
             )

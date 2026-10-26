@@ -69,7 +69,7 @@ function FitBounds({ points }: { points: [number, number][] }) {
     map.fitBounds(points as LatLngBoundsExpression, { padding: [30, 30] });
     // ``key`` (the serialized points) is the real dependency; ``points`` is a
     // fresh array each render and would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key stands for points
   }, [map, key]);
   return null;
 }

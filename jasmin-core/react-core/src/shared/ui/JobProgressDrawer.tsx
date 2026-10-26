@@ -10,7 +10,6 @@ import {
   Progress,
   Space,
   Spin,
-  Table,
   Tag,
   Typography,
 } from "antd";
@@ -18,6 +17,7 @@ import type { FC, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useJob } from "@hooks/useJob";
+import ReadOnlyReportTable from "@shared/tables/ReadOnlyReportTable";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -198,8 +198,7 @@ export const JobProgressDrawer: FC<JobProgressDrawerProps> = ({
               <Title level={5} style={{ marginBottom: 0 }}>
                 {t("job_progress.per_item_results")}
               </Title>
-              <Table<PerItemResult>
-                size="small"
+              <ReadOnlyReportTable<PerItemResult>
                 rowKey={(row) => row.reseller_id ?? row.order_id ?? ""}
                 pagination={false}
                 dataSource={rows}

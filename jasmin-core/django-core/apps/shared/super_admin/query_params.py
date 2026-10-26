@@ -19,11 +19,15 @@ from rest_framework.request import Request
 
 from apps.shared.query_params import ParamSpec
 from apps.shared.query_params import validate_query_params as _validate
+from apps.shared.support.models import TicketStatus
 
 PARAM_CATALOGUE: dict[str, ParamSpec] = {
     # Counting users is cross-schema work, so the tenant roster stays useful
     # without it — but the dashboard wants the counts, hence the True default.
     "include_user_count": ParamSpec("bool", default=True),
+    # The support-ticket list's filters.
+    "status": ParamSpec("choice", choices=tuple(TicketStatus.values)),
+    "tenant_schema": ParamSpec("str"),
 }
 
 

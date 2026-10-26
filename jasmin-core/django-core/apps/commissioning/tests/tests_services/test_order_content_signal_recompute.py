@@ -14,7 +14,6 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from django.test import TestCase
 
 from apps.commissioning.models import (
     MovementShareArticle,
@@ -50,16 +49,16 @@ def _setup_order_content(amount: Decimal = Decimal("10")):
     )
 
 
-@pytest.mark.usefixtures("tenant")
-class OrderContentRecomputeTests(TestCase):
-    def test_recompute_creates_theoreticals(self):
+@pytest.mark.django_db
+class TestOrderContentRecompute:
+    def test_recompute_creates_theoreticals(self, tenant):
         oc = _setup_order_content(Decimal("10"))
         recompute_order_contents([oc.id])
 
         th = TheoreticalHarvest.objects.get(order_content=oc)
         assert th.amount == Decimal("10")
 
-    def test_editing_order_content_amount_rebuilds_theoreticals(self):
+    def test_editing_order_content_amount_rebuilds_theoreticals(self, tenant):
         oc = _setup_order_content(Decimal("10"))
         recompute_order_contents([oc.id])
         assert TheoreticalHarvest.objects.get(order_content=oc).amount == Decimal("10")
@@ -70,7 +69,7 @@ class OrderContentRecomputeTests(TestCase):
 
         assert TheoreticalHarvest.objects.get(order_content=oc).amount == Decimal("25")
 
-    def test_deleting_order_content_cascades_theoreticals(self):
+    def test_deleting_order_content_cascades_theoreticals(self, tenant):
         oc = _setup_order_content(Decimal("10"))
         recompute_order_contents([oc.id])
         oc_id = oc.id
@@ -83,7 +82,7 @@ class OrderContentRecomputeTests(TestCase):
             order_content_id=oc_id, movement_type="ORDERCONTENT"
         ).exists()
 
-    def test_no_duplicate_movements_after_repeated_recomputes(self):
+    def test_no_duplicate_movements_after_repeated_recomputes(self, tenant):
         oc = _setup_order_content(Decimal("10"))
         recompute_order_contents([oc.id])
 
@@ -105,14 +104,14 @@ class OrderContentRecomputeTests(TestCase):
             f"baseline={baseline}, after={after}"
         )
 
-    def test_recompute_dedupes_order_content_ids(self):
+    def test_recompute_dedupes_order_content_ids(self, tenant):
         oc = _setup_order_content(Decimal("10"))
         # Same id passed 5x — must produce one theoretical row.
         recompute_order_contents([oc.id, oc.id, oc.id, oc.id, oc.id])
 
         assert TheoreticalHarvest.objects.filter(order_content=oc).count() == 1
 
-    def test_recompute_for_empty_input_is_noop(self):
+    def test_recompute_for_empty_input_is_noop(self, tenant):
         recompute_order_contents([])
         recompute_order_contents([None])
         recompute_order_contents(())

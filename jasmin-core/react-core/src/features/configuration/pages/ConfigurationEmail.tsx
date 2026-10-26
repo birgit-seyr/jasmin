@@ -162,7 +162,7 @@ export default function ConfigurationEmail() {
     if (configData) {
       setConfig(configData);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hasChanges and saving only gate the re-seed
   }, [configData]);
 
   // Track changes → mark the form dirty (fieldType tunes the debounce window).

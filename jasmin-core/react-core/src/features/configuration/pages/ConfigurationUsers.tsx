@@ -200,11 +200,6 @@ export default function ConfigurationUsers() {
     }
   }, [t, fetchUsers]);
 
-  // ---- Edit roles -------------------------------------------------------
-  const openRoleEditor = (u: UserRow) => {
-    setRoleEditUser(u);
-  };
-
   // ---- Splitting users into three buckets ------------------------------
   const { staffUsers, customerUsers, memberOnlyUsers } = useMemo(() => {
     const staff: UserRow[] = [];
@@ -295,7 +290,7 @@ export default function ConfigurationUsers() {
                 size="small"
                 icon={<EditOutlined />}
                 aria-label={t("users.edit_roles")}
-                onClick={() => openRoleEditor(u)}
+                onClick={() => setRoleEditUser(u)}
               />
               <RoleTags roles={u.roles} />
             </Space>

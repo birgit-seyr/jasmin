@@ -16,7 +16,7 @@ from collections.abc import Callable, Iterable
 from decimal import Decimal
 from typing import Any
 
-from apps.shared.money import CENT
+from apps.shared.money import round_money
 
 from ..models.mixin import line_netto
 from .crate_lines import crate_line_id, crate_line_key, resolve_crate_line
@@ -74,7 +74,7 @@ def build_crate_summary_row(
         "amount": amount,
         "price_per_unit": str(price_d),
         "rabatt": float(rabatt_d),
-        "line_netto": str(line.quantize(CENT)),
+        "line_netto": str(round_money(line)),
         "tax_rate": float(tax_rate),
         # ``summarize_crate_items`` sets the note of a line of rows; the
         # empty placeholder row has none.

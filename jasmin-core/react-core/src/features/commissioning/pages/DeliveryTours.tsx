@@ -281,7 +281,7 @@ export default function DeliveryTours() {
     saveTours({
       data: { delivery_day: selectedDay, tours: buildTourData(tourPlans) },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- saves only on a user edit, reading the day as of it
   }, [tourPlans]);
 
   // Place a chip: from the palette (unique — clears any existing copy) or moved

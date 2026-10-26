@@ -1,6 +1,7 @@
 import dayjs, { type ConfigType } from "dayjs";
 import type { Key } from "react";
 import { messageForErrorCode } from "@shared/utils/apiError";
+import { formatApiDate } from "@shared/utils/apiDate";
 import { otherRows, sameCellValue } from "./duplicateErrors";
 import type { EditableColumnConfig, TableRecord } from "./types";
 
@@ -10,7 +11,7 @@ type Row = Record<string, unknown>;
 function isoDay(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
   const day = dayjs(value as ConfigType);
-  return day.isValid() ? day.format("YYYY-MM-DD") : null;
+  return day.isValid() ? formatApiDate(day) : null;
 }
 
 const inGroup = (group: readonly string[], a: Row, b: Row): boolean =>

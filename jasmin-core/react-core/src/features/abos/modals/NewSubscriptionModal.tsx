@@ -56,7 +56,7 @@ import ShareTypeVariationPickerGrid from "../components/ShareTypeVariationPicker
 import { DeliveryStationMap } from "@shared/ui";
 import NumberInput from "@shared/ui/NumberInput";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
-import { filterVariationsForTrial, notify } from "@shared/utils";
+import { filterVariationsForTrial, notify, todayApiDate } from "@shared/utils";
 import { getErrorCode, getErrorMessage } from "@shared/utils/apiError";
 import SepaSetupModal from "@features/members/modals/SepaSetupModal";
 import { usePaymentsBillingProfilesList } from "@shared/api/generated/payments-—-billing-profiles/payments-—-billing-profiles";
@@ -417,7 +417,7 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
   // Group variations by share type for the visual picker (step 1).
   // Variation ID → total active quantity (drives the "already subscribed" badge).
   const activeQuantityByVariation = useMemo(() => {
-    const today = dayjs().format("YYYY-MM-DD");
+    const today = todayApiDate();
     const map: Record<string, number> = {};
     for (const sub of subscriptions) {
       if (
@@ -824,8 +824,8 @@ const NewSubscriptionModal: FC<NewSubscriptionModalProps> = ({
                 theme={{
                   components: {
                     Segmented: {
-                      itemSelectedBg: "var(--color-primary)",
-                      itemSelectedColor: "#ffffff",
+                      itemSelectedBg: "var(--color-primary-solid)",
+                      itemSelectedColor: "var(--color-text-on-primary)",
                     },
                   },
                 }}

@@ -163,7 +163,7 @@ export const useContactColumns = (options: ContactColumnOptions = {}) => {
     };
     // `overrides` is intentionally NOT in the dep array — `overridesKey`
     // tracks its content, and putting both would defeat the stabilization.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- overridesKey stands for overrides
   }, [t, translationPrefix, overridesKey, countries]);
 
   return columns;

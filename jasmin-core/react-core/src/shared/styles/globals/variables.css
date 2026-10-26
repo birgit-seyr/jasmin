@@ -4,6 +4,9 @@
   --color-primary: rgb(34, 108, 71);
   --color-primary-hover: rgb(29, 96, 62);
   --color-primary-active: rgb(136, 0, 111);
+  /* A fill that carries white text: buttons, badges, the selected segment. */
+  --color-primary-solid: rgb(34, 108, 71);
+  --color-text-on-primary: #ffffff;
 
   --color-primary-light: rgba(206, 221, 207);
 
@@ -151,6 +154,10 @@
   --color-primary: rgb(76, 175, 120);
   --color-primary-hover: rgb(96, 195, 140);
   --color-primary-active: rgb(56, 155, 100);
+  /* Stays the dark green: white text on the dark theme's light primary
+     would fall below 3:1. */
+  --color-primary-solid: rgb(34, 108, 71);
+  --color-text-on-primary: #ffffff;
   --color-primary-light: rgba(76, 175, 120, 0.15);
   --color-accent: #1f1f1f;
   --color-border-tabs: #555;

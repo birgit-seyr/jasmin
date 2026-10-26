@@ -1,11 +1,11 @@
 import { HistoryOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button, Card, Divider, Space, Tag, Typography } from "antd";
-import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Subscription } from "@shared/api/generated/models";
 import { EmptyHint, StatusSquare, ToolTipIcon } from "@shared/ui";
 import type { StatusSquareVariant } from "@shared/ui";
+import { todayApiDate } from "@shared/utils/apiDate";
 import { useDateFormat } from "@hooks/index";
 import PastSubscriptionsModal from "../modals/PastSubscriptionsModal";
 import SubscriptionDetailModal from "../modals/SubscriptionDetailModal";
@@ -33,7 +33,7 @@ const ActiveSubscriptionsCard = ({
   const [selected, setSelected] = useState<Subscription | null>(null);
 
   const { active, coming, pending, past } = useMemo(() => {
-    const today = dayjs().format("YYYY-MM-DD");
+    const today = todayApiDate();
     const active: Subscription[] = [];
     const coming: Subscription[] = [];
     const pending: Subscription[] = [];

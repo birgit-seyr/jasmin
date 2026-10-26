@@ -265,7 +265,7 @@ export default function ConfigurationApp() {
     // overlay-backed inputs on their stale defaults. The ``hasChanges ||
     // saving`` guard above still protects in-progress edits. (TenantContext
     // memoizes the value, so this only re-fires on a real data change.)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-seeds on tenant data, not on draft state
   }, [tenant]);
 
   // Stable refs for save handler

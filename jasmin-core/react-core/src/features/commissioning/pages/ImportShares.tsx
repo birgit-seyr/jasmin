@@ -236,7 +236,6 @@ export default function ImportShares() {
         style={{ marginTop: 12 }}
       >
         <ReadOnlyReportTable
-          className="custom-jasmin-table"
           rowKey={(r) => `${r.variation_id}|${r.delivery_station_day_id}`}
           columns={cols}
           dataSource={rows}
@@ -346,7 +345,6 @@ export default function ImportShares() {
           {errorRows.length > 0 && (
             <Card size="small" title={t("import_shares.errors")}>
               <ReadOnlyReportTable
-                className="custom-jasmin-table"
                 rowKey="row"
                 columns={[
                   {
@@ -395,7 +393,6 @@ export default function ImportShares() {
       <Card title={t("import_shares.history")} style={{ marginTop: 16 }}>
         <Spin spinning={loading}>
           <ReadOnlyReportTable
-            className="custom-jasmin-table"
             rowKey="id"
             dataSource={batches}
             onRow={(record) => ({

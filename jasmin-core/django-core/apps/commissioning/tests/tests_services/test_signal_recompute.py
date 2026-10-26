@@ -5,7 +5,6 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from django.test import TestCase
 
 from apps.commissioning.models import (
     MovementShareArticle,
@@ -82,11 +81,13 @@ def _make_delivery(
     return delivery
 
 
-@pytest.mark.usefixtures("tenant")
-class RecomputeOnDeliveryChangeTests(TestCase):
+@pytest.mark.django_db
+class TestRecomputeOnDeliveryChange:
     """The reverse-direction trigger: ShareDelivery → recompute."""
 
-    def test_share_content_created_before_any_delivery_then_delivery_added(self):
+    def test_share_content_created_before_any_delivery_then_delivery_added(
+        self, tenant
+    ):
         share, sc, dsd, _, stv = _setup()
         recompute_shares([share.id])
 
@@ -99,7 +100,7 @@ class RecomputeOnDeliveryChangeTests(TestCase):
         th = TheoreticalHarvest.objects.get(share_content=sc)
         assert th.amount == Decimal("5")
 
-    def test_joker_taken_delivery_does_not_count(self):
+    def test_joker_taken_delivery_does_not_count(self, tenant):
         share, sc, dsd, _, stv = _setup()
         _make_delivery(share=share, dsd=dsd, variation=stv, joker_taken=False)
         _make_delivery(share=share, dsd=dsd, variation=stv, joker_taken=True)
@@ -107,7 +108,7 @@ class RecomputeOnDeliveryChangeTests(TestCase):
 
         assert TheoreticalHarvest.objects.get(share_content=sc).amount == Decimal("5")
 
-    def test_toggling_joker_on_existing_delivery_recomputes(self):
+    def test_toggling_joker_on_existing_delivery_recomputes(self, tenant):
         share, sc, dsd, _, stv = _setup()
         _make_delivery(share=share, dsd=dsd, variation=stv)
         d2 = _make_delivery(share=share, dsd=dsd, variation=stv)
@@ -121,7 +122,7 @@ class RecomputeOnDeliveryChangeTests(TestCase):
 
         assert TheoreticalHarvest.objects.get(share_content=sc).amount == Decimal("5")
 
-    def test_deleting_a_delivery_recomputes(self):
+    def test_deleting_a_delivery_recomputes(self, tenant):
         share, sc, dsd, _, stv = _setup()
         d1 = _make_delivery(share=share, dsd=dsd, variation=stv)
         _make_delivery(share=share, dsd=dsd, variation=stv)
@@ -136,9 +137,9 @@ class RecomputeOnDeliveryChangeTests(TestCase):
         assert TheoreticalHarvest.objects.get(share_content=sc).amount == Decimal("10")
 
 
-@pytest.mark.usefixtures("tenant")
-class RecomputeOnShareContentEditTests(TestCase):
-    def test_editing_share_content_amount_rebuilds_theoreticals(self):
+@pytest.mark.django_db
+class TestRecomputeOnShareContentEdit:
+    def test_editing_share_content_amount_rebuilds_theoreticals(self, tenant):
         share, sc, dsd, _, stv = _setup()
         _make_delivery(share=share, dsd=dsd, variation=stv)
         _make_delivery(share=share, dsd=dsd, variation=stv)
@@ -152,7 +153,7 @@ class RecomputeOnShareContentEditTests(TestCase):
 
         assert TheoreticalHarvest.objects.get(share_content=sc).amount == Decimal("14")
 
-    def test_recompute_is_idempotent(self):
+    def test_recompute_is_idempotent(self, tenant):
         """Multiple recompute calls must not duplicate rows."""
         share, sc, dsd, _, stv = _setup()
         _make_delivery(share=share, dsd=dsd, variation=stv)
@@ -164,7 +165,7 @@ class RecomputeOnShareContentEditTests(TestCase):
         assert TheoreticalHarvest.objects.filter(share_content=sc).count() == 1
         assert TheoreticalHarvest.objects.get(share_content=sc).amount == Decimal("10")
 
-    def test_recompute_dedupes_share_ids(self):
+    def test_recompute_dedupes_share_ids(self, tenant):
         share, sc, dsd, _, stv = _setup()
         _make_delivery(share=share, dsd=dsd, variation=stv)
         recompute_shares([share.id, share.id, share.id, share.id])
@@ -172,9 +173,9 @@ class RecomputeOnShareContentEditTests(TestCase):
         assert TheoreticalHarvest.objects.filter(share_content=sc).count() == 1
 
 
-@pytest.mark.usefixtures("tenant")
-class RecomputeWipesStaleMovementsTests(TestCase):
-    def test_no_duplicate_sharecontent_movements_after_repeated_edits(self):
+@pytest.mark.django_db
+class TestRecomputeWipesStaleMovements:
+    def test_no_duplicate_sharecontent_movements_after_repeated_edits(self, tenant):
         share, sc, dsd, _, stv = _setup()
         _make_delivery(share=share, dsd=dsd, variation=stv)
         recompute_shares([share.id])
@@ -197,9 +198,9 @@ class RecomputeWipesStaleMovementsTests(TestCase):
         )
 
 
-@pytest.mark.usefixtures("tenant")
-class RecomputeOnForecastChangeTests(TestCase):
-    def test_forecast_change_recomputes_linked_shares(self):
+@pytest.mark.django_db
+class TestRecomputeOnForecastChange:
+    def test_forecast_change_recomputes_linked_shares(self, tenant):
         share, sc, dsd, _, stv = _setup()
         _make_delivery(share=share, dsd=dsd, variation=stv)
         recompute_shares([share.id])
@@ -220,9 +221,9 @@ class RecomputeOnForecastChangeTests(TestCase):
         assert TheoreticalHarvest.objects.filter(share_content=sc).count() == 1
 
 
-@pytest.mark.usefixtures("tenant")
-class RecomputeNoopTests(TestCase):
-    def test_recompute_for_empty_input_is_noop(self):
+@pytest.mark.django_db
+class TestRecomputeNoop:
+    def test_recompute_for_empty_input_is_noop(self, tenant):
         recompute_shares([])
         recompute_shares([None])
         recompute_shares(())

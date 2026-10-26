@@ -21,6 +21,8 @@ vi.mock("@hooks/index", async () => {
     useTenant: () => tenant,
     // LoginPage reads the trial duration for the trial card subtitle.
     useSubscriptionTerm: () => ({ trialDurationInDeliveries: 4 }),
+    // The About modal colours its check icons from the theme tokens.
+    useTheme: () => ({ colorSuccess: "#52c41a" }),
   };
 });
 

@@ -333,7 +333,7 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
     // ``refreshTenantFull`` reads ``currentTenant?.id`` from its own
     // closure; the ref guard above is what prevents the effect from
     // re-firing on every state update.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the ref guard keeps it to one fetch per tenant
   }, [currentTenant?.id]);
 
   // Tenant settings can change outside this tab: another office user or

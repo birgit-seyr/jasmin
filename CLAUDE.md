@@ -496,7 +496,7 @@ equivalent exists is a defect, not a shortcut.
 | Table | `EditableTable` for anything editable; `CrudListPage` / `useCrudListPage` for a standard CRUD list page; `ReadOnlyReportTable` for read-only, server-paginated or custom-action tables (`READ_ONLY_PERMISSION` gates an EditableTable read-only) |
 | Column defs | the `use*Column(s)` hooks — `useTimeBoundColumns`, `useActiveStatusColumn`, `useSellerColumn`, `useShareArticleColumn`, `useNoteColumn`, … |
 | Date-range picker | AntD `RangePicker` + `useDateRangePresets` |
-| Date display/format | `useDateFormat` — `dateFormat` (picker), `formatDate` (cells), `formatDateForAPI` (`YYYY-MM-DD` payloads). Never hardcode a date format. It is a hook (it reads tenant settings through `useTenant`), so it cannot be called from a plain service — format in the component and pass the string down, or hand the formatter in. |
+| Date display/format | `useDateFormat` — `dateFormat` (picker), `formatDate` (cells), `formatDateForAPI` (`YYYY-MM-DD` payloads). Never hardcode a date format. It is a hook (it reads tenant settings through `useTenant`), so it cannot be called from a plain service — format in the component and pass the string down, or hand the formatter in. Wire dates outside a component come from `@shared/utils/apiDate`: `toApiDate`, `formatApiDate`, and `todayApiDate` for today's local date (never `toISOString().slice(0, 10)`, which is the UTC date). |
 | CSV | `buildCsvString` + `downloadCsvBlob` (`src/shared/utils/csv.ts`), or `ExportCsvDateRangeModal` for a date-range export honoring the tenant `csv_format`. The export-modal shells live in `src/features/commissioning/modals/csv/`, not `shared`. |
 | Money / currency | `useCurrency` |
 | Selectors | `src/shared/selectors/*` — Year/Week/Month/Day/Member/Reseller/ShareType |
@@ -577,6 +577,9 @@ cards/sections are co-located in `src/features/<app>/components/`. See
   `npm run lint`, `npm run build`, `npm run test:run`. type-check skips `.jsx`
   files + `vi.mock()` strings, so **the build is the real oracle** for `.jsx`;
   tests catch stale `vi.mock` paths and the `no-raw-axios` allowlist.
+- **Every `eslint-disable` says why**, in ESLint's own syntax on the directive:
+  `// eslint-disable-next-line <rule> -- <reason>`. A comment elsewhere in the
+  function doesn't count. `src/test/eslint-disable-reasons.test.ts` enforces it.
 
 ### Data fetching
 
@@ -646,6 +649,12 @@ Fixing copy changes the value; the key never changes.
 
 ## Testing rules
 
+**Style conventions stop at the test files.** The naming, abbreviation and
+building-block rules above are for app code; in test code they are optional,
+and an audit or review leaves them out. The rules below still hold in tests,
+because breaking one hides a failure: discovery, frozen clocks, random order,
+the fixtures that make a gate actually run.
+
 ### Backend testing
 
 **Tests run in random order** (pytest-randomly), so a test may rely on nothing
@@ -668,6 +677,11 @@ another test leaves behind. Three traps catch it:
 
 A failing run prints `Using --randomly-seed=N` at its top; replay that order
 with `--randomly-seed=N`, or run in file order with `-p no:randomly`.
+
+**Test classes are plain pytest classes**: `class TestSomething:` under
+`@pytest.mark.django_db`, with the `tenant` fixture as a test argument. No
+Django `TestCase`. pytest collects only `Test*` classes, so a plain class
+named `SomethingTests` silently never runs.
 
 **Test both the present AND absent case of an optional/nullable FK** (or any
 presence-guarded branch). A guard like `x.seller.name if x.seller else ""`
@@ -791,8 +805,8 @@ vi.mock("react-i18next", () => ({
   initialises). A variable dereferenced LAZILY — behind a `() => ...mock(...)`
   arrow, read only at call/render time — is safe as a plain module-scope `const`.
   Reference: `src/shared/ui/__tests__/BulkActionButton.test.tsx`.
-- **Don't hand-roll a partial `useTenant` stub** — a partial one is a recorded
-  breakage. Use `makeUseTenantMock` (`src/test/tenantMock.ts`), as 15 suites do.
+- **`makeUseTenantMock`** (`src/test/tenantMock.ts`) builds a complete `useTenant`
+  stub; a hand-rolled one breaks as soon as the component reads a field it lacks.
 - **`getErrorMessage` only inspects errors that look like axios errors** — mocks
   must include `isAxiosError: true` alongside `response.data`.
 - **Render-loop smoke test pattern:** use `profileRenders()` from
@@ -1294,9 +1308,6 @@ e.g. `MemberFactory(user=user)` creates a Member with a linked `JasminUser`.
 - Time travel: the `time-machine` library for date/time testing (see
   [Backend testing](#backend-testing) for the mandatory freeze rule)
 - Mock external calls (email, Huey, payments) with `unittest.mock`
-- Several `commissioning/tests/` subdirectories contain an `OVERVIEW.txt` mapping
-  test classes and methods (not all do — e.g. `tests_services` currently lacks
-  one) — consult it when present before adding tests in that dir
 - `apps/commissioning/services/recompute.py` provides `recompute_shares()` and
   `recompute_order_contents()` — call these at the end of any service operation
   that mutates `ShareContent`, `ShareDelivery`, or `Forecast`

@@ -19,13 +19,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from apps.shared.openapi_params import catalogue_parameter
 from apps.shared.request_utils import client_ip
 from apps.shared.super_admin.permissions import IsSuperAdmin
+from apps.shared.super_admin.query_params import PARAM_CATALOGUE, validate_query_params
 from apps.shared.super_admin.views.authentication import SuperAdminJWTAuthentication
 from apps.shared.tenants.models import Tenant
 from core.pagination import ValidatedLimitOffsetPagination
 
-from .errors import InvalidTicketStatus, TicketNotFound, TicketReplyEmpty
+from .errors import TicketNotFound, TicketReplyEmpty
 from .models import AuthorKind, SupportTicket, SupportTicketMessage, TicketStatus
 from .serializers import (
     SupportTicketAdminDetailSerializer,
@@ -64,18 +66,29 @@ class SupportTicketAdminViewSet(ViewSet):
         except SupportTicket.DoesNotExist as exc:
             raise TicketNotFound("Support ticket not found.") from exc
 
-    @extend_schema(responses=SupportTicketAdminListSerializer(many=True))
+    @extend_schema(
+        parameters=[
+            catalogue_parameter(
+                "status",
+                PARAM_CATALOGUE,
+                description="Only tickets in this status.",
+            ),
+            catalogue_parameter(
+                "tenant_schema",
+                PARAM_CATALOGUE,
+                description="Only tickets from this tenant schema.",
+            ),
+        ],
+        responses=SupportTicketAdminListSerializer(many=True),
+    )
     def list(self, request):
+        params = validate_query_params(request, optional=["status", "tenant_schema"])
         with schema_context("public"):
             qs = SupportTicket.objects.all()
-            status_param = request.query_params.get("status")
-            if status_param:
-                if status_param not in TicketStatus.values:
-                    raise InvalidTicketStatus(f"Unknown status '{status_param}'.")
-                qs = qs.filter(status=status_param)
-            tenant_param = request.query_params.get("tenant_schema")
-            if tenant_param:
-                qs = qs.filter(tenant_schema=tenant_param)
+            if params["status"]:
+                qs = qs.filter(status=params["status"])
+            if params["tenant_schema"]:
+                qs = qs.filter(tenant_schema=params["tenant_schema"])
             qs = qs.order_by("tenant_schema", "-created_at")
             paginator = _SupportAdminPagination()
             page = paginator.paginate_queryset(qs, request, view=self)

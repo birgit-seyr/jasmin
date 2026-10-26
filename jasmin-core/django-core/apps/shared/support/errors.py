@@ -14,12 +14,7 @@ class TicketReplyEmpty(BadRequestError):
     code = "support.reply_empty"
 
 
-class InvalidTicketStatus(BadRequestError):
-    code = "support.invalid_status"
-
-
 __all__ = [
     "TicketNotFound",
     "TicketReplyEmpty",
-    "InvalidTicketStatus",
 ]

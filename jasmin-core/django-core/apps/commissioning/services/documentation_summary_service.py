@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
+from decimal import Decimal
 from typing import Any, Literal, TypedDict
 
 from django.db import transaction
 from django.db.models import Q, QuerySet
 from isoweek import Week
+
+from apps.shared.money import to_decimal
 
 from ..constants import PURCHASE_DAY
 from ..models import (
@@ -404,8 +407,8 @@ class DocumentationSummaryService:
         theoretical_stock_map: dict[
             tuple[str, str, str | None, str | None], dict[str, Any]
         ],
-        theoretical_sum_share: float = 0,
-    ) -> tuple[float, float, float]:
+        theoretical_sum_share: Decimal | float = 0,
+    ) -> tuple[Decimal, Decimal, Decimal]:
         """Calculate theoretical current stock for an entry.
 
         Returns (total, share_stock, order_stock).
@@ -417,18 +420,18 @@ class DocumentationSummaryService:
         matching_keys = [candidate] if candidate in theoretical_stock_map else []
 
         if not matching_keys:
-            return 0, 0.0, 0.0
+            return Decimal("0"), Decimal("0"), Decimal("0")
 
-        share_stock = 0.0
-        order_stock = 0.0
-        theoretical_sum_share = float(theoretical_sum_share)
+        share_stock = Decimal("0")
+        order_stock = Decimal("0")
+        theoretical_sum_share = to_decimal(theoretical_sum_share)
 
         for key in matching_keys:
             entry = theoretical_stock_map[key]
             stock = entry.get("current_stock_amount")
             if stock is None:
                 stock = entry.get("theoretical_current_stock") or 0
-            stock = max(float(stock), 0.0)
+            stock = max(to_decimal(stock), Decimal("0"))
 
             is_share = entry.get("for_shares")
             is_order = entry.get("for_resellers")
@@ -436,7 +439,9 @@ class DocumentationSummaryService:
             if is_share and is_order:
                 # Both flags: assign up to theoretical_sum_share to share,
                 # remainder to order
-                to_share = min(stock, max(theoretical_sum_share - share_stock, 0))
+                to_share = min(
+                    stock, max(theoretical_sum_share - share_stock, Decimal("0"))
+                )
                 share_stock += to_share
                 order_stock += stock - to_share
             elif is_share:
@@ -462,10 +467,10 @@ class DocumentationSummaryService:
         theoretical_id: str | None,
         additional_id: str | None,
         forecast_info: tuple[str | None, str | None, str | None],
-        theoretical_current_stock: float | None,
+        theoretical_current_stock: Decimal | None,
         harvest_sums: tuple[float, float, float, float] | None = None,
-        theoretical_current_stock_share_content: float | None = None,
-        theoretical_current_stock_order_content: float | None = None,
+        theoretical_current_stock_share_content: Decimal | None = None,
+        theoretical_current_stock_order_content: Decimal | None = None,
         theoretical_note: str = "",
     ) -> dict[str, Any]:
         """Build a single result entry."""

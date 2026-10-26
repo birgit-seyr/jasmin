@@ -1,12 +1,12 @@
 from collections import defaultdict
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from django.db.models import Count, Q, QuerySet
 from django.db.models.functions import TruncMonth, TruncWeek, TruncYear
 from django.utils import timezone
 
-from apps.shared.money import CENT, round_money
+from apps.shared.money import round_money
 
 from ..models import Member, ShareContent
 from ..models.choices import UnitOptions, VegetableSizeOptions
@@ -184,9 +184,7 @@ def _compute_variation_averages(
     station_averages = {}
     for field_name, data in station_totals.items():
         if data["count"] > 0:
-            # ROUND_HALF_UP (not builtin round()'s banker's rounding) to match
-            # the platform's money/quantity rounding standard.
-            avg = (data["sum"] / data["count"]).quantize(CENT, rounding=ROUND_HALF_UP)
+            avg = round_money(data["sum"] / data["count"])
             station_averages[field_name] = avg
 
     # Now aggregate from station level to tour and day levels
@@ -220,11 +218,11 @@ def _compute_variation_averages(
 
     # Tour level (rounded)
     for tour_key, total in tour_totals.items():
-        averages[tour_key] = round(total, 2)
+        averages[tour_key] = round_money(total)
 
     # Day level (rounded)
     for day_key, total in day_totals.items():
-        averages[day_key] = round(total, 2)
+        averages[day_key] = round_money(total)
 
     # Float only at the response boundary — the values were accumulated in
     # Decimal above; ``float`` here keeps the wire contract (JSON numbers)

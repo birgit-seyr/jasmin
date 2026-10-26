@@ -20,6 +20,7 @@ import { useRoles } from "@shared/auth";
 import { notify } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
 import { MemberSelector } from "@shared/selectors";
+import { toApiDate } from "@shared/utils/apiDate";
 import SepaMandateImportModal from "@features/abos/modals/SepaMandateImportModal";
 import SepaSetupModal from "@features/members/modals/SepaSetupModal";
 
@@ -101,9 +102,7 @@ export default function SepaMandates() {
         id: paperRow.id,
         data: {
           member: paperRow.member,
-          sepa_mandate_paper_received_at: paperDate
-            ? paperDate.format("YYYY-MM-DD")
-            : null,
+          sepa_mandate_paper_received_at: toApiDate(paperDate),
         },
       });
       notify.success(t("sepa.paper_saved"));

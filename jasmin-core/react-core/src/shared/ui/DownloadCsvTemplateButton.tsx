@@ -5,7 +5,12 @@ import { isValidElement, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { commissioningDataImportCreate } from "@shared/api/generated/commissioning/commissioning";
 import { getErrorMessage, messageForErrorCode } from "@shared/utils/apiError";
-import { downloadBlob, notify } from "@shared/utils";
+import {
+  buildCsvString,
+  downloadCsvBlob,
+  notify,
+  resolveCsvDialect,
+} from "@shared/utils";
 import type {
   DataImportErrorItem,
   DataImportResponse,
@@ -174,15 +179,6 @@ function extractText(node: ReactNode): string {
   return "";
 }
 
-// RFC 4180-style CSV cell escape: wrap in quotes if it contains a comma,
-// quote, or newline; double up internal quotes.
-function csvCell(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
 /**
  * "Download empty CSV template" affordance.
  *
@@ -293,15 +289,14 @@ export default function DownloadCsvTemplateButton({
           (col) => selectValuesHint(col) ?? t(typeHintKeyFor(col)),
         );
 
-    const csv =
-      [titleRow, derivedHeaders, typeRow]
-        .map((row) => row.map(csvCell).join(","))
-        .join("\n") + "\n";
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    downloadBlob(
-      blob,
-      filename.endsWith(".csv") ? filename : `${filename}.csv`,
+    // The generic importer reads commas (``csv.reader``'s default) whatever
+    // the tenant's CSV format, so the template is written with them.
+    const csv = buildCsvString(
+      titleRow,
+      [derivedHeaders, typeRow],
+      resolveCsvDialect("en"),
     );
+    void downloadCsvBlob(csv, filename);
   };
 
   return (

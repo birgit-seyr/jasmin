@@ -125,7 +125,7 @@ def _tenant_language() -> str:
 
 def _resolve_language(request: Request) -> str:
     """Pick the language from ``?language=`` or fall back to tenant default."""
-    raw = request.query_params.get("language")
+    raw = validate_query_params(request, optional=["language"])["language"]
     explicit = normalize_language(raw)
     if explicit:
         return explicit

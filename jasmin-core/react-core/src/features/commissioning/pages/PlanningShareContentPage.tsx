@@ -1,6 +1,7 @@
 import { Spin } from "antd";
 import dayjs from "dayjs";
 import { toApiDate } from "@shared/utils";
+import { todayApiDate } from "@shared/utils/apiDate";
 import { useTranslation } from "react-i18next";
 import { Navigate, useParams } from "react-router-dom";
 import { useShareTypes } from "@hooks/index";
@@ -66,7 +67,7 @@ export default function PlanningShareContentPage({
   // complex, so an unknown/absent share type keeps the complex route working.
   const governing = governingShareType(
     shareTypes,
-    dayjs().format("YYYY-MM-DD"),
+    todayApiDate(),
   );
   const needsComplexPlanning = governing
     ? (governing.needs_complex_planning ?? true)

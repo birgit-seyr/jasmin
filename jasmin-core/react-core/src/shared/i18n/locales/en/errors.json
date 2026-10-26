@@ -606,8 +606,7 @@
   },
   "support": {
     "ticket_not_found": "Support ticket not found.",
-    "reply_empty": "The reply must not be empty — please enter some text.",
-    "invalid_status": "Invalid status for this support ticket."
+    "reply_empty": "The reply must not be empty — please enter some text."
   },
   "super_admin": {
     "tenant_not_found": "Tenant not found.",

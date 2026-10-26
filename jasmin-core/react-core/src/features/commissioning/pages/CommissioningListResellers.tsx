@@ -279,7 +279,6 @@ export default function CommissioningListResellers() {
                 <ResellerOrderMobileCards lines={reseller.order.contents} />
               ) : (
                 <ReadOnlyReportTable
-                  className="custom-jasmin-table"
                   columns={columns}
                   dataSource={reseller.order.contents}
                   rowKey="id"

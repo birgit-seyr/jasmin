@@ -53,7 +53,7 @@ export const AdminConfirmationModalCoopShares: FC<
 }) => {
   const { t } = useTranslation();
   const { formatDateTime } = useTimeFormat();
-  const { currencySymbol } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const { onboardingMode, confirmedOn, setConfirmedOn, confirmationBody } =
     useOnboardingConfirmationDate({
       recordId: coopShare?.id ?? null,
@@ -101,8 +101,7 @@ export const AdminConfirmationModalCoopShares: FC<
         </Descriptions.Item>
         {valueOne > 0 && (
           <Descriptions.Item label={t("members.coop_shares_total_value")}>
-            {currencySymbol}
-            {(amount * valueOne).toFixed(2)}
+            {formatCurrency(amount * valueOne)}
           </Descriptions.Item>
         )}
         <Descriptions.Item label={t("members.current_status")}>

@@ -29,6 +29,7 @@ import { getErrorMessage } from "@shared/utils/apiError";
 import { getWeekdayChoices } from "@shared/utils/weekdayChoices";
 import type { ShareDelivery } from "@shared/api/generated/models";
 import { useMemberSelfService } from "@shared/auth";
+import { todayApiDate } from "@shared/utils/apiDate";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -159,7 +160,7 @@ const MemberDetail = () => {
   // ActiveSubscriptionsCard recomputes its own "currently active" set.
   const confirmedSubscriptions = useMemo(() => {
     if (!subscriptions?.length) return [];
-    const today = dayjs().format("YYYY-MM-DD");
+    const today = todayApiDate();
     return subscriptions.filter(
       (sub) =>
         sub.admin_confirmed && (!sub.valid_until || sub.valid_until >= today),

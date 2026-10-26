@@ -1,6 +1,7 @@
 import { CheckCircleTwoTone } from "@ant-design/icons";
 import { List, Modal, Space, Typography } from "antd";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "@hooks/index";
 
 const { Title, Text } = Typography;
 
@@ -32,6 +33,7 @@ interface AboutModalProps {
 
 export default function AboutModal({ open, onClose }: AboutModalProps) {
   const { t } = useTranslation();
+  const { colorSuccess } = useTheme();
 
   return (
     <Modal
@@ -53,7 +55,7 @@ export default function AboutModal({ open, onClose }: AboutModalProps) {
             <Space align="start" size={10}>
               <CheckCircleTwoTone
                 aria-hidden
-                twoToneColor="#52c41a"
+                twoToneColor={colorSuccess}
                 style={{ marginTop: 4, fontSize: 16 }}
               />
               <span>

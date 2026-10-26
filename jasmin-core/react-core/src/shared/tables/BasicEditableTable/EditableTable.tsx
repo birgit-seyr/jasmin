@@ -425,7 +425,7 @@ const EditableTable = <T extends TableRecord = TableRecord>({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetches only when the params' content changes
   }, [baseParamsKey, retryNonce]);
 
   const handleSearch = useCallback((event: ChangeEvent<HTMLInputElement>) => {

@@ -211,7 +211,9 @@ class BillingProfileViewSet(
         # the decrypted values are write-only and never echoed — so log it
         # explicitly here (the mixin only auto-logs the detail retrieve()).
         if status.is_success(response.status_code):
-            member = request.query_params.get("member")
+            member = validate_query_params(
+                request, PARAM_CATALOGUE, optional=["member"]
+            )["member"]
             self._log_pii_list_read(
                 request, f"list(member={member})" if member else "list(all)"
             )
@@ -223,7 +225,9 @@ class BillingProfileViewSet(
         # Privileged roles can narrow to one member. Lets callers that only need one
         # member's mandate fetch + decrypt a single row instead of the whole
         # tenant, and keeps the PII-read audit line scoped (``list(member=...)``).
-        member_id = self.request.query_params.get("member")
+        member_id = validate_query_params(
+            self.request, PARAM_CATALOGUE, optional=["member"]
+        )["member"]
         if member_id:
             # A non-privileged caller may narrow only to their OWN profile; a
             # foreign ``?member=`` is a 403, not a silent empty set — the same

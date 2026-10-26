@@ -83,19 +83,25 @@ vi.mock(
 
 const notifySuccessMock = vi.fn();
 const notifyErrorMock = vi.fn();
-vi.mock("@shared/utils", () => ({
-  notify: {
-    success: (...a: unknown[]) => notifySuccessMock(...a),
-    error: (...a: unknown[]) => notifyErrorMock(...a),
-  },
-  filterVariationsForTrial: (
-    variations: { allowed_for_trial_subscription?: boolean | null }[],
-    isTrial: boolean,
-  ) =>
-    isTrial
-      ? variations.filter((v) => v.allowed_for_trial_subscription !== false)
-      : variations,
-}));
+vi.mock("@shared/utils", async () => {
+  const apiDate = await vi.importActual<
+    typeof import("@shared/utils/apiDate")
+  >("@shared/utils/apiDate");
+  return {
+    notify: {
+      success: (...a: unknown[]) => notifySuccessMock(...a),
+      error: (...a: unknown[]) => notifyErrorMock(...a),
+    },
+    filterVariationsForTrial: (
+      variations: { allowed_for_trial_subscription?: boolean | null }[],
+      isTrial: boolean,
+    ) =>
+      isTrial
+        ? variations.filter((v) => v.allowed_for_trial_subscription !== false)
+        : variations,
+    todayApiDate: apiDate.todayApiDate,
+  };
+});
 vi.mock("@shared/utils/apiError", () => ({
   getErrorMessage: (_e: unknown, fallback: string) => fallback,
 }));

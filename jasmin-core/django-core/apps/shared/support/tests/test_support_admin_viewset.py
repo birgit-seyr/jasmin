@@ -61,7 +61,7 @@ class TestAdminList:
         force_authenticate(request, user=super_admin)
         resp = _dispatch({"get": "list"}, request)
         assert resp.status_code == 400
-        assert resp.data["code"] == "support.invalid_status"
+        assert resp.data["code"] == "query.invalid_param"
 
     @pytest.mark.parametrize("raw", ["abc", "0", "-5"])
     def test_unusable_limit_is_400(self, factory, super_admin, raw):

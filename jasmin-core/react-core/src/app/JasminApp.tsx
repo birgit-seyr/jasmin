@@ -66,12 +66,6 @@ export default function JasminApp() {
     algorithm: isDark ? darkAlgorithm : defaultAlgorithm,
     token: {
       ...themeTokens,
-      colorPrimary: "rgb(29, 96, 62)",
-      // The light theme's link green is too dark to read on the dark
-      // background, so the dark theme links in its own primary green.
-      colorLink: isDark ? "rgb(76, 175, 120)" : "rgb(29, 96, 62)",
-      colorLinkHover: "rgb(169, 227, 159)",
-      colorLinkActive: "rgb(136, 0, 111)",
       fontFamily:
         "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif",
     },

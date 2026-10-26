@@ -52,7 +52,7 @@ export const functionLengthPins = {
   "src/features/commissioning/hooks/columns/useHarvestingListColumns.tsx": 458,
   "src/features/commissioning/hooks/columns/useOrderColumns.tsx": 422,
   "src/features/commissioning/hooks/columns/useShareArticleListColumns.tsx": 490,
-  "src/features/commissioning/hooks/useOrdersData.ts": 612,
+  "src/features/commissioning/hooks/useOrdersData.ts": 610,
   "src/features/commissioning/modals/DeliveryStationDetailModal.tsx": 413,
   "src/features/commissioning/modals/InvoiceModal.tsx": 401,
   "src/features/commissioning/modals/ShareTypeVariationModal.tsx": 544,

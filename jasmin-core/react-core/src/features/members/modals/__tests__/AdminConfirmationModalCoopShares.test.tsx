@@ -39,7 +39,10 @@ vi.mock("@hooks/index", () => ({
   useTimeFormat: () => ({
     formatDateTime: (value: unknown) => String(value ?? ""),
   }),
-  useCurrency: () => ({ currencySymbol: "€" }),
+  useCurrency: () => ({
+    currencySymbol: "€",
+    formatCurrency: (amount: number) => `${amount} €`,
+  }),
 }));
 
 import {

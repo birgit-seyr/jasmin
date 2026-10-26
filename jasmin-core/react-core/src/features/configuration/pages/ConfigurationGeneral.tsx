@@ -385,7 +385,7 @@ export default function ConfigurationGeneral() {
     // (TenantContext memoizes the value, so this only re-fires on a real data
     // change.) ``hasChanges``/``saving`` are intentionally omitted so merely
     // toggling them never re-seeds over a fresh draft.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-seeds on tenant data, not on draft state
   }, [tenant]);
 
   // Stable refs for save handler

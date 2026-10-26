@@ -71,7 +71,7 @@ export default function StepConfirmEmail({ data, update, next, back }: StepProps
     doSend();
     // doSend is a new function every render; the effect keys on what decides
     // an auto-send, and sentForEmail keeps it to one send per address.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- doSend is new every render
   }, [email, captchaEnabled, captchaSolution]);
 
   const buildPayload = () => {

@@ -31,6 +31,7 @@ import ConsentBlock, {
 import { ModalCancelSaveFooter } from "@shared/modals/shared";
 import { notify, unwrapList } from "@shared/utils";
 import { getErrorMessage } from "@shared/utils/apiError";
+import { formatApiDate, todayApiDate } from "@shared/utils/apiDate";
 
 const { Paragraph, Text } = Typography;
 
@@ -205,9 +206,9 @@ export default function SepaSetupModal({
 
   // The office records the mandate FOR the member, from the signed paper form.
   const saveOfficeMandate = async (values: FormValues) => {
-    const today = dayjs().format("YYYY-MM-DD");
+    const today = todayApiDate();
     // The office may backdate the signature (paper mandate).
-    const signedAt = signedDate.format("YYYY-MM-DD");
+    const signedAt = formatApiDate(signedDate);
     // Paper-signature confirmation: only relevant with the tenant setting on.
     // Checked → record the received date (keep an existing one, else today);
     // unchecked → clear it.

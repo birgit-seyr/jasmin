@@ -90,7 +90,10 @@ vi.mock("@hooks/index", () => {
     onDeleteSuccess: () => {},
   };
   return {
-    useCurrency: () => ({ currencySymbol: "€" }),
+    useCurrency: () => ({
+    currencySymbol: "€",
+    formatCurrency: (amount: number) => `${amount} €`,
+  }),
     useDateFormat: () => ({ formatDate, formatDateWithColor: formatDate }),
     useInvalidateAfterTableMutation: () => invalidateAfterMutation,
     useNoteColumn: () => ({ noteColumn }),

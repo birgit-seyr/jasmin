@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, Col, Row, Table, Tag, Typography } from "antd";
+import { Card, Col, Row, Tag, Typography } from "antd";
 import { ReadOnlyReportTable } from "@shared/tables";
-import { EmptyHint } from "@shared/ui";
 import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -370,14 +369,13 @@ export default function CustomerOrderPage() {
             >
               {t("customer.prices_are_netto")}
             </Text>
-            <Table
+            <ReadOnlyReportTable
               dataSource={tableData}
               columns={columns}
               rowKey="id"
               pagination={false}
-              size="small"
               className="custom-jasmin-table compact-table"
-              locale={{ emptyText: <EmptyHint>{t("customer.no_offers")}</EmptyHint> }}
+              emptyText={t("customer.no_offers")}
             />
           </Card>
         </Col>

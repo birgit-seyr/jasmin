@@ -24,18 +24,26 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-const { notifyMock, importMock, messageForErrorCodeMock, downloadBlobMock } =
+const { notifyMock, importMock, messageForErrorCodeMock, downloadCsvBlobMock } =
   vi.hoisted(() => ({
     notifyMock: { success: vi.fn(), error: vi.fn() },
     importMock: vi.fn(),
     messageForErrorCodeMock: vi.fn(),
-    downloadBlobMock: vi.fn(),
+    downloadCsvBlobMock: vi.fn(),
   }));
 
-vi.mock("@shared/utils", () => ({
-  notify: notifyMock,
-  downloadBlob: downloadBlobMock,
-}));
+vi.mock("@shared/utils", async () => {
+  const csv =
+    await vi.importActual<typeof import("@shared/utils/csv")>(
+      "@shared/utils/csv",
+    );
+  return {
+    notify: notifyMock,
+    buildCsvString: csv.buildCsvString,
+    resolveCsvDialect: csv.resolveCsvDialect,
+    downloadCsvBlob: downloadCsvBlobMock,
+  };
+});
 
 vi.mock("@shared/api/generated/commissioning/commissioning", () => ({
   commissioningDataImportCreate: (body: unknown) => importMock(body),
@@ -70,17 +78,9 @@ beforeEach(() => {
   notifyMock.error.mockReset();
   importMock.mockReset();
   messageForErrorCodeMock.mockReset();
-  downloadBlobMock.mockReset();
+  downloadCsvBlobMock.mockReset();
 });
 
-function readBlob(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(blob);
-  });
-}
 
 describe("DownloadCsvTemplateButton template", () => {
   it("writes the type-hint row in the office's language", async () => {
@@ -99,10 +99,10 @@ describe("DownloadCsvTemplateButton template", () => {
       screen.getByRole("button", { name: /download.csv_template/ }),
     );
 
-    expect(downloadBlobMock).toHaveBeenCalledTimes(1);
-    const [blob, filename] = downloadBlobMock.mock.calls[0] as [Blob, string];
-    expect(filename).toBe("articles.csv");
-    const rows = (await readBlob(blob)).trimEnd().split("\n");
+    expect(downloadCsvBlobMock).toHaveBeenCalledTimes(1);
+    const [csv, filename] = downloadCsvBlobMock.mock.calls[0] as [string, string];
+    expect(filename).toBe("articles");
+    const rows = csv.split("\n");
     expect(rows).toEqual([
       "Name,Preis,KW",
       "name,price,week",
