@@ -19,7 +19,7 @@ const { runStepUpFlow } = vi.hoisted(() => ({ runStepUpFlow: vi.fn() }));
 
 vi.mock("../stepUp", () => ({ runStepUpFlow }));
 
-import axiosInstance from "../api";
+import axiosInstance, { performRefresh } from "../api";
 import { clearAccessToken, setAccessToken } from "../tokenStore";
 
 const URL = "/api/commissioning/data_import/";
@@ -86,6 +86,10 @@ describe("api.ts step-up interceptor with a multipart body", () => {
 
     expect(response.data).toEqual({ successful: 1, failed: 0 });
     expect(runStepUpFlow).toHaveBeenCalledTimes(1);
+    // The step-up token ends with the presented one, so the flow may renew it.
+    expect(runStepUpFlow).toHaveBeenCalledWith(
+      expect.objectContaining({ refresh: performRefresh }),
+    );
     expect(sent).toHaveLength(2);
     expect(sent[0].authorization).toBe("Bearer plain-token");
     expect(sent[1].authorization).toBe("Bearer stepped-up-token");

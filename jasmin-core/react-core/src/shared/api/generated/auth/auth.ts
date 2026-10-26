@@ -759,7 +759,7 @@ export const useAuthLogoutCreate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Revokes every refresh token for the authenticated user — this browser and every other device/session. Use after a suspected compromise. Already-issued access tokens keep working until they expire (short-lived); no new session can be minted from an old refresh token.
+ * Revokes every refresh token for the authenticated user — this browser and every other device/session. Use after a suspected compromise. Access tokens issued before it are refused as well, and no new session can be minted from an old refresh token.
  * @summary Log out of all sessions (this device and every other)
  */
 export const authLogoutAllCreate = (
@@ -1207,7 +1207,7 @@ export const useAuthRegisterVerifyCodeCreate = <TError = ErrorResponse,
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Re-verifies the caller's password (and TOTP code when ``STEP_UP_REQUIRES_TOTP`` is on) and returns a new access token carrying ``step_up_verified_at``. The frontend swaps the access token in and retries the original destructive request. The new token's TTL for step-up purposes is ``STEP_UP_TTL_SECONDS`` (default 300); the JWT itself still expires at the normal access-token lifetime.
+ * Re-verifies the caller's password (and TOTP code when ``STEP_UP_REQUIRES_TOTP`` is on) and returns a new access token carrying ``step_up_verified_at``. The frontend swaps the access token in and retries the original destructive request. The new token's TTL for step-up purposes is ``STEP_UP_TTL_SECONDS`` (default 300). The new JWT keeps the presented token's expiry, so a step-up never lengthens a session; the frontend renews the session first, so the token it presents outlasts the step-up window.
  * @summary Step-up authentication — issue a fresh access token for sudo mode
  */
 export const authStepUpCreate = (

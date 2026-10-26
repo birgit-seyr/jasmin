@@ -73,6 +73,7 @@
   },
   "member": {
     "already_confirmed": "Dieses Mitglied ist bereits bestätigt.",
+    "already_rejected": "Dieses Mitglied wurde abgelehnt. Eine neue Einladung lässt es wieder zu.",
     "link_conflict": "Verknüpfung nicht möglich — dieser User ist bereits einem anderen Mitglied zugeordnet.",
     "user_already_linked": "Dieser User ist bereits mit einem Mitglied verknüpft.",
     "user_in_blocked_status": "Dieser User ist gesperrt und kann nicht eingeladen werden.",

@@ -52,6 +52,27 @@ from apps.shared.invitations import (
 
 
 class TestJasminUserStatus:
+    def test_leaving_active_revokes_the_sessions(self, tenant):
+        """A refresh cookie on a lost device must not come back to life when
+        the deactivated login is reactivated or re-invited."""
+        user = JasminUserFactory(account_status="active")
+        assert user.sessions_revoked_at is None
+
+        user.account_status = "inactive"
+        user.save(update_fields=["account_status"])
+
+        user.refresh_from_db()
+        assert user.sessions_revoked_at is not None
+
+    def test_a_login_never_active_gets_no_revoke_stamp(self, tenant):
+        user = JasminUserFactory(account_status="pending_invitation")
+
+        user.account_status = "inactive"
+        user.save(update_fields=["account_status"])
+
+        user.refresh_from_db()
+        assert user.sessions_revoked_at is None
+
     def test_is_active_derived_from_active_status(self, tenant):
         user = JasminUserFactory(account_status="active")
         assert user.is_active is True

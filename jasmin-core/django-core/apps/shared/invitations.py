@@ -236,10 +236,16 @@ def resend_invitation(
     user: JasminUser,
     created_by: JasminUser | None = None,
     email_category: EmailCategory = EmailCategory.GENERAL,
+    member=None,
 ):
     """Cancel any open invitation, mint a new one, send email.
 
     ``email_category`` works as in :func:`create_user_with_invitation`.
+    Without ``member`` the new invitation names the member the replaced one
+    named: an office member invitation stays one (accepting it confirms the
+    member), a public self-registration's names none, so re-sending it
+    confirms nobody the office hasn't. Pass ``member`` to invite into that
+    member on purpose (a re-invite re-admits a rejected member).
     """
     from apps.commissioning.models import UserInvitation
     from apps.commissioning.models.choices import InvitationStatus
@@ -253,13 +259,20 @@ def resend_invitation(
 
     enforce_action_quota(RateLimitedAction.USER_CREATION, actor=created_by)
 
+    member_id = (
+        member.pk
+        if member is not None
+        else UserInvitation.objects.filter(user=user)
+        .order_by("-created_at")
+        .values_list("member_id", flat=True)
+        .first()
+    )
     UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
         status=InvitationStatus.CANCELLED
     )
-    member = getattr(user, "member_profile", None)
     invitation = UserInvitation.objects.create(
         user=user,
-        member=member,
+        member_id=member_id,
         email=user.email,
         expires_at=timezone.now() + INVITATION_TTL,
         created_by=created_by,
@@ -347,6 +360,22 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
     # Enforce password rules (incl. zxcvbn entropy ≥ 3 from settings).
     password_validation.validate_password(password, user=user)
 
+    from apps.commissioning.models import Member, UserInvitation
+
+    # Decide on the rows as they are now, locked in the order a member reject
+    # takes them: member, then login, then invitation. A reject committed while
+    # the password was checked has cancelled this invitation and deactivated or
+    # unlinked the login; writing back the rows read above would undo all of it.
+    member = (
+        Member.objects.select_for_update().get(pk=invitation.member_id)
+        if invitation.member_id
+        else None
+    )
+    user = get_user_model().objects.select_for_update().get(pk=user.pk)
+    invitation = UserInvitation.objects.select_for_update().get(pk=invitation.pk)
+    if invitation.status != InvitationStatus.SENT or invitation.is_expired:
+        raise ValidationError({"token": "This invitation link is invalid or expired."})
+
     user.set_password(password)
     user.account_status = "active"
     # save() on JasminUser keeps is_active in sync with account_status.
@@ -357,15 +386,20 @@ def accept_invitation(*, token: str, password: str) -> JasminUser:
 
     # If the invitation was created in the context of a Member application
     # (Scenario 1: office invites someone they already added as a member),
-    # auto-confirm that Member now that the user has actively accepted.
-    # The inviter is treated as the confirming admin for audit.
-    if invitation.member_id and not invitation.member.admin_confirmed:
-        invitation.member.confirm(admin_user=invitation.created_by, save=True)
+    # auto-confirm that Member now that the user has actively accepted —
+    # as long as this login is still the member's. The inviter is treated as
+    # the confirming admin for audit. An invitation the office sent after
+    # rejecting the member is how it re-admits them, so accepting one lifts
+    # the rejection rather than leaving the member confirmed and rejected.
+    if member is not None and member.user_id == user.pk and not member.admin_confirmed:
+        if member.admin_rejected_at is not None:
+            if invitation.created_at <= member.admin_rejected_at:
+                raise ValidationError({"token": "This invitation is no longer valid."})
+            member.admin_rejected_at = None
+        member.confirm(admin_user=invitation.created_by, save=True)
 
     # Mark *all other* outstanding invitations for this user as cancelled
     # so a stolen old token cannot be replayed even before its TTL expires.
-    from apps.commissioning.models import UserInvitation
-
     UserInvitation.objects.filter(user=user, status=InvitationStatus.SENT).update(
         status=InvitationStatus.CANCELLED
     )

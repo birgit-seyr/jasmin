@@ -473,6 +473,10 @@ def super_admin_step_up_view(request: Request) -> Response:
     for claim in _STEP_UP_CARRY_CLAIMS:
         if claim in current_payload:
             access[claim] = current_payload[claim]
+    # Ends when the presented token would have, so step-ups can't chain a
+    # session past its lifetime.
+    if "exp" in current_payload:
+        access["exp"] = current_payload["exp"]
     access["step_up_verified_at"] = int(time.time())
 
     reset_failures(email)

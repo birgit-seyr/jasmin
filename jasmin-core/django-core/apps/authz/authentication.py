@@ -38,3 +38,18 @@ class TenantBoundJWTAuthentication(JWTAuthentication):
             raise InvalidToken("Token does not belong to this tenant.")
 
         return token
+
+    def get_user(self, validated_token):
+        user = super().get_user(validated_token)
+        # A logout-all, password reset or deactivation stamps
+        # ``sessions_revoked_at``; an access token minted before it dies there
+        # too, at the same whole-second cut-off the refresh path applies.
+        revoked_at = getattr(user, "sessions_revoked_at", None)
+        issued_at = validated_token.get("iat")
+        if (
+            revoked_at is not None
+            and issued_at is not None
+            and int(issued_at) < int(revoked_at.timestamp())
+        ):
+            raise InvalidToken("Token has been revoked.")
+        return user

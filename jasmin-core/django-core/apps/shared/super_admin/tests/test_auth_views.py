@@ -792,3 +792,27 @@ class TestCredentialBodyShapes:
         assert response.status_code == 200
         assert response.data["access"]
         assert response.data["ttl_seconds"]
+
+    def test_step_up_token_ends_when_the_presented_token_would(
+        self, factory, super_admin
+    ):
+        import datetime
+
+        import time_machine
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        super_admin.is_super_admin = True
+        super_admin.user_role = "super_admin"
+        minted = datetime.datetime(2026, 7, 13, 12, 0, tzinfo=datetime.UTC)
+        with time_machine.travel(minted, tick=False) as traveller:
+            presented = make_step_up_token(super_admin)
+            # Ten minutes on, a fresh lifetime would end ten minutes later.
+            traveller.shift(600)
+            request = factory.post(
+                "/auth/step-up/", {"password": SUPER_ADMIN_PASSWORD}, format="json"
+            )
+            force_authenticate(request, user=super_admin, token=presented)
+            response = super_admin_step_up_view(request)
+
+            assert response.status_code == 200
+            assert AccessToken(response.data["access"])["exp"] == presented["exp"]

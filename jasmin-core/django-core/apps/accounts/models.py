@@ -223,12 +223,13 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
     updated_at = models.DateTimeField(auto_now=True)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
 
-    # Server-side session cut-off: any refresh token minted before this instant
-    # is rejected by ``refresh_access_token``. Stamped on password
-    # reset and "log out everywhere" so a stolen refresh token can't be
-    # rotated forward indefinitely past a credential change. NULL = never
-    # revoked. Robust against rotation (which mints new JTIs outside
-    # ``OutstandingToken``); the token's ``iat`` is what's compared.
+    # Server-side session cut-off: any token minted before this instant,
+    # refresh or access, is rejected (``refresh_access_token`` and
+    # ``TenantBoundJWTAuthentication`` compare the token's ``iat``). Stamped
+    # on password reset, "log out everywhere" and when the account leaves
+    # ``active``, so a stolen token can't outlive a credential change or a
+    # deactivation. NULL = never revoked. Robust against rotation, which mints
+    # new JTIs outside ``OutstandingToken``.
     sessions_revoked_at = models.DateTimeField(blank=True, null=True, editable=False)
 
     # Status-transition timestamps. Maintained by ``save()`` whenever
@@ -352,6 +353,12 @@ class JasminUser(JasminModel, AbstractBaseUser, PermissionsMixin):
         if self.account_status == "inactive" and previous_status != "inactive":
             self.inactivated_at = now
             stamped.append("inactivated_at")
+        # Leaving ``active`` ends every session the login has, whichever path
+        # deactivates it: a refresh cookie on a lost device must not come back
+        # to life when the account is reactivated or re-invited.
+        if previous_status == "active" and self.account_status != "active":
+            self.sessions_revoked_at = now
+            stamped.append("sessions_revoked_at")
 
         if update_fields is not None:
             extra = {"is_active"}

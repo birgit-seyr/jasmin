@@ -208,11 +208,11 @@ def refresh_access_token(
     if not _refresh_iat_still_valid(refresh):
         raise InvalidToken("Session has been revoked. Please log in again.")
 
-    # Re-validate the account on every refresh. The iat cut-off
-    # above only rejects tokens minted before an EXPLICIT revoke (password reset
-    # / logout-all, which stamp ``sessions_revoked_at``); a mid-session admin
-    # deactivation stamps nothing, so without this a deactivated user could keep
-    # refreshing for the full refresh lifetime. Mirrors the super-admin refresh.
+    # Re-validate the account on every refresh. The iat cut-off above covers
+    # the revocations that stamp ``sessions_revoked_at`` (password reset,
+    # logout-all, an account leaving ``active``); ``is_active`` is what decides
+    # whether this login may hold a session at all. Mirrors the super-admin
+    # refresh.
     user = JasminUser.objects.filter(pk=refresh.get("user_id")).first()
     if user is None or not user.is_active:
         raise InvalidToken("User is no longer active. Please log in again.")
@@ -307,8 +307,9 @@ def revoke_all_sessions(user: JasminUser) -> None:
       timestamp already covers the rotated-current-token that isn't
       outstanding). Best-effort; never the sole guarantee.
 
-    Access tokens already issued keep working until they expire (short-lived,
-    ≤ ACCESS_TOKEN_LIFETIME) — that's the inherent JWT window, not widened here.
+    Access tokens issued before the stamp are refused too:
+    ``TenantBoundJWTAuthentication`` compares their ``iat`` with it, in whole
+    seconds, so a token minted in the same second still works.
     """
     from django.utils import timezone
 

@@ -962,8 +962,8 @@ class Subscription(
         """Materialise Shares + ShareDeliveries + ChargeSchedule on confirm.
 
         Also cascades confirmation to the owning Member if it is not yet
-        admin-confirmed (a confirmed subscription implies the member is
-        accepted). Confirmation does NOT cascade the other way around.
+        admin-confirmed, and refuses the confirm for a rejected one (see
+        ``SubscriptionService.admit_member_on_confirm``). No reverse cascade.
 
         While the tenant is in onboarding mode the office enters subscriptions
         that are already running, so a fresh confirm also materialises the
@@ -977,15 +977,7 @@ class Subscription(
             SubscriptionService,
         )
 
-        member = self.member
-        # Don't back-cascade confirmation onto a member who has initiated their
-        # exit (cancelled_at set) — they should not be re-admitted by confirming
-        # a leftover subscription. The confirm endpoint refuses such a
-        # subscription, or in onboarding mode requires the member to be
-        # confirmed already; the guard covers any other confirm() caller.
-        if not member.admin_confirmed and member.cancelled_at is None:
-            member.confirm(admin_user)
-
+        SubscriptionService.admit_member_on_confirm(self, admin_user=admin_user)
         SubscriptionService().materialize_confirmed_subscription(
             self,
             actor=admin_user,

@@ -493,9 +493,9 @@ paths:
     post:
       operationId: auth_logout_all_create
       description: Revokes every refresh token for the authenticated user — this browser
-        and every other device/session. Use after a suspected compromise. Already-issued
-        access tokens keep working until they expire (short-lived); no new session
-        can be minted from an old refresh token.
+        and every other device/session. Use after a suspected compromise. Access tokens
+        issued before it are refused as well, and no new session can be minted from
+        an old refresh token.
       summary: Log out of all sessions (this device and every other)
       tags:
       - auth
@@ -820,7 +820,9 @@ paths:
         is on) and returns a new access token carrying ``step_up_verified_at``. The
         frontend swaps the access token in and retries the original destructive request.
         The new token's TTL for step-up purposes is ``STEP_UP_TTL_SECONDS`` (default
-        300); the JWT itself still expires at the normal access-token lifetime.
+        300). The new JWT keeps the presented token's expiry, so a step-up never lengthens
+        a session; the frontend renews the session first, so the token it presents
+        outlasts the step-up window.
       summary: Step-up authentication — issue a fresh access token for sudo mode
       tags:
       - auth
@@ -11616,7 +11618,7 @@ paths:
       description: |
         Create a Member. If the supplied email matches an existing JasminUser, the new Member is linked to that user (instead of rejecting with a uniqueness error). The behaviour depends on the user's account status:
           * ``active``              → link, and confirm the member when its coop shares already fit the tenant's window (a trial member, or a tenant without a minimum), sending a 'you are now a member' email if ``notify_user=true``. Otherwise the member stays pending until the office confirms it. In onboarding mode the member is only linked.
-          * ``pending_invitation``  → link only; the member is auto-confirmed when the user accepts the invitation.
+          * ``pending_invitation``  → link only; accepting an invitation sent through this member's ``send_invitation`` confirms it.
           * ``pending_approval``    → 409 conflict; the user already has a pending member application.
           * ``inactive``            → 409 conflict.
       tags:

@@ -44,6 +44,12 @@ function wrongPasswordError() {
   };
 }
 
+/** An access token whose ``exp`` lies ``seconds`` from now. */
+function tokenEnding(seconds: number): string {
+  const exp = Math.floor(Date.now() / 1000) + seconds;
+  return `header.${btoa(JSON.stringify({ exp }))}.signature`;
+}
+
 async function submitPassword(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("auth.step_up.password"), "hunter2");
   await user.click(screen.getByRole("button", { name: "auth.step_up.submit" }));
@@ -91,6 +97,75 @@ describe("StepUpProvider", () => {
     await waitFor(() =>
       expect(screen.queryByLabelText("auth.step_up.password")).not.toBeInTheDocument(),
     );
+  });
+
+  it("renews a session that would end inside the step-up window before asking", async () => {
+    const user = userEvent.setup();
+    render(
+      <StepUpProvider>
+        <div />
+      </StepUpProvider>,
+    );
+    setAccessToken(tokenEnding(120));
+    const refresh = vi.fn(async () => setAccessToken("fresh-token"));
+
+    const flow = runStepUpFlow({ ttlSeconds: 300, refresh });
+    flow.catch(() => {});
+    await screen.findByText("auth.step_up.title");
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    axiosPostMock.mockResolvedValueOnce({
+      data: { access: "sudo-token", ttl_seconds: 300 },
+    });
+    await submitPassword(user);
+
+    await expect(flow).resolves.toBe("sudo-token");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(axiosPostMock.mock.calls[0][2].headers).toEqual({
+      Authorization: "Bearer fresh-token",
+    });
+  });
+
+  it("leaves a session that outlasts the step-up window as it is", async () => {
+    const user = userEvent.setup();
+    render(
+      <StepUpProvider>
+        <div />
+      </StepUpProvider>,
+    );
+    const presented = tokenEnding(900);
+    setAccessToken(presented);
+    const refresh = vi.fn();
+
+    const flow = runStepUpFlow({ ttlSeconds: 300, refresh });
+    flow.catch(() => {});
+    await screen.findByText("auth.step_up.title");
+    axiosPostMock.mockResolvedValueOnce({
+      data: { access: "sudo-token", ttl_seconds: 300 },
+    });
+    await submitPassword(user);
+
+    await expect(flow).resolves.toBe("sudo-token");
+    expect(refresh).not.toHaveBeenCalled();
+    expect(axiosPostMock.mock.calls[0][2].headers).toEqual({
+      Authorization: `Bearer ${presented}`,
+    });
+  });
+
+  it("ends the flow without opening the modal when the renewal fails", async () => {
+    render(
+      <StepUpProvider>
+        <div />
+      </StepUpProvider>,
+    );
+    setAccessToken(tokenEnding(60));
+    const refresh = vi.fn(() => Promise.reject(new Error("refresh refused")));
+
+    await expect(runStepUpFlow({ ttlSeconds: 300, refresh })).rejects.toThrow(
+      "refresh refused",
+    );
+    expect(screen.queryByText("auth.step_up.title")).not.toBeInTheDocument();
+    expect(axiosPostMock).not.toHaveBeenCalled();
   });
 
   it("unmounting mid-prompt rejects the flow so a later flow can start", async () => {

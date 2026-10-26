@@ -6,11 +6,11 @@ from collections import defaultdict
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 
 from apps.commissioning.models import CoopShare, InvoiceReseller, Member, Subscription
-from apps.payments.constants import OPEN_CHARGE_STATUSES
+from apps.payments.constants import ChargeStatus
 from apps.payments.models import ChargeSchedule
 
 from .subjects import ErasureSubject
@@ -25,6 +25,38 @@ if TYPE_CHECKING:
     # time through the ASSEMBLED class so monkeypatched attributes on
     # ``GDPRService`` are honoured.
     from . import GDPRService
+
+
+def _ongoing_subscriptions(today) -> Q:
+    """Subscriptions that are still an ongoing contract: confirmed and running
+    until a day still to come. A reject unconfirms, so a confirmed row is no
+    rejected application, even when it keeps an earlier ``admin_rejected_at``.
+    A cancellation ends the term at ``cancelled_effective_at`` (a member exit
+    force-ends it there too) while ``valid_until`` keeps the original end, so
+    that date wins when set."""
+    still_running = Q(cancelled_effective_at__gte=today) | (
+        Q(cancelled_effective_at__isnull=True)
+        & (Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+    )
+    return Q(admin_confirmed=True) & still_running
+
+
+def _owed_charges() -> Q:
+    """Charges that still owe something. The planner writes a PLANNED row for
+    every unlocked period, at 0.00 where nothing is owed (a period without
+    deliveries, every period after a force-ended term), and nothing ever
+    settles those; a planned period that starts after the subscription's
+    effective end owes nothing either. Positive conditions only: a negated one
+    on the mostly-NULL ``cancelled_effective_at`` would drop rows in SQL."""
+    planned_and_owed = (
+        Q(status=ChargeStatus.PLANNED)
+        & Q(expected_amount__gt=0)
+        & (
+            Q(subscription__cancelled_effective_at__isnull=True)
+            | Q(period_start__lte=F("subscription__cancelled_effective_at"))
+        )
+    )
+    return Q(status__in=[ChargeStatus.ISSUED, ChargeStatus.PARTIAL]) | planned_and_owed
 
 
 class RetentionChecksMixin:
@@ -60,14 +92,15 @@ class RetentionChecksMixin:
           blocks anonymization. After payment + 10 years, retention
           is satisfied and a future cleanup cron will handle the
           historical rows.
-        - **Active subscription** — a current ``Subscription`` row
-          (``valid_until IS NULL`` or in the future) on the subject's
-          Member means an ongoing service relationship; anonymizing
-          mid-contract would orphan an active billing slot.
-        - **Open charge schedule** — any ``ChargeSchedule`` in
-          ``PLANNED`` / ``ISSUED`` / ``PARTIAL`` on the subject's
-          Member is owed-but-not-paid; same treatment as an open
-          invoice.
+        - **Active subscription** — a confirmed ``Subscription`` still
+          running (its effective end — the cancellation date, else
+          ``valid_until`` — open or to come) means
+          an ongoing service relationship; anonymizing mid-contract would
+          orphan an active billing slot.
+        - **Open charge schedule** — a ``ChargeSchedule`` that still owes
+          something: ``ISSUED`` / ``PARTIAL``, or ``PLANNED`` above 0.00 for
+          a period within the subscription's term; same treatment as an
+          open invoice.
 
         Each reason is a short string the frontend can render in a
         list (no PII; safe to log).
@@ -91,14 +124,11 @@ class RetentionChecksMixin:
             coop_count = GDPRService._open_coop_share_counts([member.pk]).get(
                 member.pk, 0
             )
-            active_sub_count = (
-                Subscription.objects.filter(member=member)
-                .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
-                .count()
-            )
+            active_sub_count = Subscription.objects.filter(
+                _ongoing_subscriptions(today), member=member
+            ).count()
             open_charge_count = ChargeSchedule.objects.filter(
-                member=member,
-                status__in=OPEN_CHARGE_STATUSES,
+                _owed_charges(), member=member
             ).count()
 
         # Reseller side — for Members who are ALSO B2B customers, plus
@@ -228,14 +258,14 @@ class RetentionChecksMixin:
         if member_ids:
             coop_by_member = GDPRService._open_coop_share_counts(member_ids)
             sub_by_member = _grouped(
-                Subscription.objects.filter(member_id__in=member_ids).filter(
-                    Q(valid_until__isnull=True) | Q(valid_until__gte=today)
+                Subscription.objects.filter(
+                    _ongoing_subscriptions(today), member_id__in=member_ids
                 ),
                 "member_id",
             )
             charge_by_member = _grouped(
                 ChargeSchedule.objects.filter(
-                    member_id__in=member_ids, status__in=OPEN_CHARGE_STATUSES
+                    _owed_charges(), member_id__in=member_ids
                 ),
                 "member_id",
             )

@@ -38,6 +38,13 @@ class MemberAlreadyConfirmed(ConflictError):
     code = "member.already_confirmed"
 
 
+class MemberAlreadyRejected(ConflictError):
+    """Confirm called on a member the office rejected. Re-admitting one takes a
+    fresh invitation from the office, whose acceptance lifts the rejection."""
+
+    code = "member.already_rejected"
+
+
 class MemberHasActiveSubscriptions(BadRequestError):
     """A member tried to self-cancel their membership while still holding
     active (admin-confirmed, not-cancelled, not-expired) subscriptions. They

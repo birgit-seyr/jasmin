@@ -437,8 +437,8 @@ class MemberViewSet(
             "email if ``notify_user=true``. Otherwise the member stays pending "
             "until the office confirms it. In onboarding mode the member is "
             "only linked.\n"
-            "  * ``pending_invitation``  → link only; the member is "
-            "auto-confirmed when the user accepts the invitation.\n"
+            "  * ``pending_invitation``  → link only; accepting an invitation "
+            "sent through this member's ``send_invitation`` confirms it.\n"
             "  * ``pending_approval``    → 409 conflict; the user already "
             "has a pending member application.\n"
             "  * ``inactive``            → 409 conflict.\n"
@@ -534,7 +534,7 @@ class MemberViewSet(
             200: MemberSerializer,
             # ``ConfirmationDate*`` errors.
             400: ErrorResponseSerializer,
-            # ``MemberAlreadyConfirmed`` / ``MemberAlreadyCancelled``.
+            # ``MemberAlreadyConfirmed`` / ``MemberAlreadyRejected`` / ``MemberAlreadyCancelled``.
             409: ErrorResponseSerializer,
         },
     )
@@ -559,7 +559,7 @@ class MemberViewSet(
             # already-confirmed check raises the 409.
             member = Member.objects.select_for_update().get(pk=member.pk)
 
-            # Raises MemberAlreadyConfirmed (409) when not pending.
+            # Raises MemberAlreadyConfirmed / MemberAlreadyRejected (409) when not pending.
             MemberService().confirm_and_notify(
                 member,
                 admin_user=auth_user(request),
@@ -1188,7 +1188,7 @@ class SubscriptionViewSet(
             # ``SubscriptionEndsAfterMemberExit``.
             400: ErrorResponseSerializer,
             # ``SubscriptionAlreadyConfirmed`` / ``SubscriptionAlreadyRejected`` /
-            # ``DeliveryStationOverCapacity``.
+            # ``MemberAlreadyRejected`` / ``DeliveryStationOverCapacity``.
             409: ErrorResponseSerializer,
         },
     )
@@ -1605,7 +1605,7 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             200: CoopShareSerializer,
             # ``ConfirmationDate*`` errors / ``MemberCoopSharesOutOfRange``.
             400: ErrorResponseSerializer,
-            # ``MemberAlreadyCancelled`` / ``CoopShareNotPending``.
+            # ``MemberAlreadyCancelled`` / ``MemberAlreadyRejected`` / ``CoopShareNotPending``.
             409: ErrorResponseSerializer,
         },
     )
@@ -1615,11 +1615,11 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
 
         Vice-versa cascade: if the share belongs to a not-yet-admitted member,
         confirming the share admits the member too (initial admission from the
-        equity side) — which in turn confirms the member's other pending shares
-        and sends the admission email. This is best-effort: if the member is not
-        yet eligible for admission (e.g. below the min-shares window), the share
-        is still confirmed and the member stays pending (admit later via
-        member-confirm). Members admitted earlier skip this entirely.
+        equity side), which confirms the member's other pending shares and sends
+        the admission email. Best-effort: a member not yet eligible (e.g. below
+        the min-shares window) stays pending and the share is still confirmed.
+        The confirm is refused for a rejected member (409 ``MemberAlreadyRejected``);
+        a new invitation re-admits them. Members admitted earlier skip this.
 
         In onboarding mode the confirmation date, the email suppression and the
         departed-member admission reach the share and the member cascade alike.

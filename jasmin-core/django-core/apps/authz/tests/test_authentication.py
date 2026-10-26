@@ -7,7 +7,10 @@ with the same id. Failures here would silently break tenant isolation.
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
+import time_machine
 from django.db import connection
 from rest_framework.test import APIRequestFactory
 from rest_framework_simplejwt.exceptions import InvalidToken
@@ -114,3 +117,31 @@ class TestTenantBinding:
         raw = _mint(u, tenant_id=None)
         with pytest.raises(InvalidToken):
             auth.get_validated_token(raw)
+
+
+class TestRevokedSessions:
+    """A logout-all, password reset or deactivation stamps
+    ``sessions_revoked_at``; an access token minted before it is refused, at
+    the whole-second cut-off the refresh path uses. The clock stays frozen so
+    the token can't fail on its own expiry instead."""
+
+    MINTED = datetime.datetime(2026, 7, 13, 12, 0, 0, tzinfo=datetime.UTC)
+
+    def test_a_token_minted_before_the_revoke_is_rejected(self, tenant, rf, auth):
+        u = JasminUserFactory()
+        with time_machine.travel(self.MINTED, tick=False) as traveller:
+            raw = _mint(u, tenant_id=tenant.schema_name)
+            traveller.shift(5)
+            u.sessions_revoked_at = datetime.datetime.now(datetime.UTC)
+            u.save(update_fields=["sessions_revoked_at"])
+            with pytest.raises(InvalidToken):
+                auth.authenticate(_bearer(rf, raw))
+
+    def test_a_token_minted_in_the_revoke_second_still_works(self, tenant, rf, auth):
+        u = JasminUserFactory()
+        with time_machine.travel(self.MINTED, tick=False):
+            u.sessions_revoked_at = datetime.datetime.now(datetime.UTC)
+            u.save(update_fields=["sessions_revoked_at"])
+            raw = _mint(u, tenant_id=tenant.schema_name)
+            user, _validated = auth.authenticate(_bearer(rf, raw))
+        assert user.id == u.id

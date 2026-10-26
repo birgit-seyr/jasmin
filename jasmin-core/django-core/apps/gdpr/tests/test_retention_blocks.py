@@ -21,6 +21,7 @@ from decimal import Decimal
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 
 from apps.commissioning.models import Member
 from apps.commissioning.tests.factories import (
@@ -104,7 +105,9 @@ class TestCheckRetentionBlocks:
         """An ongoing subscription (future end date) = open service contract."""
         user = JasminUserFactory()
         member = MemberFactory(user=user)
-        SubscriptionFactory(member=member)
+        SubscriptionFactory(
+            member=member, admin_confirmed=True, valid_until=_sunday_offset(26)
+        )
 
         reasons = GDPRService.check_retention_blocks(user)
         assert any("active subscription" in r for r in reasons)
@@ -115,6 +118,7 @@ class TestCheckRetentionBlocks:
         member = MemberFactory(user=user)
         SubscriptionFactory(
             member=member,
+            admin_confirmed=True,
             valid_until=_sunday_offset(4),  # ~4 weeks ahead, a Sunday
         )
 
@@ -129,6 +133,7 @@ class TestCheckRetentionBlocks:
         member = MemberFactory(user=user)
         SubscriptionFactory(
             member=member,
+            admin_confirmed=True,
             valid_until=_sunday_offset(-4),  # ~4 weeks ago, a Sunday
         )
 
@@ -177,6 +182,127 @@ class TestCheckRetentionBlocks:
         reasons = GDPRService.check_retention_blocks(user)
         assert not any("open charge(s)" in r for r in reasons)
 
+    def test_unconfirmed_application_does_not_block(self, tenant):
+        """An application the office hasn't confirmed is no contract yet."""
+        user = JasminUserFactory()
+        member = MemberFactory(user=user)
+        SubscriptionFactory(member=member, valid_until=_sunday_offset(26))
+
+        reasons = GDPRService.check_retention_blocks(user)
+        assert not any("active subscription" in r for r in reasons)
+
+    def test_rejected_subscription_does_not_block(self, tenant):
+        """A rejection stamps the application but keeps its term, so a rejected
+        applicant's ``valid_until`` is still to come."""
+        user = JasminUserFactory()
+        member = MemberFactory(user=user)
+        SubscriptionFactory(
+            member=member,
+            admin_rejected_at=timezone.now(),
+            valid_until=_sunday_offset(26),
+        )
+
+        reasons = GDPRService.check_retention_blocks(user)
+        assert not any("active subscription" in r for r in reasons)
+
+    def test_subscription_confirmed_after_a_rejection_blocks(self, tenant):
+        """A confirm keeps an earlier ``admin_rejected_at``; the confirmed
+        subscription is a running contract all the same."""
+        user = JasminUserFactory()
+        member = MemberFactory(user=user)
+        SubscriptionFactory(
+            member=member,
+            admin_confirmed=True,
+            admin_rejected_at=timezone.now(),
+            valid_until=_sunday_offset(26),
+        )
+
+        reasons = GDPRService.check_retention_blocks(user)
+        assert any("active subscription" in r for r in reasons)
+
+    def test_subscription_ended_by_a_cancellation_does_not_block(self, tenant):
+        """A member exit force-ends the term at ``cancelled_effective_at`` and
+        keeps the original ``valid_until``; the earlier date is the end."""
+        user = JasminUserFactory()
+        member = MemberFactory(user=user)
+        SubscriptionFactory(
+            member=member,
+            admin_confirmed=True,
+            valid_until=_sunday_offset(26),
+            cancelled_effective_at=_sunday_offset(-2),
+        )
+
+        reasons = GDPRService.check_retention_blocks(user)
+        assert not any("active subscription" in r for r in reasons)
+
+    def test_subscription_cancelled_for_a_later_date_blocks(self, tenant):
+        user = JasminUserFactory()
+        member = MemberFactory(user=user)
+        SubscriptionFactory(
+            member=member,
+            admin_confirmed=True,
+            valid_until=_sunday_offset(26),
+            cancelled_effective_at=_sunday_offset(2),
+        )
+
+        reasons = GDPRService.check_retention_blocks(user)
+        assert any("active subscription" in r for r in reasons)
+
+    def test_planned_charge_owing_nothing_does_not_block(self, tenant):
+        """The planner writes a PLANNED row at 0.00 for a period without
+        deliveries, and nothing ever settles it."""
+        user = JasminUserFactory()
+        member = MemberFactory(user=user)
+        subscription = SubscriptionFactory(member=member)
+        ChargeSchedule.objects.create(
+            member=member,
+            subscription=subscription,
+            period_start=datetime.date(2026, 1, 5),
+            period_end=datetime.date(2026, 1, 31),
+            due_date=datetime.date(2026, 1, 31),
+            expected_amount=Decimal("0.00"),
+            status=ChargeStatus.PLANNED,
+        )
+
+        reasons = GDPRService.check_retention_blocks(user)
+        assert not any("open charge(s)" in r for r in reasons)
+
+    def test_planned_charge_after_the_term_ended_does_not_block(self, tenant):
+        """A force-ended term leaves its later periods planned; only the
+        periods within the term still owe something."""
+        user = JasminUserFactory()
+        member = MemberFactory(user=user)
+        subscription = SubscriptionFactory(
+            member=member,
+            admin_confirmed=True,
+            cancelled_effective_at=datetime.date(2026, 1, 25),
+        )
+        ChargeSchedule.objects.create(
+            member=member,
+            subscription=subscription,
+            period_start=datetime.date(2026, 2, 2),
+            period_end=datetime.date(2026, 2, 28),
+            due_date=datetime.date(2026, 2, 28),
+            expected_amount=Decimal("25.00"),
+            status=ChargeStatus.PLANNED,
+        )
+        assert not any(
+            "open charge(s)" in r for r in GDPRService.check_retention_blocks(user)
+        )
+
+        ChargeSchedule.objects.create(
+            member=member,
+            subscription=subscription,
+            period_start=datetime.date(2026, 1, 5),
+            period_end=datetime.date(2026, 1, 31),
+            due_date=datetime.date(2026, 1, 31),
+            expected_amount=Decimal("25.00"),
+            status=ChargeStatus.PLANNED,
+        )
+        assert any(
+            "open charge(s)" in r for r in GDPRService.check_retention_blocks(user)
+        )
+
     def test_unpaid_finalized_invoice_on_linked_reseller_blocks(self, tenant):
         """UStG §14b: open finalized invoice on a Reseller linked to
         the user must block (B2B customer + member overlap case)."""
@@ -216,7 +342,9 @@ class TestCheckRetentionBlocks:
         user = JasminUserFactory()
         member = MemberFactory(user=user)
         CoopShareFactory(member=member)
-        SubscriptionFactory(member=member)
+        SubscriptionFactory(
+            member=member, admin_confirmed=True, valid_until=_sunday_offset(26)
+        )
 
         reasons = GDPRService.check_retention_blocks(user)
         assert len(reasons) >= 2
@@ -334,11 +462,45 @@ class TestCheckRetentionBlocksBulk:
         # / charge / invoice) = 5 queries, independent of the user count.
         assert len(large_selects) <= 6
 
+    def test_bulk_agrees_with_single_user_on_what_no_longer_blocks(self, tenant):
+        rejected = JasminUserFactory()
+        rejected_member = MemberFactory(user=rejected)
+        rejected_subscription = SubscriptionFactory(
+            member=rejected_member,
+            admin_rejected_at=timezone.now(),
+            valid_until=_sunday_offset(26),
+        )
+        nothing_owed = JasminUserFactory()
+        nothing_owed_member = MemberFactory(user=nothing_owed)
+        # Same variation and station day: the factory would otherwise create a
+        # second, overlapping set of them.
+        ChargeSchedule.objects.create(
+            member=nothing_owed_member,
+            subscription=SubscriptionFactory(
+                member=nothing_owed_member,
+                share_type_variation=rejected_subscription.share_type_variation,
+                default_delivery_station_day=(
+                    rejected_subscription.default_delivery_station_day
+                ),
+            ),
+            period_start=datetime.date(2026, 1, 5),
+            period_end=datetime.date(2026, 1, 31),
+            due_date=datetime.date(2026, 1, 31),
+            expected_amount=Decimal("0.00"),
+            status=ChargeStatus.PLANNED,
+        )
+
+        bulk = GDPRService.check_retention_blocks_bulk([rejected, nothing_owed])
+        for user in (rejected, nothing_owed):
+            assert bulk[user.id] == GDPRService.check_retention_blocks(user) == []
+
     def test_bulk_agrees_with_single_user(self, tenant):
         user = JasminUserFactory()
         member = MemberFactory(user=user)
         CoopShareFactory(member=member)
-        SubscriptionFactory(member=member)
+        SubscriptionFactory(
+            member=member, admin_confirmed=True, valid_until=_sunday_offset(26)
+        )
 
         single = GDPRService.check_retention_blocks(user)
         bulk = GDPRService.check_retention_blocks_bulk([user])[user.id]

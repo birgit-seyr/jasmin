@@ -73,6 +73,7 @@
   },
   "member": {
     "already_confirmed": "This member is already confirmed.",
+    "already_rejected": "This member was rejected. Sending them a new invitation re-admits them.",
     "link_conflict": "Cannot link — this user is already attached to a different member.",
     "user_already_linked": "This user is already linked to a member.",
     "user_in_blocked_status": "This user is blocked and cannot be invited.",

@@ -24,6 +24,7 @@ from apps.authz.roles import STAFF_ROLES, Role
 from ..errors import (
     MemberAlreadyCancelled,
     MemberAlreadyConfirmed,
+    MemberAlreadyRejected,
     MemberCoopSharesOutOfRange,
     MemberEmailAlreadyHasUser,
     MemberEmailHeldByNonMemberLogin,
@@ -163,8 +164,17 @@ class MemberService:
           existing exit stamps and the normal payback due date. The member row
           keeps its cancellation and no cancellation email is sent.
         """
+        # Decide on the member row as it is now, locked: a reject committed
+        # since the caller read it (a stale tab, a confirm waiting on the
+        # reject's lock) would otherwise be undone. Refreshed in place, so the
+        # caller's instance is current too.
+        member.refresh_from_db(from_queryset=Member.objects.select_for_update())
         if member.admin_confirmed:
             raise MemberAlreadyConfirmed("Member is already confirmed")
+        if member.admin_rejected_at is not None:
+            raise MemberAlreadyRejected(
+                "The member was rejected; a new invitation re-admits them."
+            )
 
         # Never admit a member who has initiated their exit (cancelled_at set).
         # Defense-in-depth for every confirm caller (the coop-share and
@@ -474,6 +484,7 @@ class MemberService:
                     user=member.user,
                     created_by=admin_user,
                     email_category=EmailCategory.MEMBER_LIFECYCLE,
+                    member=member,
                 )
                 return member
             raise MemberUserAlreadyActive("Member already has an active user account.")

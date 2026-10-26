@@ -301,8 +301,8 @@ def user_logout_view(request):
     description=(
         "Revokes every refresh token for the authenticated user — this browser "
         "and every other device/session. Use after a suspected compromise. "
-        "Already-issued access tokens keep working until they expire "
-        "(short-lived); no new session can be minted from an old refresh token."
+        "Access tokens issued before it are refused as well, and no new "
+        "session can be minted from an old refresh token."
     ),
     request=None,
     responses={200: MessageResponseSerializer, 401: ErrorResponseSerializer},
@@ -530,8 +530,10 @@ set_throttle_scope(password_reset_confirm_view, "password_reset")
         "token carrying ``step_up_verified_at``. The frontend swaps "
         "the access token in and retries the original destructive "
         "request. The new token's TTL for step-up purposes is "
-        "``STEP_UP_TTL_SECONDS`` (default 300); the JWT itself still "
-        "expires at the normal access-token lifetime."
+        "``STEP_UP_TTL_SECONDS`` (default 300). The new JWT keeps the "
+        "presented token's expiry, so a step-up never lengthens a session; "
+        "the frontend renews the session first, so the token it presents "
+        "outlasts the step-up window."
     ),
     request=StepUpRequestSerializer,
     responses={

@@ -49,6 +49,18 @@ the matching section of Part 1.
 ## Working agreements
 
 - **DO NOT commit.** The user commits manually.
+- **No commit message before the code review and `make check`.** Before
+  suggesting a commit message or saying a change can be committed, run the
+  `code-reviewer` agent over the whole uncommitted diff and `make check`, both on
+  the code as it will be committed. Fix the failures and the blocking and
+  should-fix findings, and name any finding left for the user to decide. A small
+  fix made after them needs only the checks it touches — the affected tests and
+  gates, and a look at the changed lines; a larger one, or one that reaches into
+  other code, means running both again. Report what ran and its result alongside
+  the message; if something couldn't run or still fails, say so instead of
+  giving the message.
+  They can run side by side as long as the reviewer reads only: a second test
+  run would clobber the suite's schema.
 - **Never guess paths.** Always check which ones this repository actually uses —
   no reverse-engineering a plausible path.
 - **Production is LIVE — always assume dev AND prod.** Backward compatibility

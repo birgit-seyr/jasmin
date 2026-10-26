@@ -14517,7 +14517,7 @@ export function useCommissioningMembersList<TData = Awaited<ReturnType<typeof co
 /**
  * Create a Member. If the supplied email matches an existing JasminUser, the new Member is linked to that user (instead of rejecting with a uniqueness error). The behaviour depends on the user's account status:
   * ``active``              → link, and confirm the member when its coop shares already fit the tenant's window (a trial member, or a tenant without a minimum), sending a 'you are now a member' email if ``notify_user=true``. Otherwise the member stays pending until the office confirms it. In onboarding mode the member is only linked.
-  * ``pending_invitation``  → link only; the member is auto-confirmed when the user accepts the invitation.
+  * ``pending_invitation``  → link only; accepting an invitation sent through this member's ``send_invitation`` confirms it.
   * ``pending_approval``    → 409 conflict; the user already has a pending member application.
   * ``inactive``            → 409 conflict.
 

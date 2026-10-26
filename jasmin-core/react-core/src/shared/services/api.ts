@@ -289,6 +289,7 @@ axiosInstance.interceptors.response.use(
         const ttlSeconds = error.response.data.details?.ttl_seconds;
         const access = await runStepUpFlow({
           ttlSeconds: typeof ttlSeconds === "number" ? ttlSeconds : 300,
+          refresh: performRefresh,
         });
         originalRequest.headers = {
           ...(originalRequest.headers ?? {}),

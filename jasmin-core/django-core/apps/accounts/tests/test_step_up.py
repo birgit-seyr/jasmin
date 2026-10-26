@@ -401,3 +401,28 @@ def anon_client():
     from rest_framework.test import APIClient
 
     return APIClient()
+
+
+def test_step_up_token_ends_when_the_presented_token_would(user):
+    """A fresh lifetime would let password-only step-ups keep a session going
+    without the refresh cookie."""
+    import datetime
+
+    import time_machine
+
+    from apps.accounts.services.step_up_service import verify_and_issue_step_up_token
+
+    user.set_password("step-up-test-pw-Zx9!")
+    user.save(update_fields=["password"])
+    minted = datetime.datetime(2026, 7, 13, 12, 0, tzinfo=datetime.UTC)
+    with time_machine.travel(minted, tick=False) as traveller:
+        presented = AccessToken.for_user(user)
+        # Ten minutes on, a fresh lifetime would end ten minutes later.
+        traveller.shift(600)
+        issued = verify_and_issue_step_up_token(
+            user=user,
+            password="step-up-test-pw-Zx9!",
+            totp_code=None,
+            current_access_payload=presented.payload,
+        )
+        assert AccessToken(issued)["exp"] == presented["exp"]

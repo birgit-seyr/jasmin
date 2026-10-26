@@ -73,15 +73,35 @@ function stepUpEndpoint(): string {
 
 let inFlight: Promise<string> | null = null;
 
+/** Seconds the access token has left by its ``exp`` claim; ``null`` when the
+ *  token can't be read. */
+function secondsLeft(token: string | null): number | null {
+  const payload = token?.split(".")[1];
+  if (!payload) return null;
+  try {
+    const { exp } = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return typeof exp === "number" ? exp - Date.now() / 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Open the step-up modal, verify the password against the step-up
  * endpoint (retrying inside the modal on a wrong password), swap the
  * new access token into the token store, and return it. Deduplicates:
  * if a flow is already in flight, additional callers wait on the same
  * promise (one modal, not three).
+ *
+ * ``refresh`` renews the session before the modal opens when the access
+ * token would end inside the step-up window: the step-up token expires
+ * when the presented token would. A renewal that fails ends the flow.
  */
 export async function runStepUpFlow(args: {
   ttlSeconds: number;
+  refresh?: () => Promise<unknown>;
 }): Promise<string> {
   if (inFlight) return inFlight;
   if (!registeredPrompt) {
@@ -97,6 +117,12 @@ export async function runStepUpFlow(args: {
       // The IIFE runs synchronously up to its first ``await``, so this is
       // still the prompt checked above.
       const prompt = registeredPrompt;
+
+      // A minute on top of the window for typing the password.
+      const left = secondsLeft(getAccessToken());
+      if (args.refresh && (left === null || left < args.ttlSeconds + 60)) {
+        await args.refresh();
+      }
 
       let newToken: string | null = null;
       // The modal calls ``verify`` on submit and stays open (showing

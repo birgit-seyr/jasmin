@@ -4,7 +4,7 @@
 #     poetry run python scripts/module_length.py freeze
 # 19 module(s).
 
-apps/commissioning/models/members.py: 1129
+apps/commissioning/models/members.py: 1121
 apps/commissioning/models/mixin.py: 1413
 apps/commissioning/models/resellers.py: 1324
 apps/commissioning/models/shares.py: 1158

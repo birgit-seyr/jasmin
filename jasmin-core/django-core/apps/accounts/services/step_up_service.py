@@ -132,6 +132,10 @@ def verify_and_issue_step_up_token(
     for claim in _CARRY_CLAIMS:
         if claim in payload:
             new_access[claim] = payload[claim]
+    # The step-up token ends when the presented one would have: a fresh
+    # lifetime would let password-only step-ups keep a session going forever.
+    if "exp" in payload:
+        new_access["exp"] = payload["exp"]
     new_access["step_up_verified_at"] = int(time.time())
 
     logger.info(
