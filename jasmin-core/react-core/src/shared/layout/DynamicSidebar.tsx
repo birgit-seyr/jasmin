@@ -33,17 +33,11 @@ export default function DynamicSidebar() {
   // Add submenu state management here
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
-  // Handle submenu open/close - only one submenu open at a time
+  // SidebarShell resolves the open set (it knows the menu tree, so it can keep
+  // a nested submenu's ancestors open while still collapsing sibling top-level
+  // groups). We just store what it computes.
   const handleOpenChange = (keys: string[]) => {
-    const latestOpenKey = keys.find((key) => openKeys.indexOf(key) === -1);
-
-    if (latestOpenKey) {
-      // If a new submenu is opened, close others and open this one
-      setOpenKeys([latestOpenKey]);
-    } else {
-      // If closing a submenu
-      setOpenKeys([]);
-    }
+    setOpenKeys(keys);
   };
 
   // If mobile, only return the single MobileSidebar

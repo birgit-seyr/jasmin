@@ -45,6 +45,7 @@ _CATALOGUES_BY_PREFIX: dict[str, tuple[str, ...]] = {
     # ``apps/staff/viewsets/basics.py`` validates ``is_active`` through the
     # commissioning catalogue; the week/year params are staff's own.
     "/api/staff/": ("staff", "commissioning"),
+    "/api/cultivation/": ("cultivation",),
     "/api/gdpr/": (),
 }
 
@@ -92,6 +93,9 @@ _BRIDGE_MODULES: dict[str, str] = {
 @cache
 def _catalogues() -> dict[str, dict[str, ParamSpec]]:
     from apps.commissioning.utils.query_params import PARAM_CATALOGUE as COMMISSIONING
+    from apps.cultivation.query_params import (
+        CULTIVATION_PARAM_CATALOGUE as CULTIVATION,
+    )
     from apps.notifications.query_params import PARAM_CATALOGUE as NOTIFICATIONS
     from apps.payments.viewsets import PARAM_CATALOGUE as PAYMENTS
     from apps.staff.query_params import STAFF_PARAM_CATALOGUE as STAFF
@@ -101,6 +105,7 @@ def _catalogues() -> dict[str, dict[str, ParamSpec]]:
         "payments": PAYMENTS,
         "notifications": NOTIFICATIONS,
         "staff": STAFF,
+        "cultivation": CULTIVATION,
         "pagination": PAGINATION_PARAM_CATALOGUE,
     }
 
@@ -339,7 +344,7 @@ class TestTheSpecMatcherItself:
         assert len(_specs_for("/api/staff/weekly_plan/grid/", "year") or []) == 1
 
     def test_an_unmapped_subtree_is_reported_as_unmapped(self):
-        assert _specs_for("/api/cultivation/beds/", "year") is None
+        assert _specs_for("/api/economics/accounts/", "year") is None
 
 
 def _query_parameter_declarations(tree: ast.AST) -> list[int]:

@@ -13,6 +13,7 @@ from rest_framework.test import APIRequestFactory
 
 from apps.authz.permissions import (
     CanEdit,
+    CanEditCultivation,
     HasAnyRole,
     IsAdmin,
     IsCustomer,
@@ -63,6 +64,7 @@ EXPECTED_GRANTS: list[tuple[type[HasAnyRole], set[str]]] = [
     (IsCustomer, {Role.CUSTOMER, Role.OFFICE, Role.ADMIN}),
     (IsMember, {Role.MEMBER, Role.OFFICE, Role.ADMIN}),
     (CanEdit, {Role.GARDENER, Role.OFFICE, Role.ADMIN, Role.STAFF}),
+    (CanEditCultivation, {Role.GARDENER, Role.OFFICE, Role.ADMIN}),
     (
         IsStaffOrCustomer,
         {

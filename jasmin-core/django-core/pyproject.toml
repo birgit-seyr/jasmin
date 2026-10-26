@@ -20,6 +20,8 @@ huey = "^3.0.0"
 isoweek = "^1.3.3"
 nanoid = "^2.0.0"
 openpyxl = "^3.1.5"
+# CP-SAT solver behind the cultivation placement planner (apps/cultivation/optimizer).
+ortools = "^9.15"
 psycopg2-binary = "^2.9.10"
 python-dateutil = "^2.9.0"
 requests = "^2.32.3"
@@ -178,7 +180,7 @@ omit = [
     # Re-export shims; pyflakes already catches dead imports here.
     "*/__init__.py",
     # Research solver code, allow-listed in [tool.ruff.lint.per-file-ignores] too.
-    "apps/cultivation/solver/*",
+    "apps/cultivation/optimizer/*",
     # Operator one-off scripts (seed data, manual reconciliation,
     # createsuperadmin, etc.). Run manually by ops, not part of any
     # user-facing code path. Exception: rotate_field_encryption has its
@@ -267,7 +269,7 @@ ignore = [
 # Migrations are generated — don't lint them.
 "**/migrations/**" = ["ALL"]
 # Optimization solver code is research-style — skip it for now.
-"apps/cultivation/solver/**" = ["ALL"]
+"apps/cultivation/optimizer/**" = ["ALL"]
 # Django settings split: settings.py star-imports a local override file by
 # convention. F403/F405 are noise here, the alternative is a manifest of
 # every override which is more maintenance for less safety.

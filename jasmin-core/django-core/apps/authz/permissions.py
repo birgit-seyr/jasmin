@@ -98,6 +98,10 @@ class CanEdit(HasAnyRole):
     required_roles = (Role.GARDENER, Role.OFFICE, Role.ADMIN, Role.STAFF)
 
 
+class CanEditCultivation(HasAnyRole):
+    required_roles = (Role.GARDENER, Role.OFFICE, Role.ADMIN)
+
+
 # Composite read-side classes: who is allowed to *see* customer-/member-owned
 # data. Row-level filtering is the caller's responsibility (see
 # `apps.authz.scoping`).

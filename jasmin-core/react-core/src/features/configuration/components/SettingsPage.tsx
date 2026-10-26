@@ -75,6 +75,15 @@ interface SettingsPageProps {
     value: unknown,
     setSetting: (key: string, value: unknown) => void,
   ) => void;
+  /**
+   * Where the settings come from / go to. Both default to the tenant settings
+   * endpoints, so existing pages are unaffected; pass them to point a settings
+   * page at a different (e.g. app-scoped) singleton endpoint.
+   */
+  fetchSettings?: () => Promise<unknown>;
+  saveSettings?: (data: {
+    settings: Record<string, unknown>;
+  }) => Promise<unknown>;
   /** Slot rendered above the cards (inside the page). Can be a render-prop to access settings helpers. */
   extraBefore?: ReactNode | ((helpers: SettingsHelpers) => ReactNode);
   /** Slot rendered below the cards (inside the page). Can be a render-prop to access settings helpers. */
@@ -113,6 +122,8 @@ export default function SettingsPage({
   withLockedSettings = false,
   lockedTooltip,
   onBeforeSettingChange,
+  fetchSettings,
+  saveSettings,
   extraBefore,
   extraAfter,
 }: SettingsPageProps) {
@@ -128,8 +139,9 @@ export default function SettingsPage({
     getSettingValue,
   } = useAutoSavedSettings({
     tenant: tenant as { id: string; [key: string]: unknown } | null,
-    fetchSettings: () => tenantsSettingsList(),
-    saveSettings: (data) => tenantsSettingsUpdateCurrentSettingsUpdate(data),
+    fetchSettings: fetchSettings ?? (() => tenantsSettingsList()),
+    saveSettings:
+      saveSettings ?? ((data) => tenantsSettingsUpdateCurrentSettingsUpdate(data)),
     initialSettings: {},
     onSaved: refreshTenant,
   });

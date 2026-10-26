@@ -144,7 +144,7 @@ file.
 | `APIView`-style endpoints | `views.py` or a `views/` package |
 | Serializers | `serializers` (**plural**) — never singular `serializer/` |
 | Services | `services.py` or a `services/` package |
-| Errors | `errors.py` or an `errors/` package (every app that raises one has it; the `cultivation` / `economics` stubs don't) |
+| Errors | `errors.py` or an `errors/` package (every app that raises one has it; the `economics` stub doesn't) |
 
 Within a `services/` package, modules that expose a `*Service` class take the
 `_service.py` suffix (the dominant pattern); function-only helper / operation
@@ -208,10 +208,11 @@ Every `JasminError` code needs `de` **and** `en` entries in the locale
 **OpenAPI query params come from the catalogue — never hand-roll
 `OpenApiParameter` in `@extend_schema`.** A query parameter is declared ONCE as
 a `ParamSpec` (defined in `apps/shared/query_params.py`) inside the app's OWN
-catalogue — there are five: `PARAM_CATALOGUE` in
+catalogue — there are six: `PARAM_CATALOGUE` in
 `apps/commissioning/utils/query_params.py`, `apps/notifications/query_params.py`
 and `apps/shared/super_admin/query_params.py`, `STAFF_PARAM_CATALOGUE` in
-`apps/staff/query_params.py`, and payments' inline one in
+`apps/staff/query_params.py`, `CULTIVATION_PARAM_CATALOGUE` in
+`apps/cultivation/query_params.py`, and payments' inline one in
 `apps/payments/viewsets.py`. Reach for your app's, never another's. That
 catalogue is what `validate_query_params(...)`
 actually enforces at runtime, so the schema must be derived from it rather than
@@ -866,7 +867,7 @@ Located in `jasmin-core/django-core/apps/`:
 | `accounts` | User authentication, profiles, roles (member, staff, admin) |
 | `authz` | Authorization, role-based permissions, tenant-bound JWT authentication |
 | `commissioning` | Members, subscriptions, shares and weekly deliveries, stations and tours, resellers and orders, warehouse/stock |
-| `cultivation` | Stub — no models, migrations or endpoints; `solver/config_solver.py` holds bed-planner constants only. The `src/features/cultivation/` pages are placeholders too. |
+| `cultivation` | Vegetables, plant families, bed types, plots, cultivation batches and planting history, seed/seedling vendors; a CP-SAT placement planner (`optimizer/`, OR-Tools) run as a Huey job, its candidate plans and solver settings. Writes gated by `CanEditCultivation` (gardener, office, admin). The legacy `.jsx` pages under `src/features/cultivation/pages/` are still placeholders. |
 | `economics` | Chart of accounts — `Account` / `AccountValue` (monthly debit/credit). No API surface. Invoicing lives in `commissioning`, billing in `payments`. |
 | `gdpr` | Data export/deletion for GDPR compliance |
 | `notifications` | Email templates, notification dispatch, background jobs (via Huey) |
@@ -1145,7 +1146,7 @@ selected rule set is `E,F,B,BLE,UP,I` plus the hygiene rules `N,C901,PLR0913,
 PLR0915` (gated against `ruff-baseline.txt`, see [Hygiene gates](#hygiene-gates)),
 with `__init__.py` re-exports, conftest
 fixtures, Django settings star-imports, generated migrations, and the
-`apps/cultivation/solver/**` research code allow-listed.
+`apps/cultivation/optimizer/**` solver code allow-listed.
 
 **Frontend:**
 

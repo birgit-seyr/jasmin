@@ -23,7 +23,9 @@ type SidebarItem = {
 interface LeafRoute {
   key: string;
   to: string;
-  parentKey?: string;
+  /** Every containing submenu key, outermost first — opened together on a
+   *  deep-link so submenus nested more than one level deep still reveal. */
+  parentKeys: string[];
 }
 
 /** The route a leaf navigates to, read from its `<Link to>` label. */
@@ -36,21 +38,23 @@ function leafTo(label: unknown): string | undefined {
 }
 
 /** Flatten the menu tree into the leaves that carry a route, remembering the
- *  containing submenu key so we can open it on a deep-link. */
+ *  full chain of containing submenu keys. */
 function flattenLeaves(
   items: MenuProps["items"],
-  parentKey?: string,
+  parentKeys: string[] = [],
 ): LeafRoute[] {
   const out: LeafRoute[] = [];
   for (const raw of items ?? []) {
     const item = raw as SidebarItem | null;
     if (!item) continue;
     if (item.children?.length) {
-      out.push(...flattenLeaves(item.children, String(item.key)));
+      out.push(
+        ...flattenLeaves(item.children, [...parentKeys, String(item.key)]),
+      );
       continue;
     }
     const to = leafTo(item.label);
-    if (to) out.push({ key: String(item.key), to, parentKey });
+    if (to) out.push({ key: String(item.key), to, parentKeys });
   }
   return out;
 }
@@ -63,6 +67,29 @@ export default function SidebarShell({
 }: SidebarShellProps) {
   const { activeSidebarItem, setActiveSidebarItem } = useNavigation();
   const { pathname } = useLocation();
+
+  // Top-level submenu keys. Used to keep the "one root group open at a time"
+  // accordion while letting NESTED submenus open freely (a nested key is not a
+  // root, so opening it keeps the whole set — including its ancestors).
+  const rootSubmenuKeys = useMemo(
+    () =>
+      (items ?? [])
+        .map((raw) => raw as SidebarItem | null)
+        .filter((item) => item?.children?.length)
+        .map((item) => String(item?.key)),
+    [items],
+  );
+
+  const handleMenuOpenChange = (keys: string[]) => {
+    const latestOpenKey = keys.find((key) => !(openKeys ?? []).includes(key));
+    if (latestOpenKey && rootSubmenuKeys.includes(latestOpenKey)) {
+      // Opened a top-level group → collapse the other top-level groups.
+      onOpenChange?.([latestOpenKey]);
+    } else {
+      // Opened/closed a nested submenu → keep exactly what antd wants open.
+      onOpenChange?.(keys);
+    }
+  };
 
   // Match the current URL to a sidebar leaf so following a full link (e.g. from
   // a review doc) highlights the right entry AND opens its submenu — not only
@@ -84,11 +111,12 @@ export default function SidebarShell({
   useEffect(() => {
     if (!match) return;
     setActiveSidebarItem(match.key);
-    if (match.parentKey && !(openKeys ?? []).includes(match.parentKey)) {
-      onOpenChange?.([match.parentKey]);
-    }
+    const missing = match.parentKeys.filter(
+      (key) => !(openKeys ?? []).includes(key),
+    );
+    if (missing.length) onOpenChange?.([...(openKeys ?? []), ...missing]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match?.key, match?.parentKey]);
+  }, [match?.key]);
 
   return (
     <Sider className="sidebar">
@@ -97,7 +125,7 @@ export default function SidebarShell({
         mode="inline"
         selectedKeys={activeSidebarItem ? [activeSidebarItem] : []}
         openKeys={openKeys}
-        onOpenChange={onOpenChange}
+        onOpenChange={handleMenuOpenChange}
         items={items}
         onSelect={({ key }) => setActiveSidebarItem(key)}
       />

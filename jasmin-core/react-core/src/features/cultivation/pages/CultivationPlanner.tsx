@@ -1,0 +1,536 @@
+import { PlayCircleOutlined, SaveOutlined } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  Alert,
+  Button,
+  Select,
+  Slider,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+} from "antd";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  cultivationPlanSolutionsChooseCreate,
+  cultivationPlanSolutionsRunCreate,
+  cultivationPlanSolutionsSavePlacementsCreate,
+  getCultivationPlanSolutionsListQueryKey,
+  useCultivationCultivationBatchesList,
+  useCultivationPlanSolutionsList,
+  useCultivationPlanSolutionsRetrieve,
+  useCultivationPlotsList,
+} from "@shared/api/generated/cultivation/cultivation";
+import type {
+  CarryoverBlock,
+  CultivationBatch,
+  CultivationPlanSolutionDetail,
+} from "@shared/api/generated/models";
+import { useRoles } from "@shared/auth";
+import { YearSelector } from "@shared/selectors";
+import { DndGrid, DraggableChip, usePastelColorMap } from "@shared/ui";
+import { ExplainerText } from "@shared/ui";
+import { JobProgressDrawer } from "@shared/ui/JobProgressDrawer";
+import { notify } from "@shared/utils";
+import { getErrorMessage } from "@shared/utils/apiError";
+import PlannerGrids, { type BatchWindow } from "../components/PlannerGrids";
+import { type GridPlacement } from "../components/PlotGrid";
+import { CELLS_PER_BED, occupiesWeek } from "../utils/serpentine";
+
+const { Text } = Typography;
+
+/** A batch placed by the gardener/solver: batch id -> where it sits. */
+type PlacementMap = Record<string, { plotId: string; startCell: number }>;
+
+/** What a stored placement shows: the solver-time snapshot of its batch. */
+interface StoredPlacementInfo {
+  label: string;
+  plantingWeek?: number;
+  endWeek?: number;
+  cellCount: number;
+}
+
+/** The plan's stored positions, plus the display fields each one carries. */
+function readStoredPlacements(
+  details: readonly CultivationPlanSolutionDetail[],
+): { base: PlacementMap; meta: Map<string, StoredPlacementInfo> } {
+  const base: PlacementMap = {};
+  const meta = new Map<string, StoredPlacementInfo>();
+  details.forEach((d) => {
+    base[d.batch] = { plotId: d.plot, startCell: d.start_cell };
+    meta.set(d.batch, {
+      label: d.vegetable_name ?? d.batch,
+      plantingWeek: d.planting_week,
+      endWeek: d.end_week,
+      cellCount: d.cell_count,
+    });
+  });
+  return { base, meta };
+}
+
+/**
+ * Ground still held by last year's overwintering crops. Not part of this plan
+ * and not editable — but without it those cells look free, when the solver in
+ * fact had to work around them.
+ */
+function carryoverPlacements(
+  carryover: readonly CarryoverBlock[],
+  t: (key: string, options?: Record<string, unknown>) => string,
+): GridPlacement[] {
+  return carryover.map((c) => ({
+    batchId: `carryover:${c.plot}:${c.start_cell}`,
+    plotId: c.plot,
+    startCell: c.start_cell,
+    cellCount: c.cell_count,
+    label: t("cultivation.carryover_label", { crop: c.crop }),
+    plantingWeek: 1,
+    endWeek: c.until_week,
+    isCarryover: true,
+  }));
+}
+
+export default function CultivationPlanner() {
+  const { t } = useTranslation();
+  const { canEditCultivation } = useRoles();
+  const queryClient = useQueryClient();
+
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState<number>(currentYear);
+  const [week, setWeek] = useState<number>(20);
+  const [solutionId, setSolutionId] = useState<string | undefined>();
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [edits, setEdits] = useState<PlacementMap | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const { data: plots, isLoading: plotsLoading } = useCultivationPlotsList();
+  // Only the batches this planner is responsible for. Greenhouse batches are
+  // planned separately and the outdoor solver skips them — including them here
+  // would park every tunnel crop in the "unplaced" palette forever, looking like
+  // the solver had failed to place them.
+  const { data: batches } = useCultivationCultivationBatchesList({
+    year,
+    is_greenhouse: false,
+  });
+  const { data: solutions, isFetching: solutionsFetching } =
+    useCultivationPlanSolutionsList({ year });
+  const { data: solution, isFetching: solutionFetching } =
+    useCultivationPlanSolutionsRetrieve(solutionId ?? "", {
+      query: { enabled: !!solutionId },
+    });
+
+  // Pick the chosen plan (else the newest) whenever the year's list changes.
+  useEffect(() => {
+    if (!solutions?.length) {
+      setSolutionId(undefined);
+      return;
+    }
+    const stillThere = solutions.some((s) => s.id === solutionId);
+    if (stillThere) return;
+    setSolutionId((solutions.find((s) => s.chosen) ?? solutions[0]).id);
+  }, [solutions, solutionId]);
+
+  // A fresh solution wipes any unsaved hand edits.
+  useEffect(() => setEdits(null), [solutionId]);
+
+  // Already scoped to this year + outdoor by the query above.
+  const yearBatches = useMemo<CultivationBatch[]>(
+    () => batches ?? [],
+    [batches],
+  );
+
+  // Outdoor plots only — the solver excludes greenhouse plots, so showing them
+  // here would be a grid the planner can never place anything into.
+  const outdoorPlots = useMemo(
+    () => (plots ?? []).filter((plot) => !plot.is_greenhouse),
+    [plots],
+  );
+  const batchById = useMemo(() => {
+    const map = new Map<string, CultivationBatch>();
+    yearBatches.forEach((b) => b.id && map.set(b.id, b));
+    return map;
+  }, [yearBatches]);
+
+  const colorMap = usePastelColorMap(
+    useMemo(() => yearBatches.map((b) => b.id ?? ""), [yearBatches]),
+  );
+
+  const cellsPerBed = solution?.cells_per_bed ?? CELLS_PER_BED;
+
+  const cellCountFor = useCallback(
+    (batch: CultivationBatch | undefined): number => {
+      const beds = Number(batch?.amount_of_beds ?? 0);
+      return beds > 0 ? Math.ceil(beds * cellsPerBed) : 1;
+    },
+    [cellsPerBed],
+  );
+
+  const labelFor = useCallback(
+    (batchId: string, fallback?: string): string =>
+      batchById.get(batchId)?.vegetable_name ?? fallback ?? batchId,
+    [batchById],
+  );
+
+  // The plan as stored, overlaid with any unsaved hand edits.
+  const placements = useMemo<GridPlacement[]>(() => {
+    const { base, meta } = readStoredPlacements(
+      (solution?.details ?? []) as readonly CultivationPlanSolutionDetail[],
+    );
+    const effective = edits ?? base;
+    return carryoverPlacements(solution?.carryover ?? [], t).concat(
+      Object.entries(effective).map(([batchId, pos]) => {
+        const info = meta.get(batchId);
+        const batch = batchById.get(batchId);
+        return {
+          batchId,
+          plotId: pos.plotId,
+          startCell: pos.startCell,
+          // The batch's CURRENT width wins over the solver-time snapshot in
+          // `detail.cell_count`. `save_placements` recomputes it from the live
+          // `amount_of_beds` too, so trusting the snapshot would let the grid
+          // judge a drop by one width while the server judged it by another —
+          // and after this change that mismatch is a hard rejection, not just a
+          // cosmetic one. The snapshot still covers batches we have no row for.
+          cellCount: batch ? cellCountFor(batch) : (info?.cellCount ?? 1),
+          label: labelFor(batchId, info?.label),
+          color: colorMap.get(batchId),
+          plantingWeek: info?.plantingWeek ?? batch?.planting_week,
+          endWeek: info?.endWeek ?? batch?.end_week,
+        };
+      }),
+    );
+  }, [solution, edits, batchById, colorMap, cellCountFor, labelFor, t]);
+
+  // Width + week window for every batch, so a drag can be judged against the
+  // crop's whole occupancy period rather than just the week on screen.
+  const windows = useMemo(() => {
+    const map = new Map<string, BatchWindow>();
+    yearBatches.forEach((b) => {
+      if (!b.id) return;
+      map.set(b.id, {
+        cellCount: cellCountFor(b),
+        plantingWeek: b.planting_week,
+        endWeek: b.end_week,
+        bedTypeId: b.used_bed_type,
+      });
+    });
+    // A placement's stored cell_count wins over the recomputed one. The bed type
+    // is not part of a placement — it belongs to the batch — so it is carried
+    // over rather than dropped, or a placed crop could be dragged onto beds it
+    // was never sized for.
+    placements.forEach((p) =>
+      map.set(p.batchId, {
+        cellCount: p.cellCount,
+        plantingWeek: p.plantingWeek,
+        endWeek: p.endWeek,
+        bedTypeId: batchById.get(p.batchId)?.used_bed_type ?? null,
+      }),
+    );
+    return map;
+  }, [yearBatches, placements, cellCountFor, batchById]);
+
+  const placedIds = useMemo(
+    () =>
+      new Set(placements.filter((p) => !p.isCarryover).map((p) => p.batchId)),
+    [placements],
+  );
+  // Palette = this year's batches that are not placed anywhere yet.
+  const unplaced = useMemo(
+    () => yearBatches.filter((b) => b.id && !placedIds.has(b.id)),
+    [yearBatches, placedIds],
+  );
+
+  const activeInWeek = useMemo(
+    () =>
+      placements.filter((p) => occupiesWeek(p.plantingWeek, p.endWeek, week)),
+    [placements, week],
+  );
+
+  const currentMap = useCallback((): PlacementMap => {
+    if (edits) return edits;
+    const base: PlacementMap = {};
+    placements
+      .filter((p) => !p.isCarryover)
+      .forEach((p) => {
+        base[p.batchId] = { plotId: p.plotId, startCell: p.startCell };
+      });
+    return base;
+  }, [edits, placements]);
+
+  const handleDropBatch = useCallback(
+    (batchId: string, plotId: string, startCell: number) => {
+      setEdits({ ...currentMap(), [batchId]: { plotId, startCell } });
+    },
+    [currentMap],
+  );
+
+  const handleUnplace = useCallback(
+    (batchId: string) => {
+      const next = { ...currentMap() };
+      delete next[batchId];
+      setEdits(next);
+    },
+    [currentMap],
+  );
+
+  const handleRun = useCallback(async () => {
+    try {
+      const response = (await cultivationPlanSolutionsRunCreate({
+        year,
+      })) as unknown as { job_id?: string };
+      if (response?.job_id) setJobId(response.job_id);
+    } catch (error) {
+      notify.error(getErrorMessage(error, t("cultivation.solver_run_failed")));
+    }
+  }, [year, t]);
+
+  const invalidateSolutions = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: getCultivationPlanSolutionsListQueryKey(),
+    });
+  }, [queryClient]);
+
+  const handleChoose = useCallback(async () => {
+    if (!solutionId) return;
+    try {
+      await cultivationPlanSolutionsChooseCreate(solutionId);
+      notify.success(t("cultivation.solution_chosen"));
+      invalidateSolutions();
+    } catch (error) {
+      notify.error(getErrorMessage(error, t("common.error_saving")));
+    }
+  }, [solutionId, invalidateSolutions, t]);
+
+  const handleSaveEdits = useCallback(async () => {
+    if (!solutionId || !edits) return;
+    setSaving(true);
+    try {
+      await cultivationPlanSolutionsSavePlacementsCreate(solutionId, {
+        placements: Object.entries(edits).map(([batch, pos]) => ({
+          batch,
+          plot: pos.plotId,
+          start_cell: String(pos.startCell),
+        })),
+      });
+      notify.success(t("common.saved_successfully"));
+      setEdits(null);
+      invalidateSolutions();
+      queryClient.invalidateQueries({
+        queryKey: ["cultivation", "plan_solutions"],
+      });
+    } catch (error) {
+      notify.error(getErrorMessage(error, t("common.error_saving")));
+    } finally {
+      setSaving(false);
+    }
+  }, [solutionId, edits, invalidateSolutions, queryClient, t]);
+
+  // Best candidate first by land efficiency, so the picker itself ranks them.
+  const solutionOptions = useMemo(
+    () =>
+      (solutions ?? [])
+        .slice()
+        .sort(
+          (a, b) =>
+            (b.metrics?.efficiency_percent ?? 0) -
+            (a.metrics?.efficiency_percent ?? 0),
+        )
+        .map((s) => ({
+          value: s.id as string,
+          label: `${t("cultivation.version_short", { version: s.version })}${
+            s.chosen ? " ★" : ""
+          } · ${s.metrics?.efficiency_percent ?? 0}% · ${t(
+            "cultivation.n_wasted_cell_weeks",
+            { count: s.metrics?.wasted_cell_weeks ?? 0 },
+          )}`,
+        })),
+    [solutions, t],
+  );
+
+  const metrics = solution?.metrics;
+
+  return (
+    <div>
+      <h1>{t("cultivation.planner")}</h1>
+      <h5>{t("cultivation.planner_description")}</h5>
+
+      <div className="cultivation-planner__toolbar">
+        <YearSelector selectedYear={year} setSelectedYear={setYear} />
+        <Select
+          style={{ minWidth: "18em" }}
+          placeholder={t("cultivation.select_solution")}
+          aria-label={t("cultivation.select_solution")}
+          value={solutionId}
+          onChange={setSolutionId}
+          options={solutionOptions}
+          loading={solutionsFetching}
+          notFoundContent={t("cultivation.no_solutions_yet")}
+        />
+        {canEditCultivation && (
+          <Button
+            type="primary"
+            icon={<PlayCircleOutlined />}
+            onClick={handleRun}
+          >
+            {t("cultivation.run_solver")}
+          </Button>
+        )}
+        {canEditCultivation && solutionId && !solution?.chosen && (
+          <Button onClick={handleChoose}>
+            {t("cultivation.choose_solution")}
+          </Button>
+        )}
+        {solution?.chosen && <Tag color="green">{t("cultivation.chosen")}</Tag>}
+        {canEditCultivation && edits && (
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={saving}
+            onClick={handleSaveEdits}
+          >
+            {t("cultivation.save_adjustments")}
+          </Button>
+        )}
+        {edits && (
+          <Button onClick={() => setEdits(null)}>{t("common.cancel")}</Button>
+        )}
+      </div>
+
+      <div className="cultivation-planner__toolbar">
+        <Text>{t("cultivation.show_week", { week })}</Text>
+        <Slider
+          style={{ flex: "1 1 20em", minWidth: "14em" }}
+          min={1}
+          max={52}
+          value={week}
+          onChange={setWeek}
+          aria-label={t("cultivation.show_week", { week })}
+        />
+        <Text type="secondary">
+          {t("cultivation.n_crops_in_week", { count: activeInWeek.length })}
+        </Text>
+      </div>
+
+      {metrics ? (
+        <div className="cultivation-planner__metrics">
+          <span title={t("cultivation.metric_efficiency_hint")}>
+            <strong>{metrics.efficiency_percent}%</strong>{" "}
+            {t("cultivation.metric_efficiency")}
+          </span>
+          <span>
+            {t("cultivation.metric_wasted", {
+              count: metrics.wasted_cell_weeks,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_bed_weeks", {
+              count: metrics.bed_weeks_opened,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_plots_beds", {
+              plots: metrics.plots_used,
+              beds: metrics.beds_touched,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_successions", {
+              count: metrics.successions,
+            })}
+          </span>
+          <span>
+            {t("cultivation.metric_peak", {
+              week: metrics.peak_week,
+              cells: metrics.peak_cells_used,
+            })}
+          </span>
+        </div>
+      ) : null}
+
+      {edits && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: "1em" }}
+          message={t("cultivation.unsaved_adjustments")}
+        />
+      )}
+
+      {plotsLoading || solutionFetching ? (
+        <Spin />
+      ) : (
+        <DndGrid onPlace={() => undefined}>
+          <div className="cultivation-planner__layout">
+            <div className="cultivation-planner__palette">
+              <div className="cultivation-planner__palette-title">
+                {t("cultivation.unplaced_batches")}
+              </div>
+              {unplaced.length === 0 ? (
+                <p className="cultivation-planner__hint">
+                  {t("cultivation.all_batches_placed")}
+                </p>
+              ) : (
+                <div className="cultivation-planner__palette-list">
+                  {unplaced.map((batch) => (
+                    <DraggableChip
+                      key={batch.id}
+                      chip={{
+                        id: batch.id as string,
+                        label: `${labelFor(batch.id as string)} · KW ${
+                          batch.planting_week
+                        }`,
+                        color: colorMap.get(batch.id as string),
+                      }}
+                      canDrag={canEditCultivation}
+                      ariaHint={t("cultivation.drag_to_place")}
+                    />
+                  ))}
+                </div>
+              )}
+              {canEditCultivation && (
+                <p
+                  className="cultivation-planner__hint"
+                  style={{ marginTop: "0.75em" }}
+                >
+                  {t("cultivation.click_placed_to_unplace")}
+                </p>
+              )}
+            </div>
+
+            <div className="cultivation-planner__plots">
+              {outdoorPlots.length === 0 ? (
+                <p className="cultivation-planner__empty">
+                  {t("cultivation.no_plots_yet")}
+                </p>
+              ) : (
+                <PlannerGrids
+                  plots={outdoorPlots}
+                  placements={placements}
+                  week={week}
+                  cellsPerBed={cellsPerBed}
+                  editable={canEditCultivation}
+                  windows={windows}
+                  onDropBatch={handleDropBatch}
+                  onSelectPlacement={(p) => handleUnplace(p.batchId)}
+                />
+              )}
+            </div>
+          </div>
+        </DndGrid>
+      )}
+
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.cultivation_planner")}
+      </ExplainerText>
+
+      <JobProgressDrawer
+        jobId={jobId}
+        title={t("cultivation.run_solver")}
+        onClose={() => {
+          invalidateSolutions();
+          setJobId(null);
+        }}
+      />
+    </div>
+  );
+}

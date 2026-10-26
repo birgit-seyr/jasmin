@@ -1,0 +1,300 @@
+"""Run the placement optimizer and persist candidate plans."""
+
+from __future__ import annotations
+
+import time
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
+
+from django.db import transaction
+from django.db.models import Max
+from ortools.sat.python import cp_model
+
+from ..models import CultivationPlanSolution, CultivationPlanSolutionDetail
+from .config import DEFAULT_SETTINGS, SolverConfig
+from .loading import (
+    load_batches,
+    load_blockers,
+    load_carryover,
+    load_plots,
+    load_solver_settings,
+)
+from .model import build_model
+from .variables import OptimizerVars
+
+# batch index -> (plot index, start cell)
+Assignment = dict[int, tuple[int, int]]
+
+# Progress payloads use the shape the shared JobProgressDrawer understands:
+# percent = processed / total. CP-SAT cannot predict when it will finish, so
+# "processed" is the elapsed share of the TIME BUDGET (0..100), not a forecast —
+# a run that proves optimality early simply jumps to 100.
+ProgressCallback = Callable[[dict], None]
+_PROGRESS_TOTAL = 100
+_MIN_TICK_SECONDS = 1.0
+# How often to tick while a single solve is running. Each tick also refreshes the
+# BackgroundJob heartbeat, and the job watchdog fails anything silent for an hour —
+# so this must stay well under that no matter how long a solve is allowed to take.
+_HEARTBEAT_SECONDS = 20.0
+
+
+class _ProgressReporter:
+    """Throttled progress emitter.
+
+    ``tick()`` writes to the DB (it refreshes the job row), so it must ONLY be
+    called from the thread that owns the request/task connection — django-tenants
+    binds the tenant schema per connection, and a fresh thread would get a
+    ``public``-schema connection where the tenant tables do not exist.
+    """
+
+    def __init__(self, callback: ProgressCallback | None, budget_seconds: float):
+        self._callback = callback
+        self._budget = max(budget_seconds, 1e-6)
+        self._started = time.monotonic()
+        self._last_emit = 0.0
+        self._high_water = 0
+        self.solutions_found = 0
+        # Bumped from the solver thread, read by tick() on the owning thread.
+        self.improvements = 0
+
+    def tick(self, *, force: bool = False, done: bool = False) -> None:
+        if self._callback is None:
+            return
+        now = time.monotonic()
+        if not force and now - self._last_emit < _MIN_TICK_SECONDS:
+            return
+        self._last_emit = now
+        elapsed = now - self._started
+        share = (
+            _PROGRESS_TOTAL if done else int(min(elapsed / self._budget, 0.99) * 100)
+        )
+        # Never let the bar run backwards (a fast final solve shrinks the budget
+        # estimate but the user must not see progress regress).
+        self._high_water = max(self._high_water, share)
+        self._callback(
+            {
+                "processed": self._high_water,
+                "total": _PROGRESS_TOTAL,
+                "successful": self.solutions_found,
+                "failed": 0,
+                "elapsed_seconds": round(elapsed, 1),
+                "solutions_found": self.solutions_found,
+                "improvements": self.improvements,
+            }
+        )
+
+
+class _SolutionTicker(cp_model.CpSolverSolutionCallback):
+    """Counts improving solutions found during one solve.
+
+    Runs on the SOLVER's thread, so it must not touch the database — it only
+    bumps a counter that the owning thread reports on its next tick.
+    """
+
+    def __init__(self, reporter: _ProgressReporter):
+        super().__init__()
+        self._reporter = reporter
+
+    def on_solution_callback(self) -> None:  # noqa: N802 (or-tools API)
+        self._reporter.improvements += 1
+
+
+class CultivationPlanOptimizer:
+    """Places a year's finalized batches onto plots and saves the candidates."""
+
+    def __init__(
+        self,
+        year: int,
+        *,
+        settings: SolverConfig | None = None,
+        progress_cb: ProgressCallback | None = None,
+    ):
+        # Tenant-configured weights/flags; falls back to the module defaults.
+        self.settings = settings if settings is not None else load_solver_settings()
+        self.year = year
+        self.cells_per_bed = self.settings.cells_per_bed
+        self.progress_cb = progress_cb
+        self.batches = load_batches(year, self.cells_per_bed)
+        self.plots = load_plots(self.cells_per_bed)
+        self.blockers = load_blockers(year)
+        self.carryover = load_carryover(year, self.settings)
+        # Status of the LAST solve attempt, so callers can tell "proved there is no
+        # plan" from "ran out of time" from "nothing to plan" — all three of which
+        # otherwise return an empty solution list.
+        self.last_status: int | None = None
+
+    def _new_solver(self) -> cp_model.CpSolver:
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = self.settings.max_time_seconds
+        solver.parameters.num_search_workers = self.settings.workers
+        return solver
+
+    def solve(self, num_solutions: int | None = None) -> list[Assignment]:
+        """Return up to ``num_solutions`` distinct assignments (best-first).
+
+        Solves once, forbids that exact assignment with a no-good cut, and
+        re-solves — so each next plan is the best one different from all before
+        it.
+        """
+        if num_solutions is None:
+            num_solutions = self.settings.num_solutions
+        if not self.batches:
+            return []
+
+        reporter = _ProgressReporter(
+            self.progress_cb, num_solutions * self.settings.max_time_seconds
+        )
+        reporter.tick(force=True)
+
+        model, variables = build_model(
+            self.batches, self.plots, self.blockers, self.carryover, self.settings
+        )
+
+        solutions: list[Assignment] = []
+        for _ in range(num_solutions):
+            solver = self._new_solver()
+            status = self._solve_with_heartbeat(solver, model, reporter)
+            # Only the FIRST solve's status describes the problem; later ones are
+            # expected to end INFEASIBLE once the no-good cuts exhaust the
+            # alternatives, which is success, not failure.
+            if not solutions:
+                self.last_status = status
+            if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                break
+            assignment = self._extract(solver, variables)
+            solutions.append(assignment)
+            reporter.solutions_found = len(solutions)
+            reporter.tick(force=True)
+            self._forbid(model, variables, assignment)
+        reporter.tick(force=True, done=True)
+        return solutions
+
+    def _solve_with_heartbeat(
+        self,
+        solver: cp_model.CpSolver,
+        model: cp_model.CpModel,
+        reporter: _ProgressReporter,
+    ) -> int:
+        """Run one solve, ticking progress on a wall-clock schedule.
+
+        CP-SAT's only in-solve hook fires on *improving solutions*, so a long
+        barren search would emit nothing and let the job's heartbeat go stale.
+        The solve therefore runs on a worker thread (it is CPU-bound C++ and
+        releases the GIL) while THIS thread ticks on a timer.
+
+        That split is also what keeps the progress writes correct: every DB write
+        happens here, on the thread whose connection django-tenants has bound to
+        the tenant schema. The solution callback runs on the solver thread and
+        must stay database-free.
+        """
+        ticker = _SolutionTicker(reporter)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(solver.Solve, model, ticker)
+            while True:
+                try:
+                    return future.result(timeout=_HEARTBEAT_SECONDS)
+                except FutureTimeoutError:
+                    reporter.tick(force=True)
+
+    def _extract(
+        self, solver: cp_model.CpSolver, variables: OptimizerVars
+    ) -> Assignment:
+        assignment: Assignment = {}
+        for b in range(len(self.batches)):
+            for p in range(len(self.plots)):
+                key = (b, p)
+                if key in variables.present and solver.value(variables.present[key]):
+                    assignment[b] = (p, solver.value(variables.start[key]))
+                    break
+        return assignment
+
+    def _forbid(
+        self, model: cp_model.CpModel, variables: OptimizerVars, assignment: Assignment
+    ) -> None:
+        """No-good cut: at least one batch must change plot or start cell."""
+        stayed: list[cp_model.IntVar] = []
+        for b, (p, s0) in assignment.items():
+            key = (b, p)
+            same_start = model.new_bool_var(f"same_start_{b}_{len(stayed)}")
+            model.add(variables.start[key] == s0).only_enforce_if(same_start)
+            model.add(variables.start[key] != s0).only_enforce_if(same_start.negated())
+            stay = model.new_bool_var(f"stay_{b}_{len(stayed)}")
+            model.add_bool_and([variables.present[key], same_start]).only_enforce_if(
+                stay
+            )
+            model.add_bool_or(
+                [variables.present[key].negated(), same_start.negated()]
+            ).only_enforce_if(stay.negated())
+            stayed.append(stay)
+        if stayed:
+            model.add_bool_or([s.negated() for s in stayed])
+
+    @transaction.atomic
+    def save(self, solutions: list[Assignment]) -> list[CultivationPlanSolution]:
+        """Persist each assignment as a versioned CultivationPlanSolution.
+
+        Versions continue after any plans already stored for this year, so
+        re-running the optimizer adds candidates instead of colliding with the
+        ``(year, version)`` unique constraint.
+        """
+        next_version = (
+            CultivationPlanSolution.objects.filter(year=self.year).aggregate(
+                top=Max("version")
+            )["top"]
+            or 0
+        ) + 1
+
+        # An assignment that placed nothing is not a plan — storing it would put
+        # an empty candidate in the picker that looks selectable but shows
+        # nothing on the grid.
+        solutions = [assignment for assignment in solutions if assignment]
+
+        saved: list[CultivationPlanSolution] = []
+        for offset, assignment in enumerate(solutions):
+            solution = CultivationPlanSolution.objects.create(
+                year=self.year,
+                version=next_version + offset,
+                cells_per_bed=self.cells_per_bed,
+            )
+            CultivationPlanSolutionDetail.objects.bulk_create(
+                CultivationPlanSolutionDetail(
+                    solution=solution,
+                    batch_id=self.batches[b].id,
+                    plot_id=self.plots[p].id,
+                    start_cell=start_cell,
+                    cell_count=self.batches[b].cell_count,
+                )
+                for b, (p, start_cell) in assignment.items()
+            )
+            saved.append(solution)
+        return saved
+
+    @property
+    def status_name(self) -> str:
+        """Human name of the last solve status ("OPTIMAL", "INFEASIBLE", ...)."""
+        if self.last_status is None:
+            return "NOT_SOLVED"
+        return cp_model.CpSolver().status_name(self.last_status)
+
+    def run(self, num_solutions: int | None = None) -> list[CultivationPlanSolution]:
+        return self.save(self.solve(num_solutions))
+
+
+def optimize_year(
+    year: int,
+    num_solutions: int | None = None,
+    *,
+    progress_cb: ProgressCallback | None = None,
+) -> list[CultivationPlanSolution]:
+    """Convenience entry point: build, solve, and persist in one call."""
+    return CultivationPlanOptimizer(year, progress_cb=progress_cb).run(num_solutions)
+
+
+__all__ = [
+    "CultivationPlanOptimizer",
+    "optimize_year",
+    "Assignment",
+    "ProgressCallback",
+    "DEFAULT_SETTINGS",
+]

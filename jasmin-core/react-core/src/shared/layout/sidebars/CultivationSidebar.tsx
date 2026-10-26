@@ -26,6 +26,14 @@ export default function CultivationSidebar({
 
   const baseMenuItems = [
     {
+      key: "cultivation-planner",
+      requireRole: "canEditCultivation",
+      icon: <BubbleChartIcon />,
+      label: (
+        <Link to="/cultivation/planner">{t("cultivation.planner")}</Link>
+      ),
+    },
+    {
       key: "cultivation-amounts-for-cultivation",
 
       requireRole: "canEditCultivation",
@@ -123,52 +131,109 @@ export default function CultivationSidebar({
       ],
     },
     {
-      key: "cultivation-list-planting",
-
+      key: "cultivation-working-lists",
       requireRole: "canEditCultivation",
-      icon: <EmojiNatureIcon />,
+      icon: <LightModeIcon />,
       label: (
-        <Link to="/cultivation/list-planting">
-          {t("cultivation.list_planting")}
-        </Link>
+        <div className="sidebar-section-header">
+          {t("cultivation.working_lists")}
+        </div>
       ),
+      children: [
+        {
+          key: "cultivation-list-planting",
+
+          requireRole: "canEditCultivation",
+          icon: <EmojiNatureIcon />,
+          label: (
+            <Link to="/cultivation/list-planting">
+              {t("cultivation.list_planting")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-list-sowing",
+
+          requireRole: "canEditCultivation",
+          icon: <BlurOnIcon />,
+          label: (
+            <Link to="/cultivation/list-sowing">
+              {t("cultivation.list_sowing")}
+            </Link>
+          ),
+        },
+      ],
     },
     {
-      key: "cultivation-list-sowing",
-
+      key: "cultivation-order-lists",
       requireRole: "canEditCultivation",
-      icon: <BlurOnIcon />,
+      icon: <LightModeIcon />,
       label: (
-        <Link to="/cultivation/list-sowing">
-          {t("cultivation.list_sowing")}
-        </Link>
+        <div className="sidebar-section-header">
+          {t("cultivation.order_lists")}
+        </div>
       ),
+      children: [
+        {
+          key: "cultivation-order-seedlings",
+
+          requireRole: "canEditCultivation",
+          icon: <EmojiNatureIcon />,
+          label: (
+            <Link to="/cultivation/order-seedlings">
+              {t("cultivation.order_seedlings")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-order-seeds",
+
+          requireRole: "canEditCultivation",
+          icon: <BlurOnIcon />,
+          label: (
+            <Link to="/cultivation/order-seeds">
+              {t("cultivation.order_seeds")}
+            </Link>
+          ),
+        },
+      ],
     },
     {
-      key: "cultivation-fertilizer",
-
+      key: "cultivation-documentation",
       requireRole: "canEditCultivation",
-      icon: <LocalFloristIcon />,
+      icon: <LightModeIcon />,
       label: (
-        <Link to="/cultivation/documentation-fertilizers">
-          {t("cultivation.documentation_fertilizer")}
-        </Link>
+        <div className="sidebar-section-header">
+          {t("cultivation.documentation")}
+        </div>
       ),
-    },
-    {
-      key: "cultivation-pesticides",
+      children: [
+        {
+          key: "cultivation-fertilizer",
 
-      requireRole: "canEditCultivation",
-      icon: <FilterVintageIcon />,
-      label: (
-        <Link to="/cultivation/documentation-pesticides">
-          {t("cultivation.documentation_pesticides")}
-        </Link>
-      ),
+          requireRole: "canEditCultivation",
+          icon: <LocalFloristIcon />,
+          label: (
+            <Link to="/cultivation/documentation-fertilizers">
+              {t("cultivation.documentation_fertilizer")}
+            </Link>
+          ),
+        },
+        {
+          key: "cultivation-pesticides",
+
+          requireRole: "canEditCultivation",
+          icon: <FilterVintageIcon />,
+          label: (
+            <Link to="/cultivation/documentation-pesticides">
+              {t("cultivation.documentation_pesticides")}
+            </Link>
+          ),
+        },
+      ],
     },
     {
       key: "cultivation-data",
-
       requireRole: "canEditCultivation",
       icon: <BubbleChartIcon />,
       label: (
@@ -176,44 +241,97 @@ export default function CultivationSidebar({
       ),
       children: [
         {
-          key: "cultivation-vegetable-families",
-
+          key: "cultivation-areas",
           requireRole: "canEditCultivation",
-          label: (
-            <Link to="/cultivation/vegetable-families">
-              {t("cultivation.vegetable_families")}
-            </Link>
-          ),
+          label: t("cultivation.areas"),
+          children: [
+            {
+              key: "cultivation-plots",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/plots">
+                  {t("cultivation.list_plots")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-solver-settings",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/solver-settings">
+                  {t("cultivation.solver_settings")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-bed-types",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/bed-types">
+                  {t("cultivation.list_bed_types")}
+                </Link>
+              ),
+            },
+          ],
         },
         {
-          key: "cultivation-plant-families",
-
+          key: "cultivation-botanical-data",
           requireRole: "canEditCultivation",
-          label: (
-            <Link to="/cultivation/plant-families">
-              {t("cultivation.plant_families")}
-            </Link>
-          ),
+          label: t("cultivation.botanical_data"),
+          children: [
+            {
+              key: "cultivation-vegetables",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/list-vegetable-families">
+                  {t("cultivation.list_vegetables")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-vegetable-aggregations",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/vegetable-aggregations">
+                  {t("cultivation.list_vegetable_aggregations")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-break-families",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/break-families">
+                  {t("cultivation.list_break_families")}
+                </Link>
+              ),
+            },
+          ],
         },
         {
-          key: "cultivation-seller-seedlings",
-
+          key: "cultivation-vendors",
           requireRole: "canEditCultivation",
-          label: (
-            <Link to="/cultivation/seller-seedlings">
-              {t("cultivation.seller_seedlings")}
-            </Link>
-          ),
-        },
-        {
-          key: "cultivation-seller-seeds",
-
-          requireRole: "canEditCultivation",
-          label: (
-            <Link to="/cultivation/seller-seeds">
-              {t("cultivation.seller_seeds")}
-            </Link>
-          ),
+          label: t("cultivation.vendors"),
+          children: [
+            {
+              key: "cultivation-seedlings-vendors",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/seedlings-vendors">
+                  {t("cultivation.list_seedlings_vendors")}
+                </Link>
+              ),
+            },
+            {
+              key: "cultivation-seeds-vendors",
+              requireRole: "canEditCultivation",
+              label: (
+                <Link to="/cultivation/seeds-vendors">
+                  {t("cultivation.list_seeds_vendors")}
+                </Link>
+              ),
+            },
+          ],
         },
       ],
     },

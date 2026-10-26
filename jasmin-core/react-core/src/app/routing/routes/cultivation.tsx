@@ -5,29 +5,31 @@ import type { AppRoute } from "../types";
 const DashboardCultivation = lazy(
   () => import("@features/cultivation/pages/DashboardCultivation"),
 );
-const ListPlantFamilies = lazy(
-  () => import("@features/cultivation/pages/ListPlantFamilies"),
+
+const ListVegetables = lazy(
+  () => import("@/features/cultivation/pages/ListVegetables"),
 );
-const ListVegetableFamilies = lazy(
-  () => import("@features/cultivation/pages/ListVegetableFamilies"),
+const PlantingList = lazy(
+  () => import("@features/cultivation/pages/PlantingList"),
 );
-const PlantingList = lazy(() => import("@features/cultivation/pages/PlantingList"));
 const SowingList = lazy(() => import("@features/cultivation/pages/SowingList"));
 const OrderSeedlings = lazy(
   () => import("@features/cultivation/pages/OrderSeedlings"),
 );
 const OrderSeeds = lazy(() => import("@features/cultivation/pages/OrderSeeds"));
-const PlantingSchemeOutdoors = lazy(
-  () => import("@features/cultivation/pages/PlantingSchemeOutdoors"),
-);
+
 const ListSellersSeedlings = lazy(
   () => import("@features/cultivation/pages/ListSellersSeedlings"),
 );
 const ListSellersSeeds = lazy(
   () => import("@features/cultivation/pages/ListSellersSeeds"),
 );
-const SetsIndoors = lazy(() => import("@features/cultivation/pages/SetsIndoors"));
-const SetsOutdoors = lazy(() => import("@features/cultivation/pages/SetsOutdoors"));
+const CultivationBatchIndoors = lazy(
+  () => import("@features/cultivation/pages/CultivationBatchIndoors"),
+);
+const CultivationBatchOutdoors = lazy(
+  () => import("@features/cultivation/pages/CultivationBatchOutdoors"),
+);
 const SortsSeedlingsIndoors = lazy(
   () => import("@features/cultivation/pages/SortsSeedlingsIndoors"),
 );
@@ -49,8 +51,94 @@ const DocumentationFertilizers = lazy(
 const DocumentationPesticides = lazy(
   () => import("@features/cultivation/pages/DocumentationPesticides"),
 );
+const ListPlots = lazy(() => import("@features/cultivation/pages/ListPlots"));
+const CultivationPlanner = lazy(
+  () => import("@features/cultivation/pages/CultivationPlanner"),
+);
+const ConfigurationSolver = lazy(
+  () => import("@features/cultivation/pages/ConfigurationSolver"),
+);
+const ListBedTypes = lazy(
+  () => import("@features/cultivation/pages/ListBedTypes"),
+);
+const ListCultivationBreakFamilies = lazy(
+  () => import("@features/cultivation/pages/ListCultivationBreakFamilies"),
+);
+const ListVegetableAggregations = lazy(
+  () => import("@features/cultivation/pages/ListVegetableAggregations"),
+);
+const ListSeedlingsVendors = lazy(
+  () => import("@features/cultivation/pages/ListSeedlingsVendors"),
+);
+const ListSeedsVendors = lazy(
+  () => import("@features/cultivation/pages/ListSeedsVendors"),
+);
 
 export const cultivationRoutes: AppRoute[] = [
+  {
+    path: "/cultivation/planner",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <CultivationPlanner />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/solver-settings",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <ConfigurationSolver />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/plots",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <ListPlots />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/bed-types",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <ListBedTypes />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/break-families",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <ListCultivationBreakFamilies />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/vegetable-aggregations",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <ListVegetableAggregations />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/seedlings-vendors",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <ListSeedlingsVendors />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/cultivation/seeds-vendors",
+    element: (
+      <RequireRole flag="canEditCultivation">
+        <ListSeedsVendors />
+      </RequireRole>
+    ),
+  },
   {
     path: "/cultivation/dashboard",
     element: (
@@ -75,14 +163,7 @@ export const cultivationRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  {
-    path: "/cultivation/list-plant-families",
-    element: (
-      <RequireRole flag="canEditCultivation">
-        <ListPlantFamilies />
-      </RequireRole>
-    ),
-  },
+
   {
     path: "/cultivation/amounts-for-cultivation",
     element: (
@@ -95,7 +176,7 @@ export const cultivationRoutes: AppRoute[] = [
     path: "/cultivation/list-vegetable-families",
     element: (
       <RequireRole flag="canEditCultivation">
-        <ListVegetableFamilies />
+        <ListVegetables />
       </RequireRole>
     ),
   },
@@ -131,14 +212,7 @@ export const cultivationRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  {
-    path: "/cultivation/planting-scheme-outdoors",
-    element: (
-      <RequireRole flag="canEditCultivation">
-        <PlantingSchemeOutdoors />
-      </RequireRole>
-    ),
-  },
+
   {
     path: "/cultivation/list-sellers-seedlings",
     element: (
@@ -159,7 +233,7 @@ export const cultivationRoutes: AppRoute[] = [
     path: "/cultivation/sets-indoors",
     element: (
       <RequireRole flag="canEditCultivation">
-        <SetsIndoors />
+        <CultivationBatchIndoors />
       </RequireRole>
     ),
   },
@@ -167,7 +241,7 @@ export const cultivationRoutes: AppRoute[] = [
     path: "/cultivation/sets-outdoors",
     element: (
       <RequireRole flag="canEditCultivation">
-        <SetsOutdoors />
+        <CultivationBatchOutdoors />
       </RequireRole>
     ),
   },

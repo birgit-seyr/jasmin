@@ -159,7 +159,7 @@ apps/commissioning/viewsets/delivery_viewsets.py: C901 `_migrate_succession_chil
 apps/commissioning/viewsets/shares_viewsets.py: C901 `export_csv` is too complex (15 > 10)
 apps/commissioning/viewsets/shares_viewsets.py: C901 `perform_update` is too complex (11 > 10)
 apps/commissioning/viewsets/shares_viewsets.py: PLR0915 Too many statements (54 > 50)
-apps/cultivation/models/basics.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
+apps/cultivation/models/base.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
 apps/gdpr/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
 apps/gdpr/tests/test_field_classification_guard.py: C901 `_gather_pii_field_violations` is too complex (11 > 10)
 apps/payments/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
