@@ -89,6 +89,22 @@ updates:
       # test failures across the board. Upgrade on its own, not in a bot PR.
       - dependency-name: "jsdom"
         update-types: ["version-update:semver-major"]
+      # Vite 8 needs the @vitejs/plugin-react and vitest majors ignored above,
+      # so the three move together in one planned upgrade.
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7: i18next and msw don't accept it as a peer yet, so
+      # `npm ci` fails. The e2e package stays on the same major.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # The React Compiler rules of the 6+ plugin report 98 findings here;
+      # they get fixed in their own pass before the bump.
+      - dependency-name: "eslint-plugin-react-hooks"
+        update-types: ["version-update:semver-major"]
+      # The UI library the whole app is built on; a major needs its own
+      # migration with a visual check of every page.
+      - dependency-name: "antd"
+        update-types: ["version-update:semver-major"]
 
   # The Playwright end-to-end suite's own package (Playwright, TypeScript).
   - package-ecosystem: "npm"
@@ -100,6 +116,13 @@ updates:
     groups:
       patch-and-minor:
         update-types: ["minor", "patch"]
+    ignore:
+      # Stays on react-core's TypeScript major.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # The types follow the Node in .nvmrc, not the newest release.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions versions themselves
   - package-ecosystem: "github-actions"
@@ -125,6 +148,10 @@ updates:
       # The backup image's pg_dump must match the server's major version, so
       # it moves with the Postgres upgrade below, not on its own.
       - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
+      # Node moves in the Dockerfile, both .nvmrc files and package.json
+      # engines together, and only to an LTS release.
+      - dependency-name: "node"
         update-types: ["version-update:semver-major"]
 
   # Images the compose files run as published (postgres, redis, nginx,

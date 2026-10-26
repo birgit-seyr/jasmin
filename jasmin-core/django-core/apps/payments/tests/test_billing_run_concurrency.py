@@ -44,6 +44,7 @@ from apps.payments.constants import BillingRunStatus, ChargeStatus
 from apps.payments.errors import BillingRunChargesBeingReplanned
 from apps.payments.models import BillingRun, ChargeSchedule
 from apps.payments.services import BillingRunService, ChargeScheduleService
+from apps.shared.tenants.models import ActionRateLog
 
 
 @pytest.fixture()
@@ -272,6 +273,13 @@ def _export_in_thread(tenant, run_pk):
             conn.close()
 
 
+def _clear_rate_log(tenant):
+    """Drop the tenant's action-quota rows. ``create_run`` and ``export`` write
+    one each, ``transaction=True`` commits them and nothing flushes them, so five
+    within a minute would block the next run anywhere in the suite."""
+    ActionRateLog.objects.filter(tenant_schema=tenant.schema_name).delete()
+
+
 @pytest.mark.django_db(transaction=True)
 class TestBillingRunExportConcurrency:
     """``export`` must serialise on the BillingRun row so two concurrent
@@ -282,6 +290,9 @@ class TestBillingRunExportConcurrency:
     def _hermetic_charge_tables(self, tenant):
         ChargeSchedule.objects.all().delete()
         BillingRun.objects.all().delete()
+        _clear_rate_log(tenant)
+        yield
+        _clear_rate_log(tenant)
 
     def test_concurrent_export_emits_one_file_one_conflict(
         self, tenant, member, subscription, billing_profile
@@ -315,6 +326,9 @@ class TestBillingRunConcurrency:
     def _hermetic_charge_tables(self, tenant):
         ChargeSchedule.objects.all().delete()
         BillingRun.objects.all().delete()
+        _clear_rate_log(tenant)
+        yield
+        _clear_rate_log(tenant)
 
     def test_no_double_bundling_under_concurrent_create_run(
         self, tenant, member, subscription, billing_profile
@@ -404,6 +418,9 @@ class TestCreateRunWhileAReplanHoldsCharges:
     def _hermetic_charge_tables(self, tenant):
         ChargeSchedule.objects.all().delete()
         BillingRun.objects.all().delete()
+        _clear_rate_log(tenant)
+        yield
+        _clear_rate_log(tenant)
 
     def _create_run_while_held(self, subscription):
         holding, release = threading.Event(), threading.Event()
@@ -462,6 +479,9 @@ class TestRunsTakeTurns:
     def _hermetic_charge_tables(self, tenant):
         ChargeSchedule.objects.all().delete()
         BillingRun.objects.all().delete()
+        _clear_rate_log(tenant)
+        yield
+        _clear_rate_log(tenant)
 
     def test_the_second_run_waits_and_bundles_what_the_first_left(
         self, tenant, member, subscription, billing_profile
@@ -511,6 +531,9 @@ class TestExportWhileAReplanDropsACharge:
     def _hermetic_charge_tables(self, tenant):
         ChargeSchedule.objects.all().delete()
         BillingRun.objects.all().delete()
+        _clear_rate_log(tenant)
+        yield
+        _clear_rate_log(tenant)
 
     def test_the_export_refuses_then_leaves_out_the_dropped_charge(
         self, tenant, member, subscription, billing_profile
@@ -577,6 +600,9 @@ class TestDeleteWhileAReplanHoldsACharge:
     def _hermetic_charge_tables(self, tenant):
         ChargeSchedule.objects.all().delete()
         BillingRun.objects.all().delete()
+        _clear_rate_log(tenant)
+        yield
+        _clear_rate_log(tenant)
 
     def test_the_delete_refuses_then_goes_through(
         self, tenant, member, subscription, billing_profile

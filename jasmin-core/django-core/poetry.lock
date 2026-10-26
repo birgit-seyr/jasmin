@@ -1035,24 +1035,6 @@ cryptography = ">=3.4"
 Django = ">=2.2"
 
 [[package]]
-name = "django-filter"
-version = "25.2"
-description = "Django-filter is a reusable Django application for allowing users to filter querysets dynamically."
-optional = false
-python-versions = ">=3.10"
-groups = ["main"]
-files = [
-    {file = "django_filter-25.2-py3-none-any.whl", hash = "sha256:9c0f8609057309bba611062fe1b720b4a873652541192d232dd28970383633e3"},
-    {file = "django_filter-25.2.tar.gz", hash = "sha256:760e984a931f4468d096f5541787efb8998c61217b73006163bf2f9523fe8f23"},
-]
-
-[package.dependencies]
-Django = ">=5.2"
-
-[package.extras]
-drf = ["djangorestframework"]
-
-[[package]]
 name = "django-localflavor"
 version = "5.1"
 description = "Country-specific Django helpers"
@@ -3912,4 +3894,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.14"
-content-hash = "35445725ed4ed8d0a95ae8b13d7cb6898282a6fe6702c7e2db77f1d444bf7f17"
+content-hash = "f095447ca6398158db434a4c788cad8d284e128bb970e5bdffc9bd00bb400399"

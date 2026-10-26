@@ -510,7 +510,6 @@ AUTH_ORIGIN_GUARD = os.environ.get("AUTH_ORIGIN_GUARD", "True").lower() != "fals
 SHARED_APPS = [
     "corsheaders",
     "rest_framework",
-    "django_filters",
     "drf_spectacular",
     # Registers the ``run_huey`` management command (the background-task
     # consumer used by the docker ``huey`` service and ``make huey``). The
@@ -805,9 +804,6 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_FILTER_BACKENDS": [
-        "django_filters.rest_framework.DjangoFilterBackend",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": [

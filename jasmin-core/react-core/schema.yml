@@ -31804,6 +31804,7 @@ components:
         chosen:
           type: boolean
           readOnly: true
+          default: false
         cells_per_bed:
           type: integer
           readOnly: true
@@ -31878,6 +31879,7 @@ components:
         chosen:
           type: boolean
           readOnly: true
+          default: false
         cells_per_bed:
           type: integer
           readOnly: true
