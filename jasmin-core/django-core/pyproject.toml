@@ -13,7 +13,7 @@ django-admin-interface = "^0.32.0"
 django-colorfield = "^0.14.0"
 django-cors-headers = "^4.4.0"
 django-filter = "^25.2"
-djangorestframework = "^3.15.2"
+djangorestframework = "^3.18.2"
 djangorestframework-simplejwt = "^5.5.1"
 gunicorn = "^26.0.0"
 huey = "^3.0.0"
@@ -45,9 +45,17 @@ pyjwt = ">=2.15.0"
 # Transitive (pulled in by requests and sentry-sdk). Pinned to the security
 # floor that fixes CVE-2026-{97687,97688,97689} present on 2.7.0.
 urllib3 = ">=2.8.0"
+# Transitive (pulled in by requests and sentry-sdk). Pinned to the security
+# floor that fixes PYSEC-2026-4320 present on 2026.5.20.
+certifi = ">=2026.10.19"
 # Transitive (pulled in by weasyprint). Pinned to the security floor that
-# fixes PYSEC-2026-{2253,2254,2255,2256,2257} present on 12.2.0.
-pillow = ">=12.3.0"
+# fixes the 37 advisories present on 12.3.0 (CVE-2026-96636…96778,
+# CVE-2026-112390…112901, CVE-2026-114501, GHSA-78g4-xqwv-q3g8).
+pillow = ">=13.0.0"
+# Transitive (pulled in by fonttools, under weasyprint). Pinned to the
+# security floor that fixes PYSEC-2026-4322 / GHSA-9v8h-qqgm-4m35 present on
+# 1.2.0.
+brotli = ">=1.2.1"
 # Transitive (pulled in by django itself, which asks only for >=0.3.1). Pinned
 # to the floor that fixes CVE-2026-{71491,59894,59893,54284} present on 0.5.5 —
 # three parser DoS/ReDoS issues plus a code-generation escaping flaw. All of
@@ -85,24 +93,29 @@ cryptography = ">=48.0.1,<51"
 # ``apps/commissioning/services/facturx_pdfa3.py``.
 factur-x = "^6.6"
 # Transitive (pulled in by factur-x, which only asks for >=5.3.0). Pinned to
-# the security floor that fixes PYSEC-2026-{3655,3656} present on 6.14.2 —
-# crafted /ToUnicode and font-width entries that blow up memory/runtime while
-# parsing a PDF. Reachable via the reseller invoice upload path
+# the security floor that fixes CVE-2026-{113786,113789…113795,115572,115580,
+# 115585} present on 6.19.0 (and PYSEC-2026-{3655,3656} before them). PDF
+# parsing is reachable via the reseller invoice upload path
 # (``apps/commissioning/viewsets/resellers_viewsets.py::_embed_facturx_or_fallback``).
-pypdf = ">=6.15.0"
+pypdf = ">=6.21.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
 pytest-cov = "^7.1.0"
 pytest-django = "^4.5"
-black = "^26.3.1"
+black = "^26.10.1"
 factory-boy = "^3.3"
 ruff = ">=0.15.13,<0.17.0"
 pip-audit = "^2.10.0"
 pre-commit = "^4.6.0"
 # Transitive (pulled in by pre-commit). Pinned to the security floor that
-# fixes PYSEC-2026-{4011,4012,4013,4014} present on 21.3.3.
-virtualenv = ">=21.7.13"
+# fixes CVE-2026-{113714,113715,113717,113718,113720,113722,113723,113725,
+# 113726} present on 21.14.2.
+virtualenv = ">=21.14.9"
+# Transitive (pulled in by virtualenv, cachecontrol and python-discovery).
+# Pinned to the security floor that fixes CVE-2026-{112907,112913,112940}
+# present on 3.29.0.
+filelock = ">=4.2.1"
 # Per-request query-count summary printed to the runserver console.
 # Surfaces N+1s during development as you click through pages.
 # Middleware is wired in ``config/settings.py`` only when ``DEBUG=True``,

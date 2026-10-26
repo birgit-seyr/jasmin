@@ -48,7 +48,7 @@ repos:
 
   # ── Backend format ──────────────────────────────────────────
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 26.5.1
+    rev: 26.10.1
     hooks:
       - id: black
         files: ^jasmin-core/django-core/(apps|config|core)/.*\.py$
