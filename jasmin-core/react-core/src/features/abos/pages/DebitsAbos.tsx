@@ -20,7 +20,9 @@ import { useTranslation } from "react-i18next";
 
 const STATUS_COLOR: Record<string, string> = {
   DRAFT: "blue",
-  EXPORTED: "green",
+  // Sent to the bank, still open to refunds; settled once that window passed.
+  EXPORTED: "gold",
+  SETTLED: "green",
   CANCELLED: "default",
 };
 

@@ -158,3 +158,41 @@ class TestPurchaseNoSellerUniqueConstraint:
             ).count()
             == 2
         )
+
+
+@pytest.mark.django_db
+class TestPurchaseSellerUniqueConstraint:
+    KEY = {
+        "year": 2026,
+        "delivery_week": 24,
+        "day_number": 1,
+        "unit": "KG",
+        "size": "M",
+    }
+
+    def test_one_seller_buys_into_two_storages(self, tenant):
+        article = ShareArticleFactory(is_purchased=True)
+        seller = ResellerFactory()
+
+        PurchaseFactory(
+            **self.KEY, share_article=article, seller=seller, storage=StorageFactory()
+        )
+        PurchaseFactory(
+            **self.KEY, share_article=article, seller=seller, storage=StorageFactory()
+        )
+
+        assert Purchase.objects.filter(share_article=article).count() == 2
+
+    def test_a_second_row_of_a_seller_in_one_storage_is_refused(self, tenant):
+        article = ShareArticleFactory(is_purchased=True)
+        seller = ResellerFactory()
+        storage = StorageFactory()
+        PurchaseFactory(
+            **self.KEY, share_article=article, seller=seller, storage=storage
+        )
+
+        with pytest.raises(IntegrityError):
+            with transaction.atomic():
+                PurchaseFactory(
+                    **self.KEY, share_article=article, seller=seller, storage=storage
+                )

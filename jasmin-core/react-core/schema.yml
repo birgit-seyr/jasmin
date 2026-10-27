@@ -43131,6 +43131,9 @@ components:
           type: string
         storage:
           type: string
+        seller:
+          type: string
+          nullable: true
       required:
       - delivery_week
       - id

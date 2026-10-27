@@ -11,6 +11,7 @@ import time_machine
 from django.urls import reverse
 from rest_framework import status
 
+from apps.commissioning.constants import PURCHASE_DAY
 from apps.commissioning.models import (
     AdditionalTheoreticalPurchase,
     Forecast,
@@ -411,31 +412,49 @@ class TestPurchaseViewSet:
             format="json",
         )
 
-    def test_same_article_from_the_same_seller_on_the_same_day_is_refused(
+    def test_same_article_from_the_same_seller_in_the_same_storage_is_refused(
+        self, api_client, tenant
+    ):
+        """The page sends no day; the purchase lands on the purchase day, where
+        the supplier's documented row already is."""
+        article = ShareArticleFactory(is_purchased=True)
+        seller = ResellerFactory()
+        storage = StorageFactory()
+        PurchaseFactory(
+            **self.KEY,
+            day_number=PURCHASE_DAY,
+            share_article=article,
+            seller=seller,
+            storage=storage,
+            amount=Decimal("3"),
+        )
+
+        resp = self._post_purchase(api_client, article, storage, seller=str(seller.id))
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "purchase.already_documented"
+        assert "non_field_errors" in resp.data["details"]
+        assert Purchase.objects.filter(share_article=article).count() == 1
+
+    def test_same_article_from_the_same_seller_in_another_storage_is_recorded(
         self, api_client, tenant
     ):
         article = ShareArticleFactory(is_purchased=True)
         seller = ResellerFactory()
         PurchaseFactory(
             **self.KEY,
-            day_number=1,
+            day_number=PURCHASE_DAY,
             share_article=article,
             seller=seller,
             storage=StorageFactory(),
         )
 
         resp = self._post_purchase(
-            api_client,
-            article,
-            StorageFactory(),
-            day_number=1,
-            seller=str(seller.id),
+            api_client, article, StorageFactory(), seller=str(seller.id)
         )
 
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-        assert resp.data["code"] == "purchase.already_documented"
-        assert "non_field_errors" in resp.data["details"]
-        assert Purchase.objects.filter(share_article=article).count() == 1
+        assert resp.status_code == status.HTTP_201_CREATED, resp.data
+        assert Purchase.objects.filter(share_article=article).count() == 2
 
     def test_same_article_from_another_seller_is_recorded(self, api_client, tenant):
         article = ShareArticleFactory(is_purchased=True)
@@ -462,16 +481,17 @@ class TestPurchaseViewSet:
     def test_same_article_without_a_seller_in_the_same_storage_is_refused(
         self, api_client, tenant
     ):
-        """The page sends no day; the no-seller key treats two missing days as
-        the same day."""
+        """The page sends no day; the purchase lands on the purchase day, where
+        the no-seller row already is."""
         article = ShareArticleFactory(is_purchased=True)
         storage = StorageFactory()
         PurchaseFactory(
             **self.KEY,
-            day_number=None,
+            day_number=PURCHASE_DAY,
             share_article=article,
             seller=None,
             storage=storage,
+            amount=Decimal("3"),
         )
 
         resp = self._post_purchase(api_client, article, storage)

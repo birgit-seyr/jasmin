@@ -102,12 +102,44 @@ class GenericDocumentationService:
         )
 
     @staticmethod
+    @transaction.atomic
     def create_purchase_with_related_objects(
         validated_data: dict[str, Any],
     ) -> Purchase:
+        """Create a purchase, or fill the empty planning placeholder its values
+        land on (see ``empty_purchase_placeholder``)."""
+        placeholder = GenericDocumentationService.empty_purchase_placeholder(
+            validated_data, lock=True
+        )
+        if placeholder is not None:
+            return GenericDocumentationService.update_with_related_objects(
+                placeholder, validated_data
+            )
         return GenericDocumentationService.create_with_related_objects(
             Purchase, validated_data
         )
+
+    @staticmethod
+    def empty_purchase_placeholder(
+        values: dict[str, Any], *, lock: bool = False
+    ) -> Purchase | None:
+        """The row a purchase with these values would duplicate, while nothing
+        has been documented on it yet (``amount`` NULL): the placeholder the
+        planner writes for a planned purchase, on the same weekly slot, supplier
+        and storage. A new purchase fills it rather than adding a second row the
+        office can't tell apart from it."""
+        rows = Purchase.objects.filter(
+            year=values["year"],
+            delivery_week=values["delivery_week"],
+            day_number=values.get("day_number"),
+            share_article=values.get("share_article"),
+            unit=values.get("unit"),
+            size=values.get("size"),
+            storage=extract_selected_storage_id(values) or values.get("storage"),
+            seller=values.get("seller"),
+            amount__isnull=True,
+        )
+        return (rows.select_for_update() if lock else rows).first()
 
     @staticmethod
     def update_purchase_with_related_objects(

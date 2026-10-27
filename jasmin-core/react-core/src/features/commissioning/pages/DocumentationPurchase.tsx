@@ -57,6 +57,42 @@ const shareArticleFilters = {
   is_purchased: true,
 };
 
+/** Rows of the same item: article, unit and size. Suppliers each have a row of
+ *  their own; the rows on the plan's slot all show the item's plan. */
+const isSameItem = (
+  row: DocumentationSummaryRecord,
+  other: DocumentationSummaryRecord,
+) =>
+  other.share_article === row.share_article &&
+  other.unit === row.unit &&
+  other.size === row.size;
+
+const carriesPlan = (row: DocumentationSummaryRecord) =>
+  !!row.theoretical_purchase_amount ||
+  !!row.additional_theoretical_purchase_amount;
+
+/** "Set as expected" books a row's plan as bought: only while nothing of the
+ *  item is bought in this storage yet, or it would book the plan on top. */
+const canTakeOver = (
+  row: DocumentationSummaryRecord | undefined,
+  rows: DocumentationSummaryRecord[],
+) =>
+  !!row?.theoretical_purchase_amount &&
+  !rows.some(
+    (other) => isSameItem(row, other) && Number(other.purchase_amount) > 0,
+  );
+
+/** A row showing the plan can go while another row of its item still shows it. */
+const canDelete = (
+  row: DocumentationSummaryRecord,
+  rows: DocumentationSummaryRecord[],
+) =>
+  !carriesPlan(row) ||
+  rows.some(
+    (other) =>
+      other.id !== row.id && isSameItem(row, other) && carriesPlan(other),
+  );
+
 export default function DocumentationPurchase() {
   const { isStaff } = useRoles();
 
@@ -104,23 +140,12 @@ export default function DocumentationPurchase() {
       ...gatedByPermission(isStaff && !isPast),
       // A new row needs a storage to stamp on it.
       canAdd: isStaff && !isPast && selectedStorage !== null,
-      canDeleteRecord: (record: TableRecord) => {
-        if (record.key === -1 || !record.id) return true;
-        const r = record as Record<string, unknown>;
-        if (
-          r.theoretical_purchase_amount != null &&
-          r.theoretical_purchase_amount != 0
-        )
-          return false;
-        if (
-          r.additional_theoretical_purchase_amount != null &&
-          r.additional_theoretical_purchase_amount != 0
-        )
-          return false;
-        return true;
-      },
+      canDeleteRecord: (record: TableRecord) =>
+        record.key === -1 ||
+        !record.id ||
+        canDelete(record as DocumentationSummaryRecord, data),
     }),
-    [isStaff, isPast, selectedStorage],
+    [isStaff, isPast, selectedStorage, data],
   );
 
   const { noteColumn } = useNoteColumn();
@@ -345,6 +370,8 @@ export default function DocumentationPurchase() {
                   year: selectedYear,
                   delivery_week: selectedWeek,
                   storage: selectedStorage,
+                  seller:
+                    (rowData?.seller as string | null | undefined) ?? null,
                 };
               });
               return commissioningPurchaseBulkSetAsExpectedCreate({
@@ -358,15 +385,13 @@ export default function DocumentationPurchase() {
             buttonProps={{ type: "primary" }}
             disabled={
               selectedRowKeys.length === 0 ||
-              selectedRowKeys.some((key) => {
-                const row = data.find((item) => item.id === key);
-                const rowData = row as Record<string, unknown> | undefined;
-                return (
-                  rowData?.theoretical_purchase_amount == null ||
-                  rowData.theoretical_purchase_amount === 0 ||
-                  (rowData.purchase_amount as number) > 0
-                );
-              })
+              selectedRowKeys.some(
+                (key) =>
+                  !canTakeOver(
+                    data.find((item) => item.id === key),
+                    data,
+                  ),
+              )
             }
             refreshData={invalidateData}
             onSuccess={invalidateData}
@@ -389,7 +414,7 @@ export default function DocumentationPurchase() {
         rowSelection={!isPast ? rowSelectionConfig : undefined}
         onSelectedRowsChange={handleRowSelectionChange}
         selectedRowKeys={selectedRowKeys}
-        uniqueCheck={["share_article", "unit", "size"]}
+        uniqueCheck={["share_article", "unit", "size", "seller"]}
         uniqueCheckMessage={t("validation.unique.documentation_purchase")}
         keyboardAddShortcut={true}
       />

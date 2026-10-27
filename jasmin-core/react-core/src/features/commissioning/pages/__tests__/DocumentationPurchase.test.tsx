@@ -133,83 +133,14 @@ vi.mock("@shared/utils/downloadBlob", () => ({
 }));
 
 import DocumentationPurchase from "../DocumentationPurchase";
+import type { Row, Payload } from "./documentationPurchase.fixtures";
+import {
+  COLD_STORE, PACKING_SHED, CARROTS, APPLES, ONIONS, PUMPKINS, BEETROOT, LEEKS, KALE, SUNNY_HILL,
+  RIVERSIDE, soldBy, purchaseRow, CARROTS_BOUGHT, APPLES_BOUGHT, ONIONS_EXPECTED,
+  PUMPKINS_EXPECTED, BEETROOT_EMPTY, LEEKS_IN_SHED, ONIONS_FROM_RIVERSIDE, CARROTS_WEEK_39,
+} from "./documentationPurchase.fixtures";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
-
-/** A summary row: the API row plus its ``storage_<id>`` flags. */
-type Row = DocumentationSummaryRow & Record<string, unknown>;
-type Payload = Record<string, unknown>;
-
-const COLD_STORE: Storage = { id: "storage-cold", name: "Cold store", is_active: true };
-const PACKING_SHED: Storage = { id: "storage-shed", name: "Packing shed", is_active: true };
-
-const article = (name: string, unit: ShareArticle["default_movement_unit"]): ShareArticle => ({
-  id: `article-${name.toLowerCase()}`, name, default_movement_unit: unit,
-  is_active: true, is_purchased: true,
-});
-const CARROTS = article("Carrots", "KG");
-const APPLES = article("Apples", "KG");
-const ONIONS = article("Onions", "KG");
-const PUMPKINS = article("Pumpkins", "PCS");
-const BEETROOT = article("Beetroot", "KG");
-const LEEKS = { ...article("Leeks", "PCS"), default_pieces_per_pu_purchase: "12.000" };
-const KALE = article("Kale", "BUNCH");
-
-const seller = (id: string, companyName: string, controlNumber: string | null): Reseller => ({
-  id, company_name: companyName, organic_control_number: controlNumber,
-  is_seller: true, is_active_seller: true,
-  address: "Field Lane 1", zip_code: "12345", city: "Greenville",
-});
-// Sunny Hill holds an organic certificate; Riverside doesn't.
-const SUNNY_HILL = seller("seller-sunny-hill", "Sunny Hill Farm", "DE-ECO-006-12345");
-const RIVERSIDE = seller("seller-riverside", "Riverside Growers", null);
-
-const soldBy = (reseller: Reseller) => ({
-  seller: reseller.id ?? null,
-  seller_name: reseller.company_name ?? null,
-});
-
-/** A purchase as the week's summary lists it, stored in ``storage``. */
-const purchaseRow = (product: ShareArticle, storage: Storage, fields: Partial<Row> = {}): Row => ({
-  id: `purchase-${product.name.toLowerCase()}`, share_article: product.id ?? null,
-  share_article_name: product.name, unit: product.default_movement_unit, size: "M", note: "",
-  purchase_amount: null, theoretical_purchase_amount: 0, additional_theoretical_purchase_amount: 0,
-  seller: null, seller_name: null, price_per_unit: null, organic_status: "conventional",
-  // Summary fields this page doesn't show.
-  theoretical_id: null, additional_id: null, amount_per_pu: null, theoretical_current_stock: null,
-  forecast_plot_name: null, forecast_bed_number: null, forecast_note: null,
-  harvesting_crate: null, harvesting_crate_name: null,
-  ...Object.fromEntries(
-    [COLD_STORE, PACKING_SHED].map((each) => [`storage_${each.id}`, each.id === storage.id]),
-  ),
-  ...fields,
-});
-
-// Bought, and expected by the planning: 10 planned plus 5 added by hand.
-const CARROTS_BOUGHT = purchaseRow(CARROTS, COLD_STORE, {
-  purchase_amount: "12.50", price_per_unit: "1.85", ...soldBy(SUNNY_HILL),
-  theoretical_purchase_amount: 10, additional_theoretical_purchase_amount: 5,
-  organic_status: "organic", note: "Washed before delivery",
-});
-// Bought without any expectation.
-const APPLES_BOUGHT = purchaseRow(APPLES, COLD_STORE, {
-  purchase_amount: "30.00", price_per_unit: "2.40", ...soldBy(RIVERSIDE),
-});
-// Expected by the planning, not bought yet: no seller, amount or price.
-const ONIONS_EXPECTED = purchaseRow(ONIONS, COLD_STORE, { theoretical_purchase_amount: 20 });
-// Only an amount added by hand is expected.
-const PUMPKINS_EXPECTED = purchaseRow(PUMPKINS, COLD_STORE, {
-  additional_theoretical_purchase_amount: 6,
-});
-// A leftover row with nothing expected and nothing bought.
-const BEETROOT_EMPTY = purchaseRow(BEETROOT, COLD_STORE);
-const LEEKS_IN_SHED = purchaseRow(LEEKS, PACKING_SHED, {
-  purchase_amount: "40.00", price_per_unit: "0.90", ...soldBy(SUNNY_HILL),
-});
-const CARROTS_WEEK_39 = purchaseRow(CARROTS, COLD_STORE, {
-  id: "purchase-carrots-week-39", purchase_amount: "8.00", price_per_unit: "1.70",
-  ...soldBy(SUNNY_HILL),
-});
 
 /** What the in-memory farm holds; purchases by delivery week of 2026. */
 let farm: {
@@ -301,6 +232,16 @@ function rowAround(element: HTMLElement, what: string): HTMLElement {
   return row;
 }
 const rowOf = (text: string) => rowAround(screen.getByText(text), `shows ${text}`);
+/** The onions bought from Riverside, or the onions row expected only. */
+const onionsRow = (fromRiverside: boolean) => {
+  const row = bodyRows().find(
+    (each) =>
+      each.textContent?.includes("Onions") &&
+      each.textContent.includes("Riverside") === fromRiverside,
+  );
+  if (!row) throw new Error("No such onions row");
+  return row;
+};
 const editingRow = () =>
   rowAround(screen.getByRole("button", { name: "table.save" }), "is being edited");
 
@@ -677,6 +618,16 @@ describe("DocumentationPurchase recording a purchase", () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it("records the same article from another seller as a purchase of its own", async () => {
+    renderPage();
+    await listed();
+    await startNewPurchase("Apples", "Sunny Hill Farm");
+    await typeInto(ACTUAL, "5");
+    await save();
+    await createdOnce();
+    expect(created()).toMatchObject({ share_article: APPLES.id, seller: SUNNY_HILL.id });
+  });
+
   it("records the same article in another unit as a purchase of its own", async () => {
     renderPage();
     await listed();
@@ -801,6 +752,24 @@ describe("DocumentationPurchase deleting a purchase", () => {
     expect(bodyRows()).toHaveLength(3);
   });
 
+  it("deletes a row that shows the expected purchase while another row of its article still does", async () => {
+    farm.purchases[41].push(ONIONS_FROM_RIVERSIDE);
+    renderPage();
+    await listed();
+    expect(within(onionsRow(false)).getByRole("button", { name: "table.delete" })).toBeEnabled();
+    await userEvent.click(within(onionsRow(true)).getByRole("button", { name: "table.delete" }));
+    await userEvent.click(await screen.findByRole("button", { name: "table.yes" }));
+    await waitFor(() => expect(api.destroy).toHaveBeenCalledWith(ONIONS_FROM_RIVERSIDE.id));
+  });
+
+  it("keeps the expected row when the article's other row shows no expected purchase", async () => {
+    farm.purchases[41].push({ ...ONIONS_FROM_RIVERSIDE, theoretical_purchase_amount: 0 });
+    renderPage();
+    await listed();
+    const expected = onionsRow(false);
+    expect(within(expected).queryByRole("button", { name: "table.delete" })).not.toBeInTheDocument();
+  });
+
   it("offers no delete for a row that carries an expected purchase", async () => {
     renderPage();
     await listed();
@@ -893,6 +862,7 @@ describe("DocumentationPurchase taking over expected purchases", () => {
       selectedData: [{
         id: ONIONS.id, theoretical_purchase_amount: "20", theoretical_purchase_unit: "KG",
         theoretical_purchase_size: "M", year: 2026, delivery_week: 41, storage: COLD_STORE.id,
+        seller: null,
       }],
     });
     await waitFor(() => expect(cellOf(rowOf("Onions"), ACTUAL)).toHaveTextContent("20,00"));
@@ -908,6 +878,30 @@ describe("DocumentationPurchase taking over expected purchases", () => {
     await tick("Onions");
     expect(takeOverButton()).toBeEnabled();
     await tick(name);
+    expect(takeOverButton()).toBeDisabled();
+  });
+
+  it("sends the seller of a selected row that has one", async () => {
+    changeRows(41, (row) =>
+      row.id === BEETROOT_EMPTY.id
+        ? { ...row, theoretical_purchase_amount: 7, ...soldBy(RIVERSIDE) }
+        : undefined,
+    );
+    renderPage();
+    await listed();
+    await tick("Beetroot");
+    await userEvent.click(takeOverButton());
+    await waitFor(() => expect(api.setAsExpected).toHaveBeenCalledTimes(1));
+    expect(api.setAsExpected.mock.lastCall?.[0]).toMatchObject({
+      selectedData: [{ id: BEETROOT.id, seller: RIVERSIDE.id }],
+    });
+  });
+
+  it("keeps the take-over disabled while another seller's row of the article is bought", async () => {
+    farm.purchases[41].push(ONIONS_FROM_RIVERSIDE);
+    renderPage();
+    await listed();
+    await userEvent.click(within(onionsRow(false)).getByRole("checkbox"));
     expect(takeOverButton()).toBeDisabled();
   });
 

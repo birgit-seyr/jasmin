@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from django.db import models
 
 
@@ -27,6 +29,12 @@ class BillingRunStatus(models.TextChoices):
 
 # Subset of statuses that count as "owed but not yet paid".
 OPEN_CHARGE_STATUSES = (ChargeStatus.PLANNED, ChargeStatus.ISSUED, ChargeStatus.PARTIAL)
+
+# A member can have a SEPA Core direct debit refunded within eight weeks of the
+# debit, and the refund reaches the farm's bank some bank days after the claim.
+# An exported direct-debit run counts as paid once this much time has passed
+# since its collection date.
+DIRECT_DEBIT_SETTLES_AFTER = timedelta(weeks=9)
 
 
 ID_LENGTH = 12  # this is the ID in the JasminModel

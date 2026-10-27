@@ -2,6 +2,7 @@ from typing import TypedDict
 
 from rest_framework import serializers
 
+from ..constants import PURCHASE_DAY
 from ..errors import (
     HarvestAlreadyDocumented,
     OfferGroupNotFound,
@@ -16,6 +17,7 @@ from ..models import (
     OfferGroup,
     Plot,
     Purchase,
+    Reseller,
     ShareTypeVariation,
     Waste,
 )
@@ -160,10 +162,10 @@ class PurchaseSerializer(
     UniqueConstraintErrorsMixin, StorageFieldsMixin, serializers.ModelSerializer
 ):
     UNIQUE_CONSTRAINT_ERRORS = {
-        "purchase_unique_year_week_day_article_unit_size_seller": (
+        "purchase_unique_year_week_day_article_unit_size_seller_storage": (
             PurchaseAlreadyDocumented,
             "This article in this unit and size is already documented as a "
-            "purchase from this supplier for this day.",
+            "purchase from this supplier for this week and storage.",
         ),
         "purchase_unique_no_seller_year_week_day_article_unit_size_storage": (
             PurchaseWithoutSellerAlreadyDocumented,
@@ -191,6 +193,9 @@ class PurchaseSerializer(
         from ..models import OrganicCertificate, ShareArticle
         from ..models.managers import active_on_date_q
 
+        if self.instance is None and attrs.get("day_number") is None:
+            # Purchases are weekly: a new one takes the slot its plan uses.
+            attrs["day_number"] = PURCHASE_DAY
         attrs = super().validate(attrs)
 
         status = attrs.get(
@@ -223,6 +228,20 @@ class PurchaseSerializer(
                 field="organic_status",
             )
         return attrs
+
+    def _unique_candidate(self, model, attrs):
+        """A new purchase landing on an empty planning placeholder fills it
+        (``GenericDocumentationService.create_purchase_with_related_objects``),
+        so the placeholder is the row it is checked as."""
+        candidate = super()._unique_candidate(model, attrs)
+        if self.instance is None:
+            from ..services.documentation_service import GenericDocumentationService
+
+            placeholder = GenericDocumentationService.empty_purchase_placeholder(attrs)
+            if placeholder is not None:
+                candidate.pk = placeholder.pk
+                candidate._state.adding = False
+        return candidate
 
 
 class HarvestSerializer(
@@ -293,6 +312,11 @@ class PurchaseBulkSetAsExpectedItemSerializer(serializers.Serializer):
     theoretical_purchase_unit = serializers.CharField()
     theoretical_purchase_size = serializers.CharField()
     storage = serializers.CharField()
+    # The selected row's seller (null for a row without one). Left out, the
+    # slot's empty row is taken.
+    seller = serializers.PrimaryKeyRelatedField(
+        queryset=Reseller.objects.all(), required=False, allow_null=True
+    )
 
 
 class PurchaseBulkSetAsExpectedRequestSerializer(serializers.Serializer):

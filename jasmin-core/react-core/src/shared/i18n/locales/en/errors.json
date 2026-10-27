@@ -1,7 +1,7 @@
 {
   "purchase": {
     "organic_certificate_required": "For organic or in-conversion goods, the supplier must hold a certificate valid for this delivery week.",
-    "already_documented": "This article in this unit and size is already documented as a purchase from this supplier for this day.",
+    "already_documented": "This article in this unit and size is already documented as a purchase from this supplier for this week and storage.",
     "already_documented_without_seller": "This article in this unit and size is already documented as a purchase without a supplier for this week and storage."
   },
   "harvest": {

@@ -221,7 +221,11 @@ def _build_theoretical_purchase(src: TheoreticalSourceData) -> TheoreticalPurcha
 
 
 def _ensure_purchase_placeholder(src: TheoreticalSourceData) -> None:
-    purchase, _ = Purchase.objects.get_or_create(
+    """Make sure the planned purchase has a row on its weekly slot: the
+    supplier's own, an empty placeholder, which follows the plan to its
+    supplier, or else a purchase documented from another supplier, which keeps
+    its own and carries the plan. Only an empty slot gets a new placeholder."""
+    slot = Purchase.objects.filter(
         year=src.year,
         delivery_week=src.delivery_week,
         day_number=PURCHASE_DAY,
@@ -229,11 +233,32 @@ def _ensure_purchase_placeholder(src: TheoreticalSourceData) -> None:
         unit=src.unit,
         size=src.size,
         storage=src.storage,
+    )
+    if slot.filter(seller=src.seller).exists():
+        return
+    # Locked, and re-checked under the lock: a purchase that filled the
+    # placeholder meanwhile is documented and keeps its supplier.
+    placeholder = (
+        slot.filter(amount__isnull=True).select_for_update().order_by("pk").first()
+    )
+    if placeholder is not None:
+        if src.seller:
+            placeholder.seller = src.seller
+            placeholder.save(update_fields=["seller"])
+        return
+    if slot.exists():
+        return
+    Purchase.objects.get_or_create(
+        year=src.year,
+        delivery_week=src.delivery_week,
+        day_number=PURCHASE_DAY,
+        share_article=src.share_article,
+        unit=src.unit,
+        size=src.size,
+        storage=src.storage,
+        seller=src.seller,
         defaults={"amount": None},
     )
-    if src.seller and purchase.seller != src.seller:
-        purchase.seller = src.seller
-        purchase.save(update_fields=["seller"])
 
 
 def _processing_storage(

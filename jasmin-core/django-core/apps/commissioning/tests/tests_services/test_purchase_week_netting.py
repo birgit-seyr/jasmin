@@ -126,7 +126,7 @@ class TestOfficePurchaseWithoutWeekday:
 
         purchase = _office_purchase(api_client, article, storage, 10)
 
-        assert purchase.day_number is None
+        assert purchase.day_number == PURCHASE_DAY
         movement = MovementShareArticle.objects.get(purchase=purchase)
         assert movement.date == PURCHASE_NOON
         assert movement.counted_amount == Decimal("10")
@@ -295,6 +295,8 @@ class TestAdditionalAmountOnAnOfficePurchase:
     ):
         _plan(article, storage, 10)
         purchase = _office_purchase(api_client, article, storage, 12)
+        # A purchase stored without a weekday, as the page's used to be.
+        Purchase.objects.filter(pk=purchase.pk).update(day_number=None)
         additional = AdditionalTheoreticalPurchaseFactory(
             year=YEAR,
             delivery_week=WEEK,

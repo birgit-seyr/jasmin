@@ -1,7 +1,7 @@
 {
   "purchase": {
     "organic_certificate_required": "Für Bio oder Umstellung muss der Lieferant für diese Kalenderwoche ein gültiges Bio-Zertifikat besitzen.",
-    "already_documented": "Dieser Artikel ist in dieser Einheit und Größe für diesen Tag bereits als Zukauf von diesem Lieferanten dokumentiert.",
+    "already_documented": "Dieser Artikel ist in dieser Einheit und Größe für diese Woche und dieses Lager bereits als Zukauf von diesem Lieferanten dokumentiert.",
     "already_documented_without_seller": "Dieser Artikel ist in dieser Einheit und Größe für diese Woche und dieses Lager bereits als Zukauf ohne Lieferanten dokumentiert."
   },
   "harvest": {

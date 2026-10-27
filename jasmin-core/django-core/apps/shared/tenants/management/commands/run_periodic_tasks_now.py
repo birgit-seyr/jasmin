@@ -74,6 +74,9 @@ TASK_REGISTRY: dict[str, list[str]] = {
     "apps.shared.support.tasks": [
         "prune_orphan_support_tickets_task",
     ],
+    "apps.payments.tasks": [
+        "settle_collected_direct_debits",
+    ],
     "apps.gdpr.tasks": [
         "anonymise_long_cancelled_members",
         "alert_on_mass_deletes",

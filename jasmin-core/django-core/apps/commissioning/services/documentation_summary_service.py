@@ -655,7 +655,7 @@ class DocumentationSummaryService:
         amount_key: str,
         unit_key: str,
         size_key: str,
-        day_number_fn: Callable[[dict[str, Any]], int | None],
+        slot_fn: Callable[[dict[str, Any]], dict[str, Any]],
     ) -> None:
         """Shared core of the bulk "set as expected" actions: upsert the actual
         Harvest/Purchase row per item and (re)create its movement.
@@ -668,9 +668,9 @@ class DocumentationSummaryService:
         write of a non-short-term theoretical (bypassing ``full_clean`` via a raw
         ``.update()``).
 
-        ``day_number_fn`` resolves the slot's day: harvests carry their own
-        ``day_number``; purchases are always ``PURCHASE_DAY`` (matching the
-        ``TheoreticalPurchase``).
+        ``slot_fn`` resolves the rest of the row's key: harvests carry their own
+        ``day_number``; purchases are always on ``PURCHASE_DAY`` (matching the
+        ``TheoreticalPurchase``), and on the selected row's seller.
         """
         if not items:
             return
@@ -702,7 +702,7 @@ class DocumentationSummaryService:
             instance, _created = model.objects.update_or_create(
                 year=item.get("year"),
                 delivery_week=item.get("delivery_week"),
-                day_number=day_number_fn(item),
+                **slot_fn(item),
                 share_article_id=item.get("id"),
                 unit=item.get(unit_key),
                 size=item.get(size_key),
@@ -726,22 +726,27 @@ class DocumentationSummaryService:
             amount_key="theoretical_harvest_amount",
             unit_key="theoretical_harvest_unit",
             size_key="theoretical_harvest_size",
-            day_number_fn=lambda item: item.get("day_number"),
+            slot_fn=lambda item: {"day_number": item.get("day_number")},
         )
 
     @staticmethod
     def bulk_set_purchase_as_expected(data: dict[str, Any]) -> None:
         """Record theoretical/expected PURCHASE as actual purchase for the
-        selected items (upsert + movement). Purchases always land on
-        ``PURCHASE_DAY`` (matching the ``TheoreticalPurchase``), never a NULL
-        day_number. No-op when ``selectedData`` is empty."""
+        selected items (upsert + movement), on ``PURCHASE_DAY`` (matching the
+        ``TheoreticalPurchase``) and on the selected row's seller where the
+        client sends it. No-op when ``selectedData`` is empty."""
         DocumentationSummaryService._bulk_set_actual(
             data.get("selectedData", []),
             model=Purchase,
             amount_key="theoretical_purchase_amount",
             unit_key="theoretical_purchase_unit",
             size_key="theoretical_purchase_size",
-            day_number_fn=lambda _item: PURCHASE_DAY,
+            slot_fn=lambda item: (
+                {"day_number": PURCHASE_DAY, "seller": item["seller"]}
+                if "seller" in item
+                # A client that sends no seller can only take over an empty row.
+                else {"day_number": PURCHASE_DAY, "amount__isnull": True}
+            ),
         )
 
     @staticmethod
@@ -798,14 +803,13 @@ class DocumentationSummaryService:
             models, common_fields, data.get("note")
         )
 
-        # Get or create actual entry
+        # The slot's actual row; a documented one keeps its own fields.
         instance = DocumentationSummaryService._get_or_create_actual_instance(
             models["actual"], common_fields
         )
-
-        # Update model-specific fields
+        if instance.amount is not None:
+            return instance
         DocumentationSummaryService._update_model_specific_fields(instance, data, model)
-
         instance.save()
         return instance
 
@@ -820,9 +824,6 @@ class DocumentationSummaryService:
         movement_type: str,
     ) -> None:
         """Sync the movement for an additional theoretical entry."""
-        from decimal import Decimal
-
-        from .documentation_service import GenericDocumentationService
         from .snapshot_service import SnapshotService
         from .theoretical_objects import recalculate_actual_corrections
 
@@ -949,11 +950,11 @@ class DocumentationSummaryService:
     def _get_or_create_actual_instance(
         actual_model: Any, common_fields: dict[str, Any]
     ) -> Any:
-        """Get or create an actual instance with None amount."""
-        try:
-            return actual_model.objects.get(**common_fields, amount=None)
-        except actual_model.DoesNotExist:
-            return actual_model.objects.create(**common_fields, amount=None)
+        """The slot's empty row, or a purchase's documented one; else a new one."""
+        rows = actual_model.objects.filter(**common_fields)
+        if actual_model is not Purchase:
+            rows = rows.filter(amount__isnull=True)
+        return rows.first() or actual_model.objects.create(**common_fields, amount=None)
 
     @staticmethod
     def _update_model_specific_fields(
@@ -996,7 +997,6 @@ class DocumentationSummaryService:
             # seller's row or raises MultipleObjectsReturned across sellers.
             common_fields["seller"] = instance.seller
 
-        # Update model-specific fields
         DocumentationSummaryService._update_model_specific_fields(instance, data, model)
         instance.save()
 
@@ -1021,8 +1021,6 @@ class DocumentationSummaryService:
             partial=True,
         )
         if model_key == "purchase":
-            from .documentation_service import GenericDocumentationService
-
             # Re-derive the purchase's own movement too, so it is dated and
             # netted with the additional amount just written.
             GenericDocumentationService._upsert_movement(instance)

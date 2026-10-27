@@ -119,8 +119,9 @@ class HarvestAlreadyDocumented(BadRequestError):
 
 class PurchaseAlreadyDocumented(BadRequestError):
     """A purchase of this article in this unit and size from this seller is
-    already documented for the day — ``Purchase`` holds one row per (year,
-    week, day, article, unit, size, seller) when it has a seller and a day."""
+    already documented for the week and storage — ``Purchase`` holds one row
+    per (year, week, day, article, unit, size, seller, storage) when it has a
+    seller and a day."""
 
     code = "purchase.already_documented"
 

@@ -23,4 +23,6 @@ export interface PurchaseBulkSetAsExpectedItem {
   theoretical_purchase_unit: string;
   theoretical_purchase_size: string;
   storage: string;
+  /** @nullable */
+  seller?: string | null;
 }

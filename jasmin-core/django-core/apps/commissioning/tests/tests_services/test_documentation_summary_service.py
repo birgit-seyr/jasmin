@@ -415,6 +415,7 @@ class TestBulkSetPurchaseAsExpectedIdempotent:
             "theoretical_purchase_unit": "KG",
             "theoretical_purchase_size": "M",
             "storage": storage.id,
+            "seller": None,
         }
 
     def test_rerun_does_not_duplicate_purchase_movement(self, tenant):
@@ -598,6 +599,64 @@ class TestGetOrCreateActualInstance:
         )
 
         assert instance.pk == existing.pk
+        assert Harvest.objects.filter(share_article=sa).count() == 1
+
+    def test_returns_the_documented_purchase_of_the_slot(self, tenant):
+        """A purchase already documented from the seller is the slot's row: a
+        second one would break the seller's uniqueness."""
+        from apps.commissioning.models import Purchase
+
+        sa = ShareArticleFactory(is_purchased=True)
+        seller = ResellerFactory()
+        common = {
+            "year": 2026,
+            "delivery_week": 15,
+            "day_number": 1,
+            "share_article": sa,
+            "unit": "KG",
+            "size": "M",
+            "storage": StorageFactory(is_short_term_harvest_storage=True),
+            "seller": seller,
+        }
+        documented = PurchaseFactory(amount=Decimal("5"), **common)
+
+        instance = DocumentationSummaryService._get_or_create_actual_instance(
+            Purchase, common
+        )
+
+        assert instance.pk == documented.pk
+        assert Purchase.objects.filter(share_article=sa).count() == 1
+
+    def test_a_documented_harvest_is_not_handed_back(self, tenant):
+        """Only a purchase's documented row takes an additional amount; a
+        documented harvest stays as it is, and the add is refused."""
+        from django.db import IntegrityError, transaction
+
+        from apps.commissioning.models import Harvest
+
+        sa = ShareArticleFactory()
+        storage = StorageFactory(is_short_term_harvest_storage=True)
+        documented = HarvestFactory(
+            share_article=sa,
+            unit="KG",
+            size="M",
+            day_number=1,
+            storage=storage,
+            amount=Decimal("4"),
+        )
+        common = {
+            "year": documented.year,
+            "delivery_week": documented.delivery_week,
+            "day_number": 1,
+            "share_article": sa,
+            "unit": "KG",
+            "size": "M",
+            "storage": storage,
+        }
+
+        with pytest.raises(IntegrityError), transaction.atomic():
+            DocumentationSummaryService._get_or_create_actual_instance(Harvest, common)
+
         assert Harvest.objects.filter(share_article=sa).count() == 1
 
 
