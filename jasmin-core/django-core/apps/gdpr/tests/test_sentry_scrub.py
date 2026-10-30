@@ -60,6 +60,24 @@ class TestBeforeSend:
     def test_empty_event_passthrough(self):
         assert before_send({}, None) == {}
 
+    def test_drops_the_origin_secret_header(self):
+        event = {
+            "request": {
+                "headers": {
+                    "x-origin-secret": "the-secret",
+                    "X-Origin-Secret": "the-secret",
+                    "Host": "farm.example.org",
+                }
+            }
+        }
+        assert before_send(event, None)["request"]["headers"] == {
+            "Host": "farm.example.org"
+        }
+
+    def test_request_without_headers_passthrough(self):
+        for event in [{"request": "not a dict"}, {"request": {"headers": ["x"]}}]:
+            assert before_send(event, None) is event
+
 
 class TestScrubIban:
     def test_scrubs_compact_iban(self):

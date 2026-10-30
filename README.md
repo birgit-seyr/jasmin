@@ -245,6 +245,11 @@ first change to `apps/commissioning/`. The GDPR documentation set (data
 inventory, DPIA, processing activities, retention policy, breach runbook) lives
 in [docs/gdpr/](docs/gdpr/README.md).
 
+## Security
+
+To report a vulnerability, follow [SECURITY.md](SECURITY.md) — please don't
+open a public issue.
+
 ## License
 
 Copyright (C) 2026 Birgit Seyr

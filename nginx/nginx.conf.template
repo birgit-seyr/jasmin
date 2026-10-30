@@ -28,13 +28,20 @@ http {
     tcp_nodelay on;
     keepalive_timeout 65;
     types_hash_max_size 2048;
+    # The origin gate's secrets, up to 64 characters, are map keys too long
+    # for the default bucket. Has to come before the first map.
+    map_hash_bucket_size 128;
     server_tokens off;
 
     client_max_body_size 50M;
 
+    # ``peer`` is the connecting address. It differs from the first field only
+    # on the tenant hosts with the origin gate on, where the first is the client
+    # Bunny forwarded — what a request that is then refused claims to be.
     log_format main '$remote_addr - $remote_user [$time_local] "$request" '
                     '$status $body_bytes_sent "$http_referer" "$http_user_agent" '
-                    'host="$host" rt=$request_time ut=$upstream_response_time';
+                    'host="$host" rt=$request_time ut=$upstream_response_time '
+                    'peer=$realip_remote_addr';
 
     # /media/ URLs carry a capability token in the query string (``?st=``,
     # core/protected_media.py). ``$request`` is the full request line, so the
@@ -47,7 +54,8 @@ http {
     log_format media '$remote_addr - $remote_user [$time_local] '
                      '"$request_method $uri $server_protocol" '
                      '$status $body_bytes_sent "$http_referer" "$http_user_agent" '
-                     'host="$host" rt=$request_time ut=$upstream_response_time';
+                     'host="$host" rt=$request_time ut=$upstream_response_time '
+                     'peer=$realip_remote_addr';
     access_log /var/log/nginx/access.log main;
     error_log  /var/log/nginx/error.log warn;
 
@@ -110,6 +118,24 @@ http {
     map $upstream_http_content_disposition $protected_media_disposition {
         ""                                  $protected_media_attachment;
         default                             "";
+    }
+
+    # ---- Origin gate: tenant hosts only through our Bunny pull zone --------
+    # render_config.sh writes the secrets Bunny may present and, while the gate
+    # is on, the check and the real_ip settings the tenant server block
+    # includes; its header explains the gate. A request without an accepted
+    # secret is refused unless it asks for /health/. Every location of the
+    # tenant block that proxies drops the header first
+    # (``proxy_set_header X-Origin-Secret ""``), so the backend never sees it.
+    map $http_x_origin_secret $origin_secret_ok {
+        default                             0;
+        include /etc/nginx/origin_gate/secrets.conf;
+    }
+
+    map "$origin_secret_ok:$uri" $origin_gate_deny {
+        default                             1;
+        ~^1:                                0;
+        ~^0:/health/                        0;
     }
 
     # ---- HTTP -> HTTPS + ACME --------------------------------------------
@@ -199,6 +225,9 @@ http {
         ssl_stapling        on;
         ssl_stapling_verify on;
 
+        # The origin gate (see its maps above); empty while it is off.
+        include /etc/nginx/origin_gate/tenant.conf;
+
         # Security headers. NOTE: because nginx add_header inheritance is
         # all-or-nothing per level, this same snippet is re-included inside
         # every location below that sets its own add_header (/static/,
@@ -216,6 +245,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
         }
 
         location = /api/auth/register/ {
@@ -225,6 +255,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
         }
 
         # JWT refresh — bot-replays a stolen token; harder to mass-spam but
@@ -236,6 +267,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
         }
 
         # Password-reset request — every successful POST sends an email and
@@ -247,6 +279,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
         }
 
         # Password-reset confirm — accepts a token + new password; brute-force
@@ -258,6 +291,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
         }
 
         # Invitation accept — accepts a secret invitation token. Same brute-
@@ -269,6 +303,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
         }
 
         # ------- Super-admin API is NOT served on tenant / apex hosts -------
@@ -295,6 +330,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
             proxy_http_version 1.1;
             proxy_set_header   Connection      "";
             proxy_read_timeout 120s;
@@ -303,6 +339,7 @@ http {
 
         location /health/ {
             proxy_pass http://jasmin_backend;
+            proxy_set_header X-Origin-Secret   "";
             access_log off;
         }
 
@@ -336,6 +373,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
             proxy_http_version 1.1;
             proxy_set_header   Connection      "";
         }
@@ -371,6 +409,7 @@ http {
             proxy_set_header X-Real-IP         $remote_addr;
             proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Origin-Secret   "";
             proxy_http_version 1.1;
             proxy_set_header   Connection      "";
         }

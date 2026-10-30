@@ -1,18 +1,8 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 7f47bb2..a661b64 100644
+index ae1b3daf..47431df1 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
-@@ -314,7 +314,8 @@ jobs:
-             -keyout /etc/letsencrypt/live/$FRONTEND_DOMAIN/privkey.pem \
-             -out /etc/letsencrypt/live/$FRONTEND_DOMAIN/fullchain.pem \
-             -subj "/CN=$FRONTEND_DOMAIN" >/dev/null 2>&1
--          cp /work/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowed_ips.conf
-+          mkdir -p /etc/nginx/super_admin_allowlist
-+          cp /work/super_admin_allowlist/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
-           # Security-header snippets included by the template; the
-           # gateway mounts these too, so they must be present for `nginx -t`.
-           cp /work/security_headers.conf /etc/nginx/security_headers.conf
-@@ -480,7 +481,7 @@ jobs:
+@@ -452,7 +452,7 @@ jobs:
          run: |
            $COMPOSE stop backend huey
            dump="$($COMPOSE exec -T backup sh -c 'ls -t /backups/*_predeploy_*.sql.gz.gpg | head -1')"
@@ -22,10 +12,10 @@ index 7f47bb2..a661b64 100644
            $COMPOSE up -d --no-build --wait --wait-timeout 300 backend huey
            $COMPOSE exec -T backend python manage.py shell -c "from apps.shared.tenants.models import Tenant; assert Tenant.objects.filter(schema_name='ci').exists(), 'the restored database has no ci tenant'"
 diff --git a/CLAUDE.md b/CLAUDE.md
-index fd26c64..f51d582 100644
+index d0f00c07..d2e7e5d4 100644
 --- a/CLAUDE.md
 +++ b/CLAUDE.md
-@@ -1190,6 +1190,9 @@ failed probe stops nothing, but makes the script exit 1 at the very end.
+@@ -1232,6 +1232,9 @@ failed probe stops nothing, but makes the script exit 1 at the very end.
  `pg_dump` plus a media archive (`backups/backup.sh`), with an rclone off-host
  push scaffold; deploy.sh adds a DB-only `predeploy` dump before every deploy.
  `BACKUP_ENCRYPTION_KEY` is required; compose refuses to start without it.
@@ -36,7 +26,7 @@ index fd26c64..f51d582 100644
  is in the header of `backups/restore.sh`.
  
 diff --git a/backups/backup.sh b/backups/backup.sh
-index 52458d9..a247a08 100644
+index 52458d94..a247a08a 100644
 --- a/backups/backup.sh
 +++ b/backups/backup.sh
 @@ -25,12 +25,19 @@ SELF="/usr/local/bin/backup.sh"
@@ -64,7 +54,7 @@ index 52458d9..a247a08 100644
  
  # GDPR: encryption passphrase (required)
 diff --git a/backups/restore.sh b/backups/restore.sh
-index e1e0a16..7ec5a72 100644
+index e1e0a165..7ec5a72a 100644
 --- a/backups/restore.sh
 +++ b/backups/restore.sh
 @@ -31,7 +31,9 @@ set -eu
@@ -105,10 +95,10 @@ index e1e0a16..7ec5a72 100644
  # and functions in it. Every session here looks names up in pg_catalog only, so
  # no operator or function the app put elsewhere runs with the superuser's rights.
 diff --git a/docker-compose.yml b/docker-compose.yml
-index 8ddba24..e182f00 100644
+index a9683adc..b4a3efde 100644
 --- a/docker-compose.yml
 +++ b/docker-compose.yml
-@@ -306,8 +306,15 @@ services:
+@@ -311,8 +311,15 @@ services:
      pids_limit: 128
      environment:
        POSTGRES_DB: ${POSTGRES_DB}
@@ -125,10 +115,10 @@ index 8ddba24..e182f00 100644
        POSTGRES_HOST: postgres
        POSTGRES_PORT: "5432"
        # restore.sh loads a dump as the app's role, which app_db_role.sh
-@@ -391,7 +398,10 @@ services:
-       FRONTEND_PORT: "80"
-     volumes:
+@@ -403,7 +410,10 @@ services:
        - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+       - ./nginx/render_config.sh:/etc/nginx/render_config.sh:ro
+       - ./nginx/bunny_edges:/etc/nginx/bunny_edges:ro
 -      - ./nginx/super_admin_allowed_ips.conf:/etc/nginx/super_admin_allowed_ips.conf:ro
 +      # The directory, not the file: a file bind-mount pins the inode, so an
 +      # edit that replaces the file (vim, sed -i, cp) would stay invisible to
@@ -138,10 +128,10 @@ index 8ddba24..e182f00 100644
        - ./nginx/security_headers_admin.conf:/etc/nginx/security_headers_admin.conf:ro
        - static_volume:/app/staticfiles:ro
 diff --git a/jasmin-core/django-core/config/settings.py b/jasmin-core/django-core/config/settings.py
-index 133425c..42e665f 100644
+index a8128ef1..06f68863 100644
 --- a/jasmin-core/django-core/config/settings.py
 +++ b/jasmin-core/django-core/config/settings.py
-@@ -538,7 +538,7 @@ TENANT_APPS = [
+@@ -557,7 +557,7 @@ TENANT_APPS = [
      # by TOTP — instead the super-admin host is locked down by an IP
      # allowlist enforced AT THE NGINX GATEWAY (a dedicated server block
      # in nginx/nginx.conf.template that includes
@@ -150,7 +140,7 @@ index 133425c..42e665f 100644
      # The ``gateway`` CI job (scripts/verify_super_admin_allowlist.sh)
      # asserts the block + allowlist stay wired so this exemption can't
      # silently become single-factor-password-only. As app-layer
-@@ -756,7 +756,7 @@ AXES_CLIENT_IP_CALLABLE = "apps.shared.request_utils.client_ip"
+@@ -775,7 +775,7 @@ AXES_CLIENT_IP_CALLABLE = "apps.shared.request_utils.client_ip"
  #   SUPER_ADMIN_ALLOWED_IPS="203.0.113.42,198.51.100.0/29,2001:db8::/64"
  # UNSET / empty -> middleware is a no-op (dev, and deployments relying solely on
  # the nginx allowlist, keep working). Keep this in sync with
@@ -159,7 +149,7 @@ index 133425c..42e665f 100644
  SUPER_ADMIN_ALLOWED_IPS = [
      entry.strip()
      for entry in os.environ.get("SUPER_ADMIN_ALLOWED_IPS", "").split(",")
-@@ -911,9 +911,9 @@ TWO_FACTOR_ENROLMENT_LIFETIME = timedelta(minutes=15)
+@@ -927,9 +927,9 @@ TWO_FACTOR_ENROLMENT_LIFETIME = timedelta(minutes=15)
  # which leaves the whole enrolment-mandate login branch unreachable.
  # Super-admin (public schema) is not eligible for this gate — its host is
  # instead IP-restricted at the nginx gateway (see the django_otp note in
@@ -173,10 +163,10 @@ index 133425c..42e665f 100644
      _role.strip()
      for _role in os.environ.get("TWO_FACTOR_REQUIRED_ROLES", "").split(",")
 diff --git a/nginx/nginx.conf.template b/nginx/nginx.conf.template
-index 3d507a9..cdc431c 100644
+index 21664b31..c7a1d942 100644
 --- a/nginx/nginx.conf.template
 +++ b/nginx/nginx.conf.template
-@@ -382,13 +382,10 @@ http {
+@@ -421,13 +421,10 @@ http {
      # this block handles ALL traffic to ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN}
      # while tenant subdomains continue to be served by the wildcard block.
      #
@@ -194,7 +184,7 @@ index 3d507a9..cdc431c 100644
      server {
          listen      443 ssl;
          listen      [::]:443 ssl;
-@@ -396,7 +393,13 @@ http {
+@@ -435,7 +432,13 @@ http {
          server_name ${SUPER_ADMIN_SUBDOMAIN}.${FRONTEND_DOMAIN};
  
          # IP allowlist - checked before any routing. Returns 403 for non-allowed.
@@ -213,7 +203,7 @@ diff --git a/nginx/super_admin_allowed_ips.conf b/nginx/super_admin_allowlist/su
 similarity index 71%
 rename from nginx/super_admin_allowed_ips.conf
 rename to nginx/super_admin_allowlist/super_admin_allowed_ips.conf
-index 30ebdf0..3b5630c 100644
+index 30ebdf0f..3b5630c2 100644
 --- a/nginx/super_admin_allowed_ips.conf
 +++ b/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
 @@ -8,12 +8,9 @@
@@ -232,15 +222,29 @@ index 30ebdf0..3b5630c 100644
  #
  # Find your current IP: https://ifconfig.me/ or `curl -s ifconfig.me`
  #
+diff --git a/scripts/check_gateway_config.sh b/scripts/check_gateway_config.sh
+index 74421a14..21537596 100755
+--- a/scripts/check_gateway_config.sh
++++ b/scripts/check_gateway_config.sh
+@@ -26,7 +26,8 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+   -out /etc/letsencrypt/live/$FRONTEND_DOMAIN/fullchain.pem \
+   -subj "/CN=$FRONTEND_DOMAIN" >/dev/null 2>&1
+ # The files the gateway mounts next to the template.
+-cp /work/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowed_ips.conf
++mkdir -p /etc/nginx/super_admin_allowlist
++cp /work/super_admin_allowlist/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowlist/super_admin_allowed_ips.conf
+ cp /work/security_headers.conf /etc/nginx/security_headers.conf
+ cp /work/security_headers_admin.conf /etc/nginx/security_headers_admin.conf
+ cp /work/nginx.conf.template /etc/nginx/templates/nginx.conf.template
 diff --git a/scripts/deploy.sh b/scripts/deploy.sh
-index e84a668..168d628 100755
+index df3f98e6..834cf9eb 100755
 --- a/scripts/deploy.sh
 +++ b/scripts/deploy.sh
-@@ -107,6 +107,21 @@ else
-     fi
- fi
+@@ -121,6 +121,21 @@ done
+ [ -n "$(envval BUNNY_ORIGIN_SECRET)" ] || [ -z "$(envval BUNNY_ORIGIN_SECRET_NEXT)" ] || \
+     die "BUNNY_ORIGIN_SECRET_NEXT is set but BUNNY_ORIGIN_SECRET is empty."
  
-+# 1b-ter. The backup service dumps as a read-only role (BACKUP_DB_USER, granted
++# 1b-quater. The backup service dumps as a read-only role (BACKUP_DB_USER, granted
 +# pg_read_all_data) and falls back to the superuser while it is unset.
 +# Half a pair would log in with the wrong password and fail every backup.
 +BACKUP_DB_USER_VALUE="$(envval BACKUP_DB_USER)"
@@ -258,7 +262,7 @@ index e84a668..168d628 100755
  PROJECT="$(envval COMPOSE_PROJECT_NAME)"
  DOMAIN="$(envval FRONTEND_DOMAIN)"
  EMAIL="$(envval EMAIL_ADMIN)"
-@@ -320,8 +335,8 @@ fi
+@@ -340,8 +355,8 @@ fi
  echo ""
  echo "✅ Deploy run complete."
  echo "   Next (see the runbook, Phase 2.5+):"
@@ -267,10 +271,10 @@ index e84a668..168d628 100755
 +echo "   1. Add your IP to nginx/super_admin_allowlist/super_admin_allowed_ips.conf, then:"
 +echo "        docker compose exec gateway nginx -s reload"
  echo "   2. Log in at https://${ADMIN_HOST}.${DOMAIN} and create your tenants."
- echo "   3. Configure EACH tenant's own SMTP before inviting its users."
- echo "   4. Wire off-host backups (Phase 3), then run scripts/restore_drill.sh."
+ echo "      While BUNNY_ORIGIN_SECRET is set, add each new tenant host to the Bunny"
+ echo "      pull zone first: the gateway gives a host that bypasses Bunny no answer."
 diff --git a/scripts/restore_drill.sh b/scripts/restore_drill.sh
-index d385a97..c82d4f3 100755
+index d385a971..c82d4f32 100755
 --- a/scripts/restore_drill.sh
 +++ b/scripts/restore_drill.sh
 @@ -308,6 +308,8 @@ run_restore() {
@@ -283,7 +287,7 @@ index d385a97..c82d4f3 100755
          -e ALLOW_MISSING_GDPR_LEDGER=1 \
          -e CONFIRM_SWAP=1 \
 diff --git a/scripts/update.sh b/scripts/update.sh
-index a9406d5..60a09a2 100755
+index a9406d5e..60a09a27 100755
 --- a/scripts/update.sh
 +++ b/scripts/update.sh
 @@ -10,8 +10,9 @@
@@ -308,20 +312,20 @@ index a9406d5..60a09a2 100755
      echo "❌ Unexpected local changes on the server — resolve before updating:" >&2
      echo "$dirt" >&2
 diff --git a/scripts/validate_gateway_config.sh b/scripts/validate_gateway_config.sh
-index f2f0491..c307131 100755
+index ef2bf71c..f3a08d92 100755
 --- a/scripts/validate_gateway_config.sh
 +++ b/scripts/validate_gateway_config.sh
-@@ -32,7 +32,7 @@ docker run --rm \
-     -e BACKEND_HOST=backend -e BACKEND_PORT=8000 \
-     -e FRONTEND_HOST=frontend -e FRONTEND_PORT=80 \
+@@ -43,7 +43,7 @@ docker run --rm \
      -v "$REPO_ROOT/nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro" \
+     -v "$REPO_ROOT/nginx/render_config.sh:/etc/nginx/render_config.sh:ro" \
+     -v "$REPO_ROOT/nginx/bunny_edges:/etc/nginx/bunny_edges:ro" \
 -    -v "$REPO_ROOT/nginx/super_admin_allowed_ips.conf:/etc/nginx/super_admin_allowed_ips.conf:ro" \
 +    -v "$REPO_ROOT/nginx/super_admin_allowlist:/etc/nginx/super_admin_allowlist:ro" \
      -v "$REPO_ROOT/nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro" \
      -v "$REPO_ROOT/nginx/security_headers_admin.conf:/etc/nginx/security_headers_admin.conf:ro" \
      -v "${PROJECT}_certbot_conf:/etc/letsencrypt:ro" \
 diff --git a/scripts/verify_super_admin_allowlist.sh b/scripts/verify_super_admin_allowlist.sh
-index 39bfd42..ff1f309 100755
+index 39bfd424..ff1f309d 100755
 --- a/scripts/verify_super_admin_allowlist.sh
 +++ b/scripts/verify_super_admin_allowlist.sh
 @@ -32,7 +32,7 @@ set -eu

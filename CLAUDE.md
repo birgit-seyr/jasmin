@@ -1258,7 +1258,11 @@ built from the app's data quotes it.
 - `frontend`: React + Nginx (built SPA); keeps the hashed assets of the last
   three releases on the `frontend_assets` volume, so a tab still running an
   older release can lazy-load its chunks after a deploy
-- `gateway`: Public Nginx with TLS, routes to backend/frontend
+- `gateway`: Public Nginx with TLS, routes to backend/frontend. While
+  `BUNNY_ORIGIN_SECRET` is set, the tenant hosts serve only requests that came
+  through the Bunny pull zone and take the client's IP from Bunny's
+  `X-Forwarded-For` (`nginx/render_config.sh`) — so a new tenant's hostname
+  has to be in the pull zone before it gets any answer
 - `certbot`: Let's Encrypt renewal (wildcard certs via Linode DNS plugin)
 - `backup`: nightly encrypted DB dump + media archive
 
@@ -1283,7 +1287,7 @@ their schemas themselves. In production, run them in the backend container
 | `replay_gdpr_deletions` | prod, after a restore | Re-applies the GDPR erasures a backup restore undid, from the deletion ledger kept outside the database (`--ledger`, `--dry-run`). Run it after the restore and before the app serves requests again; the module docstring has the command line. |
 | `rotate_django_secret`, `rotate_db_password` | prod | Generate a new secret and print the steps to apply it; they change nothing themselves. |
 | `rotate_email_creds` | prod | Clears every tenant's stored SMTP password, so each office has to re-enter it before mail goes out again. Preview with `--dry-run`. |
-| `rotate_bunny_token` | prod | Prints the BunnyCDN token rotation steps; there is nothing to rotate in code. |
+| `rotate_bunny_token` | prod | Prints the rotation steps for the Bunny account's API key and for the origin secret (`BUNNY_ORIGIN_SECRET`); both are changed by hand. |
 | `rotate_field_encryption` | prod | Re-encrypts every encrypted field with the first key in `FIELD_ENCRYPTION_KEY` — step 3 of the key rotation its docstring describes. `--dry-run`, `--schema`. |
 | `run_periodic_tasks_now` | dev, QA | Runs every Huey periodic task once, in-process (`--only`, `--skip`). Nothing stops it in production, where it does at once what the schedule would. |
 | `seed_dev_tenant` | dev | Creates or refreshes the `test` tenant at `test.localhost` with an admin and the persona logins (`make dev-seed`). |

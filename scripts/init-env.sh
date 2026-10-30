@@ -181,6 +181,16 @@ VITE_SUPER_ADMIN_SUBDOMAIN=${SUPER_ADMIN_SUBDOMAIN}
 DJANGO_SUPERUSER_EMAIL=${ADMIN_EMAIL}
 DJANGO_SUPERUSER_PASSWORD=${SUPERUSER_PASSWORD}
 
+# --- origin gate: tenant hosts only through the Bunny pull zone ---
+# Empty until every tenant pull zone has the edge rule that sends this value as
+# the X-Origin-Secret request header: once set, the tenant hosts refuse every
+# request without it. 32 to 64 letters and digits (openssl rand -hex 32); the
+# NEXT one is accepted beside it while the secret changes. Check a change with
+# ./scripts/validate_gateway_config.sh, then apply it with
+# 'docker compose up -d gateway'. nginx/render_config.sh has the details.
+BUNNY_ORIGIN_SECRET=
+BUNNY_ORIGIN_SECRET_NEXT=
+
 # --- backups ---
 BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY}
 BACKUP_SCHEDULE=0 2 * * *

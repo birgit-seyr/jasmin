@@ -24,7 +24,7 @@ directory instead, so a reload always sees the current file. It also:
   `scripts/validate_gateway_config.sh`, `scripts/update.sh` (the clean-tree guard
   that tolerates the server-local allowlist edit), `scripts/deploy.sh` (the
   closing hint, which now says `nginx -s reload` instead of a restart), the
-  `gateway` job in `.github/workflows/ci.yml`, and three comments in
+  gateway check CI runs (`scripts/check_gateway_config.sh`), and three comments in
   `jasmin-core/django-core/config/settings.py`.
 
 ### 2. The backup sidecar dumps as a read-only role

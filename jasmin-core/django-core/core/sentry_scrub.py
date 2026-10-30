@@ -7,7 +7,9 @@ own message), which land in the monitoring store beyond the reach of the GDPR
 erasure pipeline. These hooks scrub email-, IPv4- and IBAN-shaped substrings
 from breadcrumbs, the event's log entry (the template, the formatted text and
 every string argument) and its exception values — defence-in-depth on top of
-logging stable PKs (not emails) at the call sites.
+logging stable PKs (not emails) at the call sites. ``before_send`` also drops
+the request headers that carry a secret of the platform's own, which Sentry's
+filter of the standard ones (Authorization, Cookie, …) doesn't know.
 
 Sentry's event shape is not a contract this code controls, so every hook skips
 a part whose shape it does not recognise instead of raising: an exception in
@@ -24,6 +26,11 @@ _IPV4_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 # printed groups of four. Upper case only: an IBAN is written that way, and the
 # mixed-case record IDs must stay readable in the events.
 _IBAN_RE = re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b")
+
+# Matched in lower case. The gateway drops X-Origin-Secret before proxying (the
+# origin gate, nginx/render_config.sh), so this only matters should a location
+# miss it.
+_SECRET_HEADERS = frozenset({"x-origin-secret"})
 
 
 def scrub_pii(text):
@@ -63,9 +70,21 @@ def _entries(container) -> list:
     return entries if isinstance(entries, list) else []
 
 
+def _drop_secret_headers(request) -> None:
+    headers = request.get("headers") if isinstance(request, dict) else None
+    if isinstance(headers, dict):
+        request["headers"] = {
+            name: value
+            for name, value in headers.items()
+            if not (isinstance(name, str) and name.lower() in _SECRET_HEADERS)
+        }
+
+
 def before_send(event, _hint):
     """Sentry ``before_send`` hook — scrub the event's log entry, its exception
-    values and any breadcrumbs already attached to it."""
+    values and any breadcrumbs already attached to it, and drop the request's
+    secret headers."""
+    _drop_secret_headers(event.get("request"))
     _scrub_logentry(event.get("logentry"))
     for exception in _entries(event.get("exception")):
         if isinstance(exception, dict) and exception.get("value"):

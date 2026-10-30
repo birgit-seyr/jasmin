@@ -110,6 +110,17 @@ else
     fi
 fi
 
+# 1b-ter. the origin gate's secrets become nginx map keys, and the gateway
+# refuses to start on one it can't use (nginx/render_config.sh) — checked here,
+# before anything restarts.
+for v in BUNNY_ORIGIN_SECRET BUNNY_ORIGIN_SECRET_NEXT; do
+    value="$(envval "$v")"
+    [ -z "$value" ] || [[ "$value" =~ ^[A-Za-z0-9]{32,64}$ ]] || \
+        die "$v must be 32 to 64 letters and digits (openssl rand -hex 32)."
+done
+[ -n "$(envval BUNNY_ORIGIN_SECRET)" ] || [ -z "$(envval BUNNY_ORIGIN_SECRET_NEXT)" ] || \
+    die "BUNNY_ORIGIN_SECRET_NEXT is set but BUNNY_ORIGIN_SECRET is empty."
+
 PROJECT="$(envval COMPOSE_PROJECT_NAME)"
 DOMAIN="$(envval FRONTEND_DOMAIN)"
 EMAIL="$(envval EMAIL_ADMIN)"
@@ -221,6 +232,12 @@ if [ -n "$plain_dumps" ]; then
 fi
 
 # ── 5. bring up the core stack (glitchtip/uptime deferred to Phase 5) ───────
+# The Bunny edges whose X-Forwarded-For the origin gate trusts (only while
+# BUNNY_ORIGIN_SECRET is set). A failed fetch keeps the list already there.
+log "refreshing the Bunny edge list"
+./scripts/refresh_bunny_edge_ips.sh --no-reload \
+    || log "WARN: Bunny edge list not refreshed (above) — the gateway keeps the one it has"
+
 log "starting core services"
 docker compose up -d postgres redis backend huey frontend gateway certbot backup
 
@@ -326,6 +343,8 @@ echo "   Next (see the runbook, Phase 2.5+):"
 echo "   1. Add your IP to nginx/super_admin_allowed_ips.conf, then:"
 echo "        docker compose restart gateway"
 echo "   2. Log in at https://${ADMIN_HOST}.${DOMAIN} and create your tenants."
+echo "      While BUNNY_ORIGIN_SECRET is set, add each new tenant host to the Bunny"
+echo "      pull zone first: the gateway gives a host that bypasses Bunny no answer."
 echo "   3. Configure EACH tenant's own SMTP before inviting its users."
 echo "   4. Wire off-host backups (Phase 3), then run scripts/restore_drill.sh."
 

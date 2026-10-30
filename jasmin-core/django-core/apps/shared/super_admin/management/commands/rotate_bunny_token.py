@@ -1,13 +1,9 @@
-"""Print the BunnyCDN token rotation runbook.
+"""Print the Bunny rotation runbook: the account's API key and the origin secret.
 
-There is no BunnyCDN integration in code today, so the platform has
-nothing to rotate from a button — the rotation happens entirely in
-Bunny's dashboard. This command exists so the super-admin UI button
-has a backing surface and so the runbook lives somewhere queryable
-from the CLI.
-
-Replace this stub with a real rotation if/when BunnyCDN gets an
-integration.
+Both are changed by hand — the key in Bunny's dashboard, the origin secret in
+``.env`` and the pull zones' edge rules — so the platform has nothing to rotate
+from a button. This command gives the super-admin UI button a backing surface
+and keeps the runbook queryable from the CLI.
 """
 
 from __future__ import annotations
@@ -22,7 +18,7 @@ logger = logging.getLogger("super_admin")
 
 
 class Command(BaseCommand):
-    help = "Print the BunnyCDN token rotation runbook (no code-side rotation)."
+    help = "Print the Bunny API key and origin secret rotation runbook."
 
     def handle(self, *args, **options) -> None:
         result = rotate("rotate_bunny_token")

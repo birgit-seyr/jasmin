@@ -149,6 +149,10 @@ class TestRotationService:
         assert result.generated_secret is None
         assert result.items_affected == 0
         assert "Bunny dashboard" in result.instructions
+        # The origin secret changes through the next-secret slot, so Bunny
+        # never sends one the gateway refuses.
+        assert "BUNNY_ORIGIN_SECRET_NEXT" in result.instructions
+        assert "docker compose up -d gateway" in result.instructions
 
     def test_unknown_kind_raises(self):
         with pytest.raises(UnknownRotationKind):

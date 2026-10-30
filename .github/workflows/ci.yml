@@ -295,46 +295,17 @@ jobs:
         # server block + allowlist include. Pure shell, no nginx needed.
         run: ./scripts/verify_super_admin_allowlist.sh
 
-      - name: Validate rendered nginx config (nginx -t)
-        # Render the prod template the way docker-compose's gateway command
-        # does and syntax-check it on the exact prod image, so a broken
-        # template is caught here rather than when the gateway container
-        # refuses to boot in production. A throwaway self-signed cert
-        # satisfies the ssl_certificate paths; the hosts entry lets nginx
-        # resolve the upstream names at config-load.
+      - name: Validate rendered nginx config and the origin gate
+        # Render the prod template the way the gateway service does
+        # (nginx/render_config.sh), syntax-check it on the exact prod image and
+        # serve it with the origin gate off and on, so a broken template, or a
+        # gate that refuses every tenant or lets anyone in, is caught here
+        # rather than in production.
         run: |
-          cat > /tmp/nginx_check.sh <<'EOF'
-          set -eu
-          apk add --no-cache openssl >/dev/null 2>&1
-          export FRONTEND_DOMAIN=ci.example.test SUPER_ADMIN_SUBDOMAIN=adminci
-          export BACKEND_HOST=backend BACKEND_PORT=8000 FRONTEND_HOST=frontend FRONTEND_PORT=80
-          echo "127.0.0.1 backend frontend" >> /etc/hosts
-          mkdir -p /etc/letsencrypt/live/$FRONTEND_DOMAIN
-          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
-            -keyout /etc/letsencrypt/live/$FRONTEND_DOMAIN/privkey.pem \
-            -out /etc/letsencrypt/live/$FRONTEND_DOMAIN/fullchain.pem \
-            -subj "/CN=$FRONTEND_DOMAIN" >/dev/null 2>&1
-          cp /work/super_admin_allowed_ips.conf /etc/nginx/super_admin_allowed_ips.conf
-          # Security-header snippets included by the template; the
-          # gateway mounts these too, so they must be present for `nginx -t`.
-          cp /work/security_headers.conf /etc/nginx/security_headers.conf
-          cp /work/security_headers_admin.conf /etc/nginx/security_headers_admin.conf
-          envsubst '$FRONTEND_DOMAIN $SUPER_ADMIN_SUBDOMAIN $BACKEND_HOST $BACKEND_PORT $FRONTEND_HOST $FRONTEND_PORT' \
-            < /work/nginx.conf.template > /etc/nginx/nginx.conf
-          out=$(nginx -t 2>&1) || { echo "$out"; exit 1; }
-          echo "$out"
-          # `nginx -t` exits 0 on a "conflicting server name" — but that
-          # warning means the super-admin host is shadowed by the wildcard
-          # block and its allowlist never applies. Treat it as a failure.
-          if echo "$out" | grep -qiE 'conflicting server name'; then
-            echo "FAIL: nginx reported a conflicting server name — super-admin host would route to the wrong (unrestricted) block"
-            exit 1
-          fi
-          EOF
           docker run --rm \
             -v "$PWD/nginx:/work:ro" \
-            -v /tmp/nginx_check.sh:/tmp/nginx_check.sh:ro \
-            nginx:1.31-alpine sh /tmp/nginx_check.sh
+            -v "$PWD/scripts/check_gateway_config.sh:/check.sh:ro" \
+            nginx:1.31-alpine sh /check.sh
 
   docker-smoke:
     name: Docker smoke (backend image builds + boots + serves)

@@ -394,8 +394,15 @@ services:
       BACKEND_PORT: "8000"
       FRONTEND_HOST: frontend
       FRONTEND_PORT: "80"
+      # The origin gate (nginx/render_config.sh): empty keeps it off. The
+      # gateway reads them when it is created, so a change takes
+      # `docker compose up -d gateway`, not a restart.
+      BUNNY_ORIGIN_SECRET: ${BUNNY_ORIGIN_SECRET:-}
+      BUNNY_ORIGIN_SECRET_NEXT: ${BUNNY_ORIGIN_SECRET_NEXT:-}
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/render_config.sh:/etc/nginx/render_config.sh:ro
+      - ./nginx/bunny_edges:/etc/nginx/bunny_edges:ro
       - ./nginx/super_admin_allowed_ips.conf:/etc/nginx/super_admin_allowed_ips.conf:ro
       - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
       - ./nginx/security_headers_admin.conf:/etc/nginx/security_headers_admin.conf:ro
@@ -418,9 +425,7 @@ services:
     # ("syntax error: unexpected &&", gateway crash-loop). Same indent
     # everywhere + operators at end-of-line folds to one clean command line.
     command: >
-      /bin/sh -c "envsubst '$$FRONTEND_DOMAIN $$SUPER_ADMIN_SUBDOMAIN $$BACKEND_HOST $$BACKEND_PORT $$FRONTEND_HOST $$FRONTEND_PORT'
-      < /etc/nginx/templates/nginx.conf.template
-      > /etc/nginx/nginx.conf &&
+      /bin/sh -c "sh /etc/nginx/render_config.sh &&
       nginx -t &&
       (while :; do sleep 12h & wait $${!}; nginx -s reload; done &) &&
       exec nginx -g 'daemon off;'"

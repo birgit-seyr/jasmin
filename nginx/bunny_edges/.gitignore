@@ -1,0 +1,3 @@
+# edges.conf is written on the server by scripts/refresh_bunny_edge_ips.sh.
+*
+!.gitignore
