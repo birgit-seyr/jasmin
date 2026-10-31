@@ -26,7 +26,7 @@ python-dateutil = "^2.9.0"
 requests = "^2.32.3"
 weasyprint = "^70.0"
 
-django-tenants = "^3.10"
+django-tenants = ">=3.10,<5.0"
 drf-spectacular = ">=0.29,<0.31"
 django-localflavor = "^5.0"
 redis = "^7.1.0"
