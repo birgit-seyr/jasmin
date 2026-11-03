@@ -22,7 +22,7 @@ openpyxl = "^3.1.5"
 # CP-SAT solver behind the cultivation placement planner (apps/cultivation/optimizer).
 ortools = "^9.15"
 psycopg2-binary = "^2.9.10"
-python-dateutil = "^2.9.0"
+python-dateutil = ">=2.9,<4.0"
 requests = "^2.32.3"
 weasyprint = "^70.0"
 
