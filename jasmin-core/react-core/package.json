@@ -63,7 +63,7 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
-    "@ant-design/cssinjs": "^1.23.0",
+    "@ant-design/cssinjs": "^2.1.2",
     "@eslint/js": "^9.39.5",
     "@tanstack/react-query-devtools": "^5.105.0",
     "@testing-library/jest-dom": "^7.0.1",
