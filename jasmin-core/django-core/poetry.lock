@@ -1306,17 +1306,18 @@ doc = ["Sphinx", "sphinx-rtd-theme", "sphinxcontrib-spelling"]
 
 [[package]]
 name = "factur-x"
-version = "6.8"
+version = "7.9"
 description = "Factur-X and Order-X: electronic invoicing and ordering standards"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "factur_x-6.8-py3-none-any.whl", hash = "sha256:02b57dd57f59d0cdd87f034a538bf30a4b9241a72a19cd75fe1538233163ee15"},
-    {file = "factur_x-6.8.tar.gz", hash = "sha256:d0071e9c7217666ead025f442765e1e2ef4a0ba8e2677bab640427eb08bbb349"},
+    {file = "factur_x-7.9-py3-none-any.whl", hash = "sha256:a91b66e48b51de0b2075d52091e794ed254585553daa5bfbd37041a166e296ae"},
+    {file = "factur_x-7.9.tar.gz", hash = "sha256:c4f8cc09dfc52007f6ff20c770a8e68cb02d87360d10851d75d1db5cbb1df1af"},
 ]
 
 [package.dependencies]
+iso4217 = "*"
 lxml = "*"
 pypdf = ">=5.3.0"
 python-stdnum = "*"
@@ -1536,6 +1537,18 @@ groups = ["dev"]
 files = [
     {file = "iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12"},
     {file = "iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730"},
+]
+
+[[package]]
+name = "iso4217"
+version = "1.16.20260101"
+description = "ISO 4217 currency data package for Python"
+optional = false
+python-versions = ">=3.6"
+groups = ["main"]
+files = [
+    {file = "iso4217-1.16.20260101-py2.py3-none-any.whl", hash = "sha256:69c591b93c7d783ec8c309ebee8df1aa28f8403d44bcce518ae8db050462084b"},
+    {file = "iso4217-1.16.20260101.tar.gz", hash = "sha256:6a5afba6acb01cad8045f81e2b96f6adbea04f0c524ae21f317ac4ca11c3bdd6"},
 ]
 
 [[package]]
@@ -3925,4 +3938,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.14"
-content-hash = "8fb4de943748f668caaa7896e49d908942e517827959dc175ec078f9c153d4c0"
+content-hash = "3ab1f966d54d20ccdea1e67dca982edf398ff622837a105d2968a6f7e75b0cd5"
