@@ -4,8 +4,9 @@ Generic, project-agnostic — only depends on `request.user.roles` being an
 iterable of role strings (see `apps.authz.roles.Role`). Any consuming app
 imports from here and never reaches into a specific user app.
 
-Mirrors the frontend `RoleFlags` shape in `src/shared/auth/useRoles.ts`. Keep
-these in sync — backend enforcement must match UI gating exactly.
+The role flag classes admit the roles of the frontend `RoleFlags` of the same
+name in `src/shared/auth/useRoles.ts`; keep the two in sync, so a page offers
+what the API accepts.
 """
 
 from __future__ import annotations
@@ -61,15 +62,15 @@ class HasAnyRole(BasePermission):
         return granted
 
 
-# --- Role flag classes (kept 1:1 with frontend RoleFlags) ---------------------
+# --- Role flag classes --------------------------------------------------------
+# IsOffice, IsAdmin, IsStaff and CanEditCultivation admit the roles of the
+# RoleFlags of the same name. The frontend's ``isManagement`` and ``canEdit``
+# gate the UI only: no endpoint grants by those role sets, so they have no class
+# here.
 
 
 class IsOffice(HasAnyRole):
     required_roles = (Role.OFFICE, Role.ADMIN)
-
-
-class IsManagement(HasAnyRole):
-    required_roles = (Role.MANAGEMENT, Role.ADMIN)
 
 
 class IsAdmin(HasAnyRole):
@@ -92,10 +93,6 @@ class IsCustomer(HasAnyRole):
 
 class IsMember(HasAnyRole):
     required_roles = (Role.MEMBER, Role.OFFICE, Role.ADMIN)
-
-
-class CanEdit(HasAnyRole):
-    required_roles = (Role.GARDENER, Role.OFFICE, Role.ADMIN, Role.STAFF)
 
 
 class CanEditCultivation(HasAnyRole):

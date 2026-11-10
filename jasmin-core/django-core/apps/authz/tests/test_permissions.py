@@ -14,11 +14,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.test import APIRequestFactory
 
 from apps.authz.permissions import (
-    CanEdit,
     HasAnyRole,
     IsAdmin,
     IsCustomer,
-    IsManagement,
     IsMember,
     IsOffice,
     IsStaff,
@@ -85,7 +83,6 @@ PERMISSION_MATRIX = [
         [Role.OFFICE, Role.ADMIN],
         [Role.STAFF, Role.MEMBER, Role.CUSTOMER, Role.GARDENER],
     ),
-    (IsManagement, [Role.MANAGEMENT, Role.ADMIN], [Role.OFFICE, Role.STAFF]),
     (
         IsAdmin,
         [Role.ADMIN],
@@ -105,11 +102,6 @@ PERMISSION_MATRIX = [
         IsMember,
         [Role.MEMBER, Role.OFFICE, Role.ADMIN],
         [Role.STAFF, Role.CUSTOMER, Role.GARDENER],
-    ),
-    (
-        CanEdit,
-        [Role.GARDENER, Role.OFFICE, Role.ADMIN, Role.STAFF],
-        [Role.MEMBER, Role.MANAGEMENT],
     ),
     (
         IsStaffOrCustomer,
