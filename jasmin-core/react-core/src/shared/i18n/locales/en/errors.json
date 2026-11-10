@@ -252,7 +252,9 @@
     "day_missing_harvesting_day": "This order has no harvest day, and no default harvest day is set for this delivery day. Pick a harvest day. The default order days are set under Configuration → Delivery days.",
     "day_missing_washing_day": "This order has no washing day, and no default washing day is set for this delivery day. Pick a washing day. The default order days are set under Configuration → Delivery days.",
     "day_missing_cleaning_day": "This order has no cleaning day, and no default cleaning day is set for this delivery day. Pick a cleaning day. The default order days are set under Configuration → Delivery days.",
-    "day_missing_packing_day": "This order has no commissioning day, and no default commissioning day is set for this delivery day. Pick a commissioning day. The default order days are set under Configuration → Delivery days."
+    "day_missing_packing_day": "This order has no commissioning day, and no default commissioning day is set for this delivery day. Pick a commissioning day. The default order days are set under Configuration → Delivery days.",
+    "day_not_offered": "Orders aren't delivered on this day.",
+    "ordering_deadline_passed": "The ordering deadline for this delivery day has passed."
   },
   "order_content": {
     "not_found": "Order line not found.",
@@ -265,7 +267,8 @@
     "offer_week_mismatch": "This offer is for a different week than the order.",
     "item_change_forbidden": "An order line's offer can't be changed, and only office staff can change its article.",
     "offer_change_refused": "An order line's offer can't be changed: delete the line and add it again with the other offer.",
-    "amount_negative": "The ordered amount cannot be negative."
+    "amount_negative": "The ordered amount cannot be negative.",
+    "office_only": "Only the office can change this order line."
   },
   "orderable_item": {
     "reference_invalid": "A line must reference exactly one item: either an offer or an article — not both, and not neither."

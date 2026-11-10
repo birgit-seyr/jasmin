@@ -203,6 +203,45 @@ class TestSetCustomerLinePrice:
 
         assert line["price_per_unit"] == Decimal("1.60")
 
+    def test_a_tier_priced_line_follows_its_new_amount(self):
+        instance = OrderContent(
+            offer=_offer(**OFFER_PRICES),
+            amount=Decimal("10.000"),
+            price_per_unit=Decimal("1.80"),
+        )
+        line = {"amount": Decimal("20.000")}
+
+        set_customer_line_price(line, instance)
+
+        assert line["price_per_unit"] == Decimal("1.60")
+
+    def test_the_stored_amount_sent_again_keeps_the_stored_price(self):
+        instance = OrderContent(
+            offer=_offer(**OFFER_PRICES),
+            amount=Decimal("10.000"),
+            price_per_unit=Decimal("1.50"),
+        )
+        line = {"amount": Decimal("10"), "price_per_unit": Decimal("0.01")}
+
+        set_customer_line_price(line, instance)
+
+        assert line == {"amount": Decimal("10")}
+
+    @pytest.mark.parametrize(
+        "prices", [OFFER_PRICES, {}], ids=["offer prices", "no offer prices"]
+    )
+    def test_a_price_the_office_set_survives_an_amount_change(self, prices):
+        instance = OrderContent(
+            offer=_offer(**prices),
+            amount=Decimal("10.000"),
+            price_per_unit=Decimal("2.50"),
+        )
+        line = {"amount": Decimal("20.000")}
+
+        set_customer_line_price(line, instance)
+
+        assert line == {"amount": Decimal("20.000")}
+
     def test_a_write_without_amount_keeps_the_stored_price(self):
         instance = OrderContent(offer=_offer(**OFFER_PRICES))
         line = {"note": "ring twice", "price_per_unit": Decimal("0.01")}

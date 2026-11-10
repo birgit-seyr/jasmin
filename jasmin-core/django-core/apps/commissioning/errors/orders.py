@@ -107,6 +107,22 @@ class OrderDayMissing(BadRequestError):
         )
 
 
+class OrderDayNotOffered(BadRequestError):
+    """A customer tried to order for a day their order page's day picker
+    doesn't list: one without an order delivery day (``OrdersDeliveryDay``)
+    while the farm has set some up, or Sunday while it has none."""
+
+    code = "order.day_not_offered"
+
+
+class OrderingDeadlinePassed(ConflictError):
+    """A customer tried to change their order after the delivery day's ordering
+    deadline, when their order page shows it closed. Only office staff may
+    change it then."""
+
+    code = "order.ordering_deadline_passed"
+
+
 class OrderContentNotFound(NotFoundError):
     code = "order_content.not_found"
 
@@ -121,9 +137,9 @@ class OrderContentChanged(ConflictError):
 
 
 class OrderContentOfferRequired(ForbiddenError):
-    """A customer order line must order an offer. A free ``share_article`` line
-    has no offer, so it would skip the stock check and the offer group's
-    offer set; only office staff may add one or change it."""
+    """A customer's new order line must order an offer. A free
+    ``share_article`` line has no offer, so it would skip the stock check and
+    the offer group's offer set; only office staff may add one."""
 
     code = "order_content.offer_required"
 
@@ -166,6 +182,15 @@ class OrderContentOfferWeekMismatch(ForbiddenError):
     staff may order one."""
 
     code = "order_content.offer_week_mismatch"
+
+
+class OrderContentOfficeOnly(ForbiddenError):
+    """A customer tried to change or delete what only office staff may: a line
+    office staff added that the customer couldn't have ordered (one without an
+    offer, or on an offer their order page doesn't list), or a field of their
+    own line that the line takes from its offer."""
+
+    code = "order_content.office_only"
 
 
 class OrderContentAmountNegative(ForbiddenError):

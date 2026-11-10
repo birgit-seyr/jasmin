@@ -252,7 +252,9 @@
     "day_missing_harvesting_day": "Für diese Bestellung fehlt der Erntetag, und für diesen Liefertag ist kein Standard-Erntetag hinterlegt. Bitte einen Erntetag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
     "day_missing_washing_day": "Für diese Bestellung fehlt der Waschtag, und für diesen Liefertag ist kein Standard-Waschtag hinterlegt. Bitte einen Waschtag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
     "day_missing_cleaning_day": "Für diese Bestellung fehlt der Putztag, und für diesen Liefertag ist kein Standard-Putztag hinterlegt. Bitte einen Putztag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
-    "day_missing_packing_day": "Für diese Bestellung fehlt der Kommissionierungstag, und für diesen Liefertag ist kein Standard-Kommissionierungstag hinterlegt. Bitte einen Kommissionierungstag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt."
+    "day_missing_packing_day": "Für diese Bestellung fehlt der Kommissionierungstag, und für diesen Liefertag ist kein Standard-Kommissionierungstag hinterlegt. Bitte einen Kommissionierungstag auswählen. Die Standardtage für Bestellungen werden unter Konfiguration → Liefertage festgelegt.",
+    "day_not_offered": "An diesem Tag werden keine Bestellungen geliefert.",
+    "ordering_deadline_passed": "Die Bestellfrist für diesen Liefertag ist abgelaufen."
   },
   "order_content": {
     "not_found": "Bestellposition nicht gefunden.",
@@ -265,7 +267,8 @@
     "offer_week_mismatch": "Dieses Angebot gilt für eine andere Woche als die Bestellung.",
     "item_change_forbidden": "Das Angebot einer Bestellposition lässt sich nicht ändern, den Artikel nur das Büro.",
     "offer_change_refused": "Das Angebot einer Bestellposition lässt sich nicht ändern: die Position löschen und mit dem anderen Angebot neu anlegen.",
-    "amount_negative": "Die bestellte Menge darf nicht negativ sein."
+    "amount_negative": "Die bestellte Menge darf nicht negativ sein.",
+    "office_only": "Diese Bestellposition kann nur das Büro ändern."
   },
   "orderable_item": {
     "reference_invalid": "Eine Position muss genau eine Sache enthalten: entweder ein Angebot oder einen Artikel — nicht beides und nicht nichts."

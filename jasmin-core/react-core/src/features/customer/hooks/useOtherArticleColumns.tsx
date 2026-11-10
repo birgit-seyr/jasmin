@@ -10,7 +10,8 @@ import type { OtherArticleRow } from "@features/customer/types";
 
 /**
  * Read-only columns for the "other articles" table on the customer order page —
- * order-content lines with NO offer (office-added directly). Unlike the offers
+ * the order lines the office added, without an offer or on one the customer
+ * can't order (a draft, another group's or week's). Unlike the offers
  * table these carry a raw amount in the unit, a per-unit price and a rabatt, so
  * they get their own fitted columns instead of being squeezed into the offers
  * cell. The net line total mirrors the canonical line-netto math.
@@ -31,7 +32,7 @@ export function useOtherArticleColumns() {
         render: (name: string | null, record) => {
           const size = record.size;
           const suffix = size && size !== "M" ? `, ${getVegetableSizeLabel(size)}` : "";
-          return `${name ?? ""}${suffix}`;
+          return `${name ?? record.offer_share_article_name ?? ""}${suffix}`;
         },
       },
       {

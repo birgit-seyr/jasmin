@@ -75,6 +75,19 @@ describe("useOtherArticleColumns", () => {
     expect(renderCol(cols, "total", null, ROW)).toBe("45.08 €");
   });
 
+  it("names a line on an offer by the offer's article", () => {
+    const { result } = renderHook(() => useOtherArticleColumns());
+    const line = {
+      ...ROW,
+      share_article_name: null,
+      offer_share_article_name: "Lauch",
+    };
+
+    expect(renderCol(result.current, "share_article_name", null, line)).toBe(
+      "Lauch, S",
+    );
+  });
+
   it("shows a dash for a missing rabatt", () => {
     const { result } = renderHook(() => useOtherArticleColumns());
     expect(renderCol(result.current, "rabatt", null, { ...ROW, rabatt: null })).toBe(

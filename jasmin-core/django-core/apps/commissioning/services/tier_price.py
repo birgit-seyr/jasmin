@@ -97,12 +97,28 @@ def set_customer_line_price(
 
     ``line`` is the validated request body. Its ``price_per_unit`` is dropped,
     not refused, so a client that still sends the price it worked out keeps
-    working. A new line (``instance`` ``None``) and a write that sets an
-    existing line's amount take the tier price of the line's offer for that
-    amount; any other write keeps the stored price, as does a line without an
-    offer.
+    working. A new line (``instance`` ``None``) takes the tier price of its
+    offer for its amount, and so does a write that changes an existing line's
+    amount, unless office staff set the line a price of its own: one that
+    isn't the tier price of its stored amount under the tenant's tiers of
+    today. A line priced under tiers the tenant has since changed counts as
+    such and keeps its price too. Any other write keeps the stored price, as
+    does a line without an offer.
     """
     line.pop("price_per_unit", None)
-    offer = line.get("offer") if instance is None else instance.offer
-    if offer is not None and (instance is None or "amount" in line):
-        line["price_per_unit"] = offer_tier_price(offer, line.get("amount"))
+    if instance is None:
+        offer = line.get("offer")
+        if offer is not None:
+            line["price_per_unit"] = offer_tier_price(offer, line.get("amount"))
+        return
+    offer = instance.offer
+    if offer is None or "amount" not in line:
+        return
+    if to_decimal(line["amount"]) == to_decimal(instance.amount):
+        return
+    stored_price = instance.price_per_unit
+    if stored_price is not None and to_decimal(stored_price) != offer_tier_price(
+        offer, instance.amount
+    ):
+        return
+    line["price_per_unit"] = offer_tier_price(offer, line["amount"])

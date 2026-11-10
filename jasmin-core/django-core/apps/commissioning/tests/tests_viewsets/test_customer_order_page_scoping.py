@@ -17,6 +17,7 @@ from types import SimpleNamespace
 from urllib.parse import urlencode
 
 import pytest
+import time_machine
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -27,6 +28,7 @@ from apps.commissioning.models import (
     InvoiceReseller,
     InvoiceResellerContent,
     OrderContent,
+    OrdersDeliveryDay,
 )
 from apps.commissioning.services import DeliveryNoteService
 from apps.commissioning.tests.factories.accounts import JasminUserFactory
@@ -46,6 +48,21 @@ from apps.commissioning.tests.factories.resellers import (
 from apps.shared.tenants.models import TenantSettings
 
 # --- Fixtures -------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _frozen_clock():
+    """The orders here are for week 15 of 2026, which a customer's page and the
+    server close once it is past: the clock stands on Monday of week 13."""
+    with time_machine.travel(datetime.datetime(2026, 3, 23, 12, 0), tick=False):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def order_day(tenant):
+    """The farm delivers orders on day 2, the orders' day here, with no
+    ordering deadline: a customer's new line needs an order delivery day."""
+    return OrdersDeliveryDayFactory(day_number=2)
 
 
 @pytest.fixture()
@@ -529,7 +546,9 @@ class TestCustomerOrderPage_OrderContentOfferScoping:
         self, customer_caller_client, customer_caller
     ):
         _u, my_reseller, my_group = customer_caller
-        booked = OfferFactory(offer_group=my_group, amount=Decimal("90.000"))
+        booked = OfferFactory(
+            offer_group=my_group, amount=Decimal("90.000"), is_finalized=True
+        )
         line = OrderContentFactory(
             order=OrderFactory(reseller=my_reseller),
             offer=booked,
@@ -553,7 +572,9 @@ class TestCustomerOrderPage_OrderContentOfferScoping:
         self, customer_caller_client, customer_caller
     ):
         user, my_reseller, my_group = customer_caller
-        booked = OfferFactory(offer_group=my_group, amount=Decimal("90.000"))
+        booked = OfferFactory(
+            offer_group=my_group, amount=Decimal("90.000"), is_finalized=True
+        )
         line = OrderContentFactory(
             order=OrderFactory(reseller=my_reseller),
             offer=booked,
@@ -679,6 +700,30 @@ class TestCustomerOrderPagePricing:
         line = _line_of(tiered_offer)
         assert line.amount == Decimal("8.000")
         assert line.price_per_unit == Decimal("2.00")
+
+    @pytest.mark.parametrize("amount", ["10.000", "12.000"], ids=["same", "new"])
+    def test_a_price_the_office_set_stays(
+        self, customer_caller_client, customer_caller, tiered_offer, amount
+    ):
+        """10 kg are 5 PU, at 1.80 under the tiers; the office priced them at
+        1.50."""
+        _u, my_reseller, _g = customer_caller
+        line = OrderContentFactory(
+            order=OrderFactory(reseller=my_reseller),
+            offer=tiered_offer,
+            share_article=None,
+            amount=Decimal("10.000"),
+            price_per_unit=Decimal("1.50"),
+        )
+
+        resp = customer_caller_client.patch(
+            f"{ORDER_CONTENTS_URL}{line.id}/", {"amount": amount}, format="json"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        line.refresh_from_db()
+        assert line.amount == Decimal(amount)
+        assert line.price_per_unit == Decimal("1.50")
 
     def test_a_write_without_amount_keeps_the_price(
         self, customer_caller_client, customer_caller, tiered_offer
@@ -868,7 +913,7 @@ class TestCustomerOrderPageAmounts:
         )
 
         assert resp.status_code == status.HTTP_403_FORBIDDEN
-        assert resp.data["code"] == "order_content.offer_required"
+        assert resp.data["code"] == "order_content.office_only"
         line.refresh_from_db()
         assert (line.amount, line.price_per_unit, line.rabatt) == (
             Decimal("10.000"),
@@ -951,7 +996,8 @@ class TestCustomerOrderPageOfficeLines:
     """The delivery note and the invoice take a line the office added without
     an offer from the line itself, its unit, size, sort and description at the
     office's price and rabatt, and the goods flow plans its work from it. The
-    page shows it read-only, and a customer changes nothing on it."""
+    page shows it read-only, as it does a line the office added on an offer the
+    page doesn't list, and a customer changes or deletes nothing on either."""
 
     @pytest.mark.parametrize("field, value", list(OFFICE_LINE_CHANGES.items()))
     def test_a_change_is_refused(
@@ -965,7 +1011,7 @@ class TestCustomerOrderPageOfficeLines:
         )
 
         assert resp.status_code == status.HTTP_403_FORBIDDEN
-        assert resp.data["code"] == "order_content.offer_required"
+        assert resp.data["code"] == "order_content.office_only"
         assert resp.data["field"] == field
         assert _office_line_values(line) == before
 
@@ -985,6 +1031,62 @@ class TestCustomerOrderPageOfficeLines:
 
         assert resp.status_code == status.HTTP_200_OK, resp.data
         assert _office_line_values(line) == before
+
+    @pytest.mark.parametrize(
+        "offer",
+        [
+            {"is_finalized": False},
+            {"is_finalized": True, "other_group": True},
+            {"is_finalized": True, "delivery_week": 16},
+        ],
+        ids=["draft", "other group", "other week"],
+    )
+    def test_a_line_on_an_offer_the_page_doesnt_list_is_read_only(
+        self, customer_caller_client, customer_caller, offer
+    ):
+        _u, my_reseller, my_group = customer_caller
+        group = OfferGroupFactory() if offer.pop("other_group", False) else my_group
+        line = OrderContentFactory(
+            order=OrderFactory(reseller=my_reseller),
+            offer=OfferFactory(offer_group=group, **offer),
+            share_article=None,
+            amount=Decimal("10.000"),
+        )
+        url = f"{ORDER_CONTENTS_URL}{line.id}/"
+
+        changed = customer_caller_client.patch(url, {"amount": "4.000"}, format="json")
+        deleted = customer_caller_client.delete(url)
+
+        for resp in (changed, deleted):
+            assert resp.status_code == status.HTTP_403_FORBIDDEN
+            assert resp.data["code"] == "order_content.office_only"
+        line.refresh_from_db()
+        assert line.amount == Decimal("10.000")
+
+    def test_a_line_without_offer_is_not_deleted(
+        self, customer_caller_client, office_article_line
+    ):
+        resp = customer_caller_client.delete(
+            f"{ORDER_CONTENTS_URL}{office_article_line.id}/"
+        )
+
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.data["code"] == "order_content.office_only"
+        assert OrderContent.objects.filter(pk=office_article_line.pk).exists()
+
+    def test_the_customer_deletes_their_own_line(
+        self, customer_caller_client, customer_caller, tiered_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+        body = _page_body(my_reseller, tiered_offer, 2)
+        customer_caller_client.post(ORDER_CONTENTS_URL, body, format="json")
+
+        resp = customer_caller_client.delete(
+            f"{ORDER_CONTENTS_URL}{_line_of(tiered_offer).id}/"
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert not OrderContent.objects.filter(offer=tiered_offer).exists()
 
     def test_the_office_changes_a_line_without_offer(
         self, api_client, office_article_line
@@ -1059,8 +1161,7 @@ class TestCustomerOrderPageOrderDays:
     def test_a_customer_line_of_a_new_order_takes_the_day_defaults(
         self, customer_caller_client, customer_caller, tiered_offer
     ):
-        OrdersDeliveryDayFactory(
-            day_number=2,
+        OrdersDeliveryDay.objects.filter(day_number=2).update(
             default_harvesting_day=1,
             default_packing_day=2,
             default_washing_day=1,
@@ -1091,6 +1192,246 @@ class TestCustomerOrderPageOrderDays:
 
         assert resp.status_code == status.HTTP_200_OK, resp.data
         assert _order_days(planned_order) == SENT_ORDER_DAYS
+
+
+# --- OrderContentViewSet: what a customer's line takes from its offer ---------
+
+
+class TestCustomerOrderPageOfferFields:
+    """The goods flow plans a line's harvest, washing, cleaning and storage
+    moves from its unit, size, sort and flags. A customer's line takes them
+    from its offer, and only its amount and note are the customer's to
+    change."""
+
+    def test_a_new_line_takes_them_from_its_offer(
+        self, customer_caller_client, customer_caller, tiered_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+        sent = {
+            "unit": "BUNCH",
+            "size": "L",
+            "sort": "Nantes",
+            "description": "Bunch",
+            "washing": True,
+            "cleaning": True,
+            "comes_from_long_term_storage": True,
+        }
+        body = _page_body(my_reseller, tiered_offer, 2, **sent)
+
+        resp = customer_caller_client.post(ORDER_CONTENTS_URL, body, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        line = _line_of(tiered_offer)
+        offer_fields = ("unit", "size", "sort", "washing", "cleaning")
+        assert {f: getattr(line, f) for f in offer_fields} == {
+            f: getattr(tiered_offer, f) for f in offer_fields
+        }
+        assert line.comes_from_long_term_storage is False
+        assert line.description is None
+
+    def test_a_change_to_them_is_refused(
+        self, customer_caller_client, customer_caller, tiered_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+        body = _page_body(my_reseller, tiered_offer, 2)
+        customer_caller_client.post(ORDER_CONTENTS_URL, body, format="json")
+        url = f"{ORDER_CONTENTS_URL}{_line_of(tiered_offer).id}/"
+
+        changed = customer_caller_client.patch(url, {"unit": "PCS"}, format="json")
+        resent = customer_caller_client.patch(url, {"unit": "KG"}, format="json")
+
+        assert changed.status_code == status.HTTP_403_FORBIDDEN
+        assert changed.data["code"] == "order_content.office_only"
+        assert changed.data["field"] == "unit"
+        assert resent.status_code == status.HTTP_200_OK, resent.data
+        assert _line_of(tiered_offer).unit == "KG"
+
+    def test_its_note_is_the_customers(
+        self, customer_caller_client, customer_caller, tiered_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+        body = _page_body(my_reseller, tiered_offer, 2)
+        customer_caller_client.post(ORDER_CONTENTS_URL, body, format="json")
+
+        resp = customer_caller_client.patch(
+            f"{ORDER_CONTENTS_URL}{_line_of(tiered_offer).id}/",
+            {"note": "Ring twice"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK, resp.data
+        assert _line_of(tiered_offer).note == "Ring twice"
+
+
+# --- OrderContentViewSet: when a customer's ordering closes ------------------
+
+
+def _local(*parts):
+    """A time on the farm's clock: ``time_machine`` takes a naive one as UTC."""
+    return timezone.make_aware(datetime.datetime(*parts))
+
+
+def _set_deadline(order_day, last_day, last_time=None):
+    order_day.default_last_possible_ordering_day = last_day
+    order_day.default_last_possible_ordering_time = last_time
+    order_day.save()
+
+
+@pytest.fixture()
+def customer_line(customer_caller, tiered_offer):
+    """A customer's line of 4 kg on their order for day 2 of week 15."""
+    _u, my_reseller, _g = customer_caller
+    return OrderContentFactory(
+        order=OrderFactory(reseller=my_reseller),
+        offer=tiered_offer,
+        share_article=None,
+        amount=Decimal("4.000"),
+        price_per_unit=Decimal("2.00"),
+    )
+
+
+def _writes(client, reseller, line, offer):
+    """A new line of ``offer``, an amount change of ``line`` and its delete."""
+    url = f"{ORDER_CONTENTS_URL}{line.id}/"
+    return (
+        client.post(ORDER_CONTENTS_URL, _page_body(reseller, offer, 2), format="json"),
+        client.patch(url, {"amount": "6.000"}, format="json"),
+        client.delete(url),
+    )
+
+
+class TestCustomerOrderingCloses:
+    """The customer page closes a week once it lies before the current one, and
+    the delivery day's ordering once its deadline has passed: the deadline's
+    weekday of the order's week, at its minute or else at the day's end. The
+    server refuses a customer's writes then. Week 15 of 2026 starts on Monday,
+    6 April."""
+
+    @pytest.fixture()
+    def other_offer(self, customer_caller):
+        _u, _r, my_group = customer_caller
+        return OfferFactory(offer_group=my_group, is_finalized=True)
+
+    def test_a_past_week_is_closed(
+        self, customer_caller_client, customer_caller, customer_line, other_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+
+        with time_machine.travel(_local(2026, 4, 13, 12, 0), tick=False):
+            writes = _writes(
+                customer_caller_client, my_reseller, customer_line, other_offer
+            )
+
+        for resp in writes:
+            assert resp.status_code == status.HTTP_409_CONFLICT
+            assert resp.data["code"] == "commissioning.past_week"
+        customer_line.refresh_from_db()
+        assert customer_line.amount == Decimal("4.000")
+        assert not OrderContent.objects.filter(offer=other_offer).exists()
+
+    def test_the_current_week_stays_open(
+        self, customer_caller_client, customer_caller, customer_line, other_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+
+        with time_machine.travel(_local(2026, 4, 12, 23, 0), tick=False):
+            writes = _writes(
+                customer_caller_client, my_reseller, customer_line, other_offer
+            )
+
+        for resp in writes:
+            assert resp.status_code == status.HTTP_200_OK, resp.data
+
+    def test_ordering_closes_after_the_deadline_minute(
+        self,
+        customer_caller_client,
+        customer_caller,
+        customer_line,
+        other_offer,
+        order_day,
+    ):
+        _u, my_reseller, _g = customer_caller
+        _set_deadline(order_day, 0, datetime.time(10, 30, 59))
+        url = f"{ORDER_CONTENTS_URL}{customer_line.id}/"
+
+        with time_machine.travel(_local(2026, 4, 6, 10, 30), tick=False):
+            on_time = customer_caller_client.patch(
+                url, {"amount": "8.000"}, format="json"
+            )
+        with time_machine.travel(_local(2026, 4, 6, 10, 31), tick=False):
+            late = _writes(
+                customer_caller_client, my_reseller, customer_line, other_offer
+            )
+
+        assert on_time.status_code == status.HTTP_200_OK, on_time.data
+        for resp in late:
+            assert resp.status_code == status.HTTP_409_CONFLICT
+            assert resp.data["code"] == "order.ordering_deadline_passed"
+        customer_line.refresh_from_db()
+        assert customer_line.amount == Decimal("8.000")
+
+    def test_without_a_time_the_deadline_day_stays_open(
+        self, customer_caller_client, customer_line, order_day
+    ):
+        _set_deadline(order_day, 1)
+        url = f"{ORDER_CONTENTS_URL}{customer_line.id}/"
+
+        with time_machine.travel(_local(2026, 4, 7, 23, 59), tick=False):
+            on_time = customer_caller_client.patch(
+                url, {"amount": "8.000"}, format="json"
+            )
+        with time_machine.travel(_local(2026, 4, 8, 0, 0), tick=False):
+            late = customer_caller_client.patch(
+                url, {"amount": "10.000"}, format="json"
+            )
+
+        assert on_time.status_code == status.HTTP_200_OK, on_time.data
+        assert late.status_code == status.HTTP_409_CONFLICT
+        assert late.data["code"] == "order.ordering_deadline_passed"
+
+    def test_a_day_without_orders_takes_no_new_line(
+        self, customer_caller_client, customer_caller, tiered_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+        body = _page_body(my_reseller, tiered_offer, 2, day_number=3)
+
+        resp = customer_caller_client.post(ORDER_CONTENTS_URL, body, format="json")
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.data["code"] == "order.day_not_offered"
+        assert resp.data["field"] == "day_number"
+        assert not OrderContent.objects.filter(offer=tiered_offer).exists()
+
+    @pytest.mark.parametrize(
+        "day, expected",
+        [(2, status.HTTP_200_OK), (6, status.HTTP_400_BAD_REQUEST)],
+        ids=["Wednesday", "Sunday"],
+    )
+    def test_without_order_days_monday_to_saturday_are_open(
+        self, customer_caller_client, customer_caller, tiered_offer, day, expected
+    ):
+        """The page's day picker offers Monday to Saturday, with no deadline,
+        while the farm has set up no order delivery day."""
+        _u, my_reseller, _g = customer_caller
+        OrdersDeliveryDay.objects.all().delete()
+        body = _page_body(my_reseller, tiered_offer, 2, day_number=day)
+
+        resp = customer_caller_client.post(ORDER_CONTENTS_URL, body, format="json")
+
+        assert resp.status_code == expected, resp.data
+        if expected == status.HTTP_400_BAD_REQUEST:
+            assert resp.data["code"] == "order.day_not_offered"
+
+    def test_the_office_writes_a_closed_order(
+        self, api_client, customer_caller, customer_line, other_offer
+    ):
+        _u, my_reseller, _g = customer_caller
+
+        with time_machine.travel(_local(2026, 4, 13, 12, 0), tick=False):
+            writes = _writes(api_client, my_reseller, customer_line, other_offer)
+
+        for resp in writes:
+            assert resp.status_code == status.HTTP_200_OK, resp.data
 
 
 # --- CrateOrderContent -----------------------------------------------------

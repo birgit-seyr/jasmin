@@ -23,7 +23,7 @@
  * sub-component (already covered by their own seam tests).
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -144,8 +144,16 @@ vi.mock("@features/customer/hooks/useCustomerOrderColumns", () => ({
   useCustomerOrderColumns: (params: unknown) =>
     useCustomerOrderColumnsMock(params),
 }));
+// The read-only table names each line, so a test can tell which table holds it.
 vi.mock("@features/customer/hooks/useOtherArticleColumns", () => ({
-  useOtherArticleColumns: () => [],
+  useOtherArticleColumns: () => [
+    {
+      key: "name",
+      title: "name",
+      render: (_: unknown, row: { offer_share_article_name?: string }) =>
+        row.offer_share_article_name,
+    },
+  ],
 }));
 vi.mock("@features/customer/hooks/useCustomerOrderMutations", () => ({
   useCustomerOrderMutations: (params: unknown) =>
@@ -380,6 +388,79 @@ describe("setsPrice", () => {
       expect(lastMutationsParams().setsPrice).toBe(true);
     },
   );
+});
+
+// ── Which table a line goes to ──────────────────────────────────────────────
+
+describe("office lines", () => {
+  const nameColumn = {
+    key: "name",
+    title: "name",
+    render: (_: unknown, row: { offer_share_article_name?: string }) =>
+      row.offer_share_article_name,
+  };
+  const line = (id: string, offer: string, name: string) => ({
+    id,
+    offer,
+    order_id: "order-1",
+    offer_share_article_name: name,
+  });
+
+  beforeEach(() => {
+    useCustomerOrderColumnsMock.mockReturnValue([nameColumn]);
+    orderContentsListMock.mockReturnValue({
+      data: {
+        items: [
+          line("line-1", "offer-listed", "Carrots"),
+          line("line-2", "offer-draft", "Leeks"),
+          line("line-3", "offer-other-group", "Celeriac"),
+        ],
+      },
+    });
+  });
+
+  it("shows a line on an offer the customer can't order read-only", async () => {
+    offersListMock.mockReturnValue({
+      data: [
+        { id: "offer-listed", is_finalized: true },
+        { id: "offer-draft", is_finalized: false },
+      ],
+    });
+
+    renderPage();
+
+    const otherArticles = (
+      await screen.findByText("customer.other_articles")
+    ).closest(".ant-card") as HTMLElement;
+    expect(within(otherArticles).getByText("Leeks")).toBeInTheDocument();
+    expect(within(otherArticles).getByText("Celeriac")).toBeInTheDocument();
+    expect(within(otherArticles).queryByText("Carrots")).not.toBeInTheDocument();
+    expect(screen.getByText("Carrots")).toBeInTheDocument();
+  });
+
+  it("leaves the office every offer line to change", async () => {
+    authUser = { id: "u-1", roles: ["office"] };
+    offersListMock.mockReturnValue({
+      data: [
+        { id: "offer-listed", is_finalized: true },
+        { id: "offer-draft", is_finalized: false },
+      ],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Leeks")).toBeInTheDocument();
+    expect(screen.queryByText("customer.other_articles")).not.toBeInTheDocument();
+  });
+
+  it("keeps every offer line in the offers table until the offers load", async () => {
+    offersListMock.mockReturnValue({ data: undefined });
+
+    renderPage();
+
+    expect(await screen.findByText("Leeks")).toBeInTheDocument();
+    expect(screen.queryByText("customer.other_articles")).not.toBeInTheDocument();
+  });
 });
 
 // ── Render-loop smoke ───────────────────────────────────────────────────────

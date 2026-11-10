@@ -40,7 +40,6 @@ from ..errors import (
     DocumentNotFinalized,
     DocumentPdfMissing,
     OfferGroupCannotDeleteDefault,
-    OrderContentItemChangeForbidden,
     ResellerEmailMissing,
     ResellerInvoiceEmailDisabled,
 )
@@ -104,8 +103,9 @@ from ..services import (
 )
 from ..services.customer_order_policy import (
     assert_customer_line_write_allowed,
-    assert_customer_orderable_offer,
-    drop_customer_order_days,
+    restrict_customer_line_change,
+    restrict_customer_line_delete,
+    restrict_customer_new_line,
 )
 from ..services.einvoice_upload import validate_finalized_pdf_upload
 from ..services.order_content_service import AMOUNT_NOT_SENT
@@ -656,7 +656,8 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         # linked reseller.
         reseller = serializer.validated_data["reseller"]
         enforce_own_reseller(request, reseller.pk)
-        self._restrict_customer_new_line(request, serializer.validated_data, reseller)
+        if not is_privileged(request):
+            restrict_customer_new_line(serializer.validated_data, reseller)
         self._apply_customer_pricing(request, serializer.validated_data, None)
 
         result = OrderContentService.create_order_with_content_and_crates(
@@ -681,7 +682,8 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
-        self._reject_customer_item_change(request, instance, validated_data)
+        if not is_privileged(request):
+            restrict_customer_line_change(validated_data, instance)
         self._apply_customer_pricing(request, validated_data, instance)
 
         result = OrderContentService.update_order_content(
@@ -692,42 +694,6 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             **{k: v for k, v in validated_data.items() if k != "amount"},
         )
         return Response(result)
-
-    @staticmethod
-    def _restrict_customer_new_line(
-        request: Request, validated_data: dict, reseller: Reseller
-    ) -> None:
-        """Non-privileged (customer) callers may only order an offer their
-        order page lists, and never set the order's days. Privileged roles bypass.
-        """
-        if not is_privileged(request):
-            assert_customer_orderable_offer(validated_data, reseller)
-            drop_customer_order_days(validated_data)
-
-    @staticmethod
-    def _reject_customer_item_change(
-        request: Request, instance: OrderContent, validated_data: dict
-    ) -> None:
-        """A non-privileged (customer) caller may edit their own line but never
-        re-point it at another offer or article: its stock was reserved on the
-        current offer, and the orderable-offer check ran against that offer at
-        create. Re-sending the current value is not a change. Privileged roles
-        bypass.
-        """
-        if is_privileged(request):
-            return
-        current_ids = {
-            "offer": instance.offer_id,
-            "share_article": instance.share_article_id,
-        }
-        for field, current_id in current_ids.items():
-            if field not in validated_data:
-                continue
-            if getattr(validated_data[field], "pk", None) != current_id:
-                raise OrderContentItemChangeForbidden(
-                    "An order line's offer can't be changed, and only office "
-                    "staff may change its article."
-                )
 
     @staticmethod
     def _apply_customer_pricing(
@@ -759,7 +725,9 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     )
     def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Enforce ownership via scoped get_queryset().
-        self.get_object()
+        instance = self.get_object()
+        if not is_privileged(request):
+            restrict_customer_line_delete(instance)
         order_content_id = kwargs.get("pk")
 
         result = OrderContentService.delete_order_content(order_content_id)

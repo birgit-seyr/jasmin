@@ -90,9 +90,10 @@ export default function CustomerOrderPage() {
     [selectedYear, selectedWeek, resellerId],
   );
 
-  const { data: offers = [] } = useCommissioningOffersList(offersParams, {
+  const { data: fetchedOffers } = useCommissioningOffersList(offersParams, {
     query: { enabled: !!resellerId },
   });
+  const offers = useMemo(() => fetchedOffers ?? [], [fetchedOffers]);
 
   const orderParams = useMemo<CommissioningOrderContentsListParams>(
     () => ({
@@ -150,27 +151,56 @@ export default function CustomerOrderPage() {
 
   const isReadOnly = isPastWeek || isOrderingClosed;
 
-  // Offer-based rows feed the offers table; offer-less order lines (office-added
-  // directly, no offer) go to the separate "other articles" table below.
+  // The roles the backend takes a line's price from (office, admin,
+  // management); it prices a customer's lines itself. Office users may also
+  // change every offer line, the customer's or their own.
+  const { isOffice, isManagement } = useRoles();
+
+  // The offers the customer may order this week, the finalized ones of their
+  // offer group; null until the offers have loaded.
+  const orderableOfferIds = useMemo(
+    () =>
+      fetchedOffers
+        ? new Set(
+            fetchedOffers
+              .filter((offer) => offer.is_finalized)
+              .map((offer) => offer.id),
+          )
+        : null,
+    [fetchedOffers],
+  );
+  const isOrderable = useCallback(
+    (offerId: string) =>
+      isOffice || !orderableOfferIds || orderableOfferIds.has(offerId),
+    [isOffice, orderableOfferIds],
+  );
+
+  // Rows of an orderable offer feed the offers table. The lines the office
+  // added, without an offer or, for a customer, on one they can't order, go to
+  // the read-only "other articles" table below: only the office may change
+  // them.
   const offerRows = useMemo(
     () =>
       orderContents.filter(
         (item): item is OrderContentListItem & { offer: string } =>
-          !!item.offer,
+          !!item.offer && isOrderable(item.offer),
       ),
-    [orderContents],
+    [orderContents, isOrderable],
   );
   const otherArticleRows = useMemo<OtherArticleRow[]>(
     () =>
       orderContents
-        .filter((item) => !item.offer && item.order_id)
+        .filter(
+          (item) =>
+            item.order_id && (!item.offer || !isOrderable(item.offer)),
+        )
         .map((item) => ({
           ...item,
           // Real persisted order-content rows always carry an id.
           id: item.id as string,
           order_is_finalized: Boolean(item.order_is_finalized),
         })),
-    [orderContents],
+    [orderContents, isOrderable],
   );
 
   // The order contents response already merges ordered items with unused offers from the backend.
@@ -207,9 +237,6 @@ export default function CustomerOrderPage() {
   // Single-tier mode when the tenant hasn't configured tiers — only
   // ``price_1`` is ever picked, no quantity-based escalation.
   const finalTiers = useOfferTiers();
-  // The roles the backend takes a line's price from (office, admin,
-  // management); it prices a customer's lines itself.
-  const { isOffice, isManagement } = useRoles();
 
   // Order-level info for the summary header (outside the cards): once anything
   // is ordered every row for this reseller/week/day shares one Order, so the
@@ -368,9 +395,9 @@ export default function CustomerOrderPage() {
         </Col>
       </Row>
 
-      {/* Offer-less order lines (office-added directly) — only when present, so
-          the table is invisible otherwise. Own columns: amount + unit, per-unit
-          price, rabatt, line total. */}
+      {/* The lines the office added (``otherArticleRows``) — only when present,
+          so the table is invisible otherwise. Own columns: amount + unit,
+          per-unit price, rabatt, line total. */}
       {otherArticleRows.length > 0 && (
         <Row gutter={[24, 24]} className="mt-24">
           <Col xs={24}>

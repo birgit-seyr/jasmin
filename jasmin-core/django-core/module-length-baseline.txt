@@ -16,7 +16,7 @@ apps/commissioning/services/documentation_summary_service.py: 1028
 apps/commissioning/services/offer_service.py: 1088
 apps/commissioning/views/reseller_views.py: 1442
 apps/commissioning/viewsets/members_viewsets.py: 1836
-apps/commissioning/viewsets/resellers_viewsets.py: 1564
+apps/commissioning/viewsets/resellers_viewsets.py: 1532
 apps/commissioning/viewsets/shares_viewsets.py: 2286
 apps/notifications/registry.py: 1051
 apps/payments/services.py: 1233
