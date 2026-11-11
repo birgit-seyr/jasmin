@@ -47,6 +47,25 @@ class CrateInUse(ConflictError):
     code = "crate.in_use"
 
 
+class MarketProductGroupInUse(ConflictError):
+    """A market product group that PLUs still belong to cannot be deleted."""
+
+    code = "market_product_group.in_use"
+
+
+class MarketArticleInUse(ConflictError):
+    """A PLU with prices cannot be deleted: its price history would go with
+    it. A PLU that is no longer sold is set inactive instead."""
+
+    code = "market_article.in_use"
+
+
+class ScaleTaxCodeInUse(ConflictError):
+    """A scale VAT code that PLUs still sell under cannot be deleted."""
+
+    code = "scale_tax_code.in_use"
+
+
 class OrdersDeliveryDayInUse(ConflictError):
     """An order day still referenced elsewhere cannot be deleted."""
 

@@ -12,6 +12,9 @@
       "members_member_number_must_be_unique": "Mitgliedsnummer muss einzigartig sein.",
       "name": "Name muss einzigartig sein.",
       "number": "Nummer muss einzigartig sein.",
+      "plu_number": "Diese PLU-Nummer ist schon vergeben.",
+      "tax_rate": "Für diesen Steuersatz gibt es schon einen Code.",
+      "market_price": "Diese PLU hat in dieser Woche schon einen Preis — bitte ihre Zeile bearbeiten.",
       "time_management_order_days": "Bestelltage müssen einzigartig sein.",
       "sort_order": "Diese Reihenfolge ist im selben Zeitraum bereits einer anderen Variante zugewiesen."
     },

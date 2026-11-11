@@ -6,8 +6,9 @@
  * delivery-station pages (unless a host keeps its pickup locations itself),
  * among them the station-fee billing (a station that charges a fee), the bulk
  * packing list (bulk packing, or mixed packing with a variation that is packed
- * in bulk) and the weight statistics (box packing, or mixed packing with a
- * variation that is packed in boxes, as only boxes are weighed).
+ * in bulk), the weight statistics (box packing, or mixed packing with a
+ * variation that is packed in boxes, as only boxes are weighed) and the market
+ * pages (a farm with markets).
  *
  * Each route is asserted on both sides of its condition: "no link with this
  * href" only proves something once the same href is proven to exist.
@@ -108,6 +109,7 @@ const sections = [
   "commissioning-resellers",
   "commissioning-harvesting-packing",
   "commissioning-delivery-stations",
+  "commissioning-markets",
   "commissioning-data",
 ];
 
@@ -145,6 +147,12 @@ beforeEach(() => {
   stations.list = [];
 });
 
+const marketPages = [
+  "/commissioning/market-prices",
+  "/commissioning/list-market-articles",
+  "/commissioning/list-market-product-groups",
+  "/commissioning/list-scale-tax-codes",
+];
 const stationFees = "/commissioning/delivery-station-fees";
 const weightStatistics = "/commissioning/statistics-share-weights";
 const packedInBulk = { id: "v-bulk", is_packed_bulk: true };
@@ -184,6 +192,25 @@ describe("CommissioningSidebar", () => {
     expect(routes.has("/commissioning/washing-list")).toBe(false);
     expect(routes.has("/commissioning/cleaning-list")).toBe(false);
     expect(routes.has("/commissioning/harvesting-list")).toBe(true);
+  });
+
+  it("links the market prices and the market data on a farm with markets", () => {
+    const routes = linkedRoutes();
+
+    for (const route of marketPages) {
+      expect(routes.has(route), route).toBe(true);
+    }
+  });
+
+  it("drops every market page on a farm without markets", () => {
+    settings.has_markets = false;
+
+    const routes = linkedRoutes();
+
+    for (const route of marketPages) {
+      expect(routes.has(route), route).toBe(false);
+    }
+    expect(routes.has("/commissioning/list-storages")).toBe(true);
   });
 
   it("offers the share import in the import-shares mode", () => {

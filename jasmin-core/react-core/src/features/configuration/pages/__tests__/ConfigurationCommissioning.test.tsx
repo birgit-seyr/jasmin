@@ -130,3 +130,15 @@ describe("ConfigurationCommissioning layout", () => {
     expect(layoutKeys()).toContain("show_size_column");
   });
 });
+
+describe("ConfigurationCommissioning sales", () => {
+  it("lets the office turn the markets on", () => {
+    render(<ConfigurationCommissioning />);
+
+    const markets = shown.settings
+      .find((category) => category.category === "sales")
+      ?.settings.find((setting) => setting.key === "has_markets");
+    expect(markets).toBeDefined();
+    expect(markets?.disabled).toBeFalsy();
+  });
+});

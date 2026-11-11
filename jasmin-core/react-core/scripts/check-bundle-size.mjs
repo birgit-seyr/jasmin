@@ -113,7 +113,7 @@ const budgets = [
   {
     name: "locale-de (the resident fallback bundle)",
     kb: sizes[deLocaleChunk],
-    limit: 80,
+    limit: 82,
   },
   { name: "vendor-react", kb: sizes[reactChunk], limit: 60 },
 ];

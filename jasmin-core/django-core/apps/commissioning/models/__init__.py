@@ -49,7 +49,13 @@ from .imports import (
     ShareImportBatch,
 )
 from .logs import OfferSending, ReminderSending
-from .markets import Market
+from .markets import (
+    Market,
+    MarketArticle,
+    MarketPrice,
+    MarketProductGroup,
+    ScaleTaxCode,
+)
 from .members import (
     CoopShare,
     CoopShareTransfer,

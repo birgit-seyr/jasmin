@@ -139,6 +139,61 @@ CREW_MATRIX: list[tuple[str, str, str, str]] = [
     ("/api/commissioning/member_loans/", "post", "staff", "deny"),
     ("/api/commissioning/member_loans/", "post", "gardener", "deny"),
     ("/api/commissioning/member_loans/", "post", "office", "4xx"),
+    # ======= commissioning: markets =======
+    # ------- Market product groups (Staff read, Office write) -------
+    ("/api/commissioning/market_product_groups/", "get", "staff", "ok"),
+    ("/api/commissioning/market_product_groups/", "get", "gardener", "ok"),
+    ("/api/commissioning/market_product_groups/", "post", "staff", "deny"),
+    ("/api/commissioning/market_product_groups/", "post", "gardener", "deny"),
+    ("/api/commissioning/market_product_groups/", "post", "office", "4xx"),
+    # ------- PLUs (Staff read, Office write) -------
+    ("/api/commissioning/market_articles/", "get", "staff", "ok"),
+    ("/api/commissioning/market_articles/", "get", "gardener", "ok"),
+    ("/api/commissioning/market_articles/", "post", "staff", "deny"),
+    ("/api/commissioning/market_articles/", "post", "gardener", "deny"),
+    ("/api/commissioning/market_articles/", "post", "office", "4xx"),
+    # ------- Scale VAT codes (Staff read, Office write) -------
+    ("/api/commissioning/scale_tax_codes/", "get", "staff", "ok"),
+    ("/api/commissioning/scale_tax_codes/", "get", "gardener", "ok"),
+    ("/api/commissioning/scale_tax_codes/", "post", "staff", "deny"),
+    ("/api/commissioning/scale_tax_codes/", "post", "gardener", "deny"),
+    ("/api/commissioning/scale_tax_codes/", "post", "office", "4xx"),
+    # ------- Market prices (Staff read, Office write) -------
+    (f"/api/commissioning/market_prices/?{WEEK}", "get", "staff", "ok"),
+    (f"/api/commissioning/market_prices/?{WEEK}", "get", "gardener", "ok"),
+    ("/api/commissioning/market_prices/", "post", "staff", "deny"),
+    ("/api/commissioning/market_prices/", "post", "gardener", "deny"),
+    ("/api/commissioning/market_prices/", "post", "office", "4xx"),
+    (
+        "/api/commissioning/market_prices/bulk_copy_to_next_week/",
+        "post",
+        "staff",
+        "deny",
+    ),
+    (
+        "/api/commissioning/market_prices/bulk_copy_to_next_week/",
+        "post",
+        "gardener",
+        "deny",
+    ),
+    (
+        "/api/commissioning/market_prices/bulk_copy_to_next_week/",
+        "post",
+        "office",
+        "4xx",
+    ),
+    ("/api/commissioning/market_prices/bulk_set_active/", "post", "staff", "deny"),
+    ("/api/commissioning/market_prices/bulk_set_active/", "post", "gardener", "deny"),
+    ("/api/commissioning/market_prices/bulk_set_active/", "post", "office", "4xx"),
+    # The scale export is a GET custom action, so it takes the write gate.
+    (f"/api/commissioning/market_prices/scale_export/?{WEEK}", "get", "staff", "deny"),
+    (
+        f"/api/commissioning/market_prices/scale_export/?{WEEK}",
+        "get",
+        "gardener",
+        "deny",
+    ),
+    (f"/api/commissioning/market_prices/scale_export/?{WEEK}", "get", "office", "ok"),
     # ======= commissioning: resellers =======
     # ------- Offers (StaffOrCustomer read, Office write) -------
     (f"/api/commissioning/offers/?{WEEK}", "get", "staff", "ok"),

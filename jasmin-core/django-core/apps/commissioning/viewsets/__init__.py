@@ -51,6 +51,12 @@ from .logs_viewsets import (
     TheoreticalPurchaseViewSet,
     TheoreticalWashAmountViewSet,
 )
+from .markets_viewsets import (
+    MarketArticleViewSet,
+    MarketPriceViewSet,
+    MarketProductGroupViewSet,
+    ScaleTaxCodeViewSet,
+)
 from .members_viewsets import (
     CoopShareViewSet,
     MemberLoanViewSet,

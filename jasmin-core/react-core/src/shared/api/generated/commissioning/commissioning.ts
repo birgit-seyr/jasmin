@@ -103,6 +103,10 @@ import type {
   CommissioningInvoicesListParams,
   CommissioningInvoicesUploadPdfCreateBody,
   CommissioningListResellersEntry,
+  CommissioningMarketArticlesListParams,
+  CommissioningMarketPricesListParams,
+  CommissioningMarketPricesScaleExportRetrieveParams,
+  CommissioningMarketProductGroupsListParams,
   CommissioningMemberGrowthStatisticsListParams,
   CommissioningMemberLoansListParams,
   CommissioningMembersCancelCreateBody,
@@ -238,6 +242,14 @@ import type {
   InvoiceSentToAccounting,
   InvoiceSentToReseller,
   InvoiceUploadPdfResponse,
+  MarketArticle,
+  MarketArticleRequest,
+  MarketPrice,
+  MarketPriceBulkActiveRequest,
+  MarketPriceCopyResult,
+  MarketPriceRequest,
+  MarketProductGroup,
+  MarketProductGroupRequest,
   Member,
   MemberCancelResult,
   MemberCreateRequest,
@@ -307,6 +319,9 @@ import type {
   PatchedHarvestSharePlanningUpdateRequest,
   PatchedInvoiceResellerContentRequest,
   PatchedInvoiceResellerRequest,
+  PatchedMarketArticleRequest,
+  PatchedMarketPriceRequest,
+  PatchedMarketProductGroupRequest,
   PatchedMemberLoanRequest,
   PatchedMemberRequest,
   PatchedMyCustomerDataUpdateRequest,
@@ -320,6 +335,7 @@ import type {
   PatchedPlotRequest,
   PatchedPurchaseRequest,
   PatchedResellerRequest,
+  PatchedScaleTaxCodeRequest,
   PatchedSeasonRequest,
   PatchedSetInvoiceNoteRequest,
   PatchedSetOrderNoteRequest,
@@ -350,6 +366,8 @@ import type {
   PurchaseRequest,
   Reseller,
   ResellerRequest,
+  ScaleTaxCode,
+  ScaleTaxCodeRequest,
   Season,
   SeasonRequest,
   SetInvoiceNoteResponse,
@@ -13784,6 +13802,1428 @@ const {mutation: mutationOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const commissioningMarketArticlesList = (
+    params?: CommissioningMarketArticlesListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketArticle[]>(
+      {url: `/api/commissioning/market_articles/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMarketArticlesListQueryKey = (params?: CommissioningMarketArticlesListParams,) => {
+    return [
+    `/api/commissioning/market_articles/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningMarketArticlesListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError = ErrorResponse>(params?: CommissioningMarketArticlesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMarketArticlesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMarketArticlesList>>> = ({ signal }) => commissioningMarketArticlesList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMarketArticlesListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketArticlesList>>>
+export type CommissioningMarketArticlesListQueryError = ErrorResponse
+
+
+export function useCommissioningMarketArticlesList<TData = Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError = ErrorResponse>(
+ params: undefined |  CommissioningMarketArticlesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketArticlesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketArticlesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketArticlesList<TData = Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError = ErrorResponse>(
+ params?: CommissioningMarketArticlesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketArticlesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketArticlesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketArticlesList<TData = Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError = ErrorResponse>(
+ params?: CommissioningMarketArticlesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningMarketArticlesList<TData = Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError = ErrorResponse>(
+ params?: CommissioningMarketArticlesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMarketArticlesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningMarketArticlesCreate = (
+    marketArticleRequest: MarketArticleRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketArticle>(
+      {url: `/api/commissioning/market_articles/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: marketArticleRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketArticlesCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesCreate>>, TError,{data: MarketArticleRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesCreate>>, TError,{data: MarketArticleRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketArticlesCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketArticlesCreate>>, {data: MarketArticleRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningMarketArticlesCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketArticlesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketArticlesCreate>>>
+    export type CommissioningMarketArticlesCreateMutationBody = MarketArticleRequest
+    export type CommissioningMarketArticlesCreateMutationError = ErrorResponse
+
+    export const useCommissioningMarketArticlesCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesCreate>>, TError,{data: MarketArticleRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketArticlesCreate>>,
+        TError,
+        {data: MarketArticleRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketArticlesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketArticlesRetrieve = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketArticle>(
+      {url: `/api/commissioning/market_articles/${id}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMarketArticlesRetrieveQueryKey = (id?: string,) => {
+    return [
+    `/api/commissioning/market_articles/${id}/`
+    ] as const;
+    }
+
+    
+export const getCommissioningMarketArticlesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError = ErrorResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMarketArticlesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>> = ({ signal }) => commissioningMarketArticlesRetrieve(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMarketArticlesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>>
+export type CommissioningMarketArticlesRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningMarketArticlesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError = ErrorResponse>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketArticlesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketArticlesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningMarketArticlesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketArticlesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMarketArticlesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningMarketArticlesUpdate = (
+    id: string,
+    marketArticleRequest: MarketArticleRequest,
+ ) => {
+      
+      
+      return axiosService<MarketArticle>(
+      {url: `/api/commissioning/market_articles/${id}/`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: marketArticleRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketArticlesUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesUpdate>>, TError,{id: string;data: MarketArticleRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesUpdate>>, TError,{id: string;data: MarketArticleRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketArticlesUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketArticlesUpdate>>, {id: string;data: MarketArticleRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningMarketArticlesUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketArticlesUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketArticlesUpdate>>>
+    export type CommissioningMarketArticlesUpdateMutationBody = MarketArticleRequest
+    export type CommissioningMarketArticlesUpdateMutationError = ErrorResponse
+
+    export const useCommissioningMarketArticlesUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesUpdate>>, TError,{id: string;data: MarketArticleRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketArticlesUpdate>>,
+        TError,
+        {id: string;data: MarketArticleRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketArticlesUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketArticlesPartialUpdate = (
+    id: string,
+    patchedMarketArticleRequest: PatchedMarketArticleRequest,
+ ) => {
+      
+      
+      return axiosService<MarketArticle>(
+      {url: `/api/commissioning/market_articles/${id}/`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchedMarketArticleRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketArticlesPartialUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesPartialUpdate>>, TError,{id: string;data: PatchedMarketArticleRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesPartialUpdate>>, TError,{id: string;data: PatchedMarketArticleRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketArticlesPartialUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketArticlesPartialUpdate>>, {id: string;data: PatchedMarketArticleRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningMarketArticlesPartialUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketArticlesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketArticlesPartialUpdate>>>
+    export type CommissioningMarketArticlesPartialUpdateMutationBody = PatchedMarketArticleRequest
+    export type CommissioningMarketArticlesPartialUpdateMutationError = ErrorResponse
+
+    export const useCommissioningMarketArticlesPartialUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesPartialUpdate>>, TError,{id: string;data: PatchedMarketArticleRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketArticlesPartialUpdate>>,
+        TError,
+        {id: string;data: PatchedMarketArticleRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketArticlesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketArticlesDestroy = (
+    id: string,
+ ) => {
+      
+      
+      return axiosService<void>(
+      {url: `/api/commissioning/market_articles/${id}/`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketArticlesDestroyMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesDestroy>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesDestroy>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['commissioningMarketArticlesDestroy'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketArticlesDestroy>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  commissioningMarketArticlesDestroy(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketArticlesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketArticlesDestroy>>>
+    
+    export type CommissioningMarketArticlesDestroyMutationError = ErrorResponse
+
+    export const useCommissioningMarketArticlesDestroy = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketArticlesDestroy>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketArticlesDestroy>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketArticlesDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The week's market prices, by product group and PLU number.
+ */
+export const commissioningMarketPricesList = (
+    params: CommissioningMarketPricesListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketPrice[]>(
+      {url: `/api/commissioning/market_prices/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMarketPricesListQueryKey = (params?: CommissioningMarketPricesListParams,) => {
+    return [
+    `/api/commissioning/market_prices/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningMarketPricesListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError = ErrorResponse>(params: CommissioningMarketPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMarketPricesListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMarketPricesList>>> = ({ signal }) => commissioningMarketPricesList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMarketPricesListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesList>>>
+export type CommissioningMarketPricesListQueryError = ErrorResponse
+
+
+export function useCommissioningMarketPricesList<TData = Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketPricesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketPricesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketPricesList<TData = Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketPricesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketPricesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketPricesList<TData = Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningMarketPricesList<TData = Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMarketPricesListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningMarketPricesCreate = (
+    marketPriceRequest: MarketPriceRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketPrice>(
+      {url: `/api/commissioning/market_prices/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: marketPriceRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketPricesCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesCreate>>, TError,{data: MarketPriceRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesCreate>>, TError,{data: MarketPriceRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketPricesCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketPricesCreate>>, {data: MarketPriceRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningMarketPricesCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketPricesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesCreate>>>
+    export type CommissioningMarketPricesCreateMutationBody = MarketPriceRequest
+    export type CommissioningMarketPricesCreateMutationError = ErrorResponse
+
+    export const useCommissioningMarketPricesCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesCreate>>, TError,{data: MarketPriceRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketPricesCreate>>,
+        TError,
+        {data: MarketPriceRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketPricesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketPricesRetrieve = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketPrice>(
+      {url: `/api/commissioning/market_prices/${id}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMarketPricesRetrieveQueryKey = (id?: string,) => {
+    return [
+    `/api/commissioning/market_prices/${id}/`
+    ] as const;
+    }
+
+    
+export const getCommissioningMarketPricesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError = ErrorResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMarketPricesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>> = ({ signal }) => commissioningMarketPricesRetrieve(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMarketPricesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>>
+export type CommissioningMarketPricesRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningMarketPricesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError = ErrorResponse>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketPricesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketPricesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningMarketPricesRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMarketPricesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningMarketPricesUpdate = (
+    id: string,
+    marketPriceRequest: MarketPriceRequest,
+ ) => {
+      
+      
+      return axiosService<MarketPrice>(
+      {url: `/api/commissioning/market_prices/${id}/`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: marketPriceRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketPricesUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesUpdate>>, TError,{id: string;data: MarketPriceRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesUpdate>>, TError,{id: string;data: MarketPriceRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketPricesUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketPricesUpdate>>, {id: string;data: MarketPriceRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningMarketPricesUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketPricesUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesUpdate>>>
+    export type CommissioningMarketPricesUpdateMutationBody = MarketPriceRequest
+    export type CommissioningMarketPricesUpdateMutationError = ErrorResponse
+
+    export const useCommissioningMarketPricesUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesUpdate>>, TError,{id: string;data: MarketPriceRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketPricesUpdate>>,
+        TError,
+        {id: string;data: MarketPriceRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketPricesUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketPricesPartialUpdate = (
+    id: string,
+    patchedMarketPriceRequest: PatchedMarketPriceRequest,
+ ) => {
+      
+      
+      return axiosService<MarketPrice>(
+      {url: `/api/commissioning/market_prices/${id}/`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchedMarketPriceRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketPricesPartialUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesPartialUpdate>>, TError,{id: string;data: PatchedMarketPriceRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesPartialUpdate>>, TError,{id: string;data: PatchedMarketPriceRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketPricesPartialUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketPricesPartialUpdate>>, {id: string;data: PatchedMarketPriceRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningMarketPricesPartialUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketPricesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesPartialUpdate>>>
+    export type CommissioningMarketPricesPartialUpdateMutationBody = PatchedMarketPriceRequest
+    export type CommissioningMarketPricesPartialUpdateMutationError = ErrorResponse
+
+    export const useCommissioningMarketPricesPartialUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesPartialUpdate>>, TError,{id: string;data: PatchedMarketPriceRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketPricesPartialUpdate>>,
+        TError,
+        {id: string;data: PatchedMarketPriceRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketPricesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketPricesDestroy = (
+    id: string,
+ ) => {
+      
+      
+      return axiosService<void>(
+      {url: `/api/commissioning/market_prices/${id}/`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketPricesDestroyMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesDestroy>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesDestroy>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['commissioningMarketPricesDestroy'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketPricesDestroy>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  commissioningMarketPricesDestroy(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketPricesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesDestroy>>>
+    
+    export type CommissioningMarketPricesDestroyMutationError = ErrorResponse
+
+    export const useCommissioningMarketPricesDestroy = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesDestroy>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketPricesDestroy>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketPricesDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Copy the selected prices into the week after their own. A PLU that already has a price there keeps it, and its copy is skipped.
+ */
+export const commissioningMarketPricesBulkCopyToNextWeekCreate = (
+    bulkIdsRequest: BulkIdsRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketPriceCopyResult>(
+      {url: `/api/commissioning/market_prices/bulk_copy_to_next_week/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: bulkIdsRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketPricesBulkCopyToNextWeekCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesBulkCopyToNextWeekCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesBulkCopyToNextWeekCreate>>, TError,{data: BulkIdsRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketPricesBulkCopyToNextWeekCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketPricesBulkCopyToNextWeekCreate>>, {data: BulkIdsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningMarketPricesBulkCopyToNextWeekCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketPricesBulkCopyToNextWeekCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesBulkCopyToNextWeekCreate>>>
+    export type CommissioningMarketPricesBulkCopyToNextWeekCreateMutationBody = BulkIdsRequest
+    export type CommissioningMarketPricesBulkCopyToNextWeekCreateMutationError = ErrorResponse
+
+    export const useCommissioningMarketPricesBulkCopyToNextWeekCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesBulkCopyToNextWeekCreate>>, TError,{data: BulkIdsRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketPricesBulkCopyToNextWeekCreate>>,
+        TError,
+        {data: BulkIdsRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketPricesBulkCopyToNextWeekCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * Put the selected prices on sale or take them off it.
+ */
+export const commissioningMarketPricesBulkSetActiveCreate = (
+    marketPriceBulkActiveRequest: MarketPriceBulkActiveRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<void>(
+      {url: `/api/commissioning/market_prices/bulk_set_active/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: marketPriceBulkActiveRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketPricesBulkSetActiveCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesBulkSetActiveCreate>>, TError,{data: MarketPriceBulkActiveRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesBulkSetActiveCreate>>, TError,{data: MarketPriceBulkActiveRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketPricesBulkSetActiveCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketPricesBulkSetActiveCreate>>, {data: MarketPriceBulkActiveRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningMarketPricesBulkSetActiveCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketPricesBulkSetActiveCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesBulkSetActiveCreate>>>
+    export type CommissioningMarketPricesBulkSetActiveCreateMutationBody = MarketPriceBulkActiveRequest
+    export type CommissioningMarketPricesBulkSetActiveCreateMutationError = ErrorResponse
+
+    export const useCommissioningMarketPricesBulkSetActiveCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketPricesBulkSetActiveCreate>>, TError,{data: MarketPriceBulkActiveRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketPricesBulkSetActiveCreate>>,
+        TError,
+        {data: MarketPriceBulkActiveRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketPricesBulkSetActiveCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The XLSX the market scales import: the week's active prices by PLU number.
+ */
+export const commissioningMarketPricesScaleExportRetrieve = (
+    params: CommissioningMarketPricesScaleExportRetrieveParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<Blob>(
+      {url: `/api/commissioning/market_prices/scale_export/`, method: 'GET',
+        params,
+        responseType: 'blob', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMarketPricesScaleExportRetrieveQueryKey = (params?: CommissioningMarketPricesScaleExportRetrieveParams,) => {
+    return [
+    `/api/commissioning/market_prices/scale_export/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningMarketPricesScaleExportRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError = ErrorResponse>(params: CommissioningMarketPricesScaleExportRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMarketPricesScaleExportRetrieveQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>> = ({ signal }) => commissioningMarketPricesScaleExportRetrieve(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMarketPricesScaleExportRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>>
+export type CommissioningMarketPricesScaleExportRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningMarketPricesScaleExportRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesScaleExportRetrieveParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketPricesScaleExportRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesScaleExportRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketPricesScaleExportRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesScaleExportRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningMarketPricesScaleExportRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError = ErrorResponse>(
+ params: CommissioningMarketPricesScaleExportRetrieveParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketPricesScaleExportRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMarketPricesScaleExportRetrieveQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningMarketProductGroupsList = (
+    params?: CommissioningMarketProductGroupsListParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketProductGroup[]>(
+      {url: `/api/commissioning/market_product_groups/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMarketProductGroupsListQueryKey = (params?: CommissioningMarketProductGroupsListParams,) => {
+    return [
+    `/api/commissioning/market_product_groups/`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getCommissioningMarketProductGroupsListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError = ErrorResponse>(params?: CommissioningMarketProductGroupsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMarketProductGroupsListQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>> = ({ signal }) => commissioningMarketProductGroupsList(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMarketProductGroupsListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>>
+export type CommissioningMarketProductGroupsListQueryError = ErrorResponse
+
+
+export function useCommissioningMarketProductGroupsList<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError = ErrorResponse>(
+ params: undefined |  CommissioningMarketProductGroupsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketProductGroupsList<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError = ErrorResponse>(
+ params?: CommissioningMarketProductGroupsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketProductGroupsList<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError = ErrorResponse>(
+ params?: CommissioningMarketProductGroupsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningMarketProductGroupsList<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError = ErrorResponse>(
+ params?: CommissioningMarketProductGroupsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMarketProductGroupsListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningMarketProductGroupsCreate = (
+    marketProductGroupRequest: MarketProductGroupRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketProductGroup>(
+      {url: `/api/commissioning/market_product_groups/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: marketProductGroupRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketProductGroupsCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsCreate>>, TError,{data: MarketProductGroupRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsCreate>>, TError,{data: MarketProductGroupRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketProductGroupsCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketProductGroupsCreate>>, {data: MarketProductGroupRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningMarketProductGroupsCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketProductGroupsCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketProductGroupsCreate>>>
+    export type CommissioningMarketProductGroupsCreateMutationBody = MarketProductGroupRequest
+    export type CommissioningMarketProductGroupsCreateMutationError = ErrorResponse
+
+    export const useCommissioningMarketProductGroupsCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsCreate>>, TError,{data: MarketProductGroupRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketProductGroupsCreate>>,
+        TError,
+        {data: MarketProductGroupRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketProductGroupsCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketProductGroupsRetrieve = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<MarketProductGroup>(
+      {url: `/api/commissioning/market_product_groups/${id}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningMarketProductGroupsRetrieveQueryKey = (id?: string,) => {
+    return [
+    `/api/commissioning/market_product_groups/${id}/`
+    ] as const;
+    }
+
+    
+export const getCommissioningMarketProductGroupsRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError = ErrorResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningMarketProductGroupsRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>> = ({ signal }) => commissioningMarketProductGroupsRetrieve(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningMarketProductGroupsRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>>
+export type CommissioningMarketProductGroupsRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningMarketProductGroupsRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError = ErrorResponse>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketProductGroupsRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningMarketProductGroupsRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningMarketProductGroupsRetrieve<TData = Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningMarketProductGroupsRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningMarketProductGroupsUpdate = (
+    id: string,
+    marketProductGroupRequest: MarketProductGroupRequest,
+ ) => {
+      
+      
+      return axiosService<MarketProductGroup>(
+      {url: `/api/commissioning/market_product_groups/${id}/`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: marketProductGroupRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketProductGroupsUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsUpdate>>, TError,{id: string;data: MarketProductGroupRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsUpdate>>, TError,{id: string;data: MarketProductGroupRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketProductGroupsUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketProductGroupsUpdate>>, {id: string;data: MarketProductGroupRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningMarketProductGroupsUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketProductGroupsUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketProductGroupsUpdate>>>
+    export type CommissioningMarketProductGroupsUpdateMutationBody = MarketProductGroupRequest
+    export type CommissioningMarketProductGroupsUpdateMutationError = ErrorResponse
+
+    export const useCommissioningMarketProductGroupsUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsUpdate>>, TError,{id: string;data: MarketProductGroupRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketProductGroupsUpdate>>,
+        TError,
+        {id: string;data: MarketProductGroupRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketProductGroupsUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketProductGroupsPartialUpdate = (
+    id: string,
+    patchedMarketProductGroupRequest: PatchedMarketProductGroupRequest,
+ ) => {
+      
+      
+      return axiosService<MarketProductGroup>(
+      {url: `/api/commissioning/market_product_groups/${id}/`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchedMarketProductGroupRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketProductGroupsPartialUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsPartialUpdate>>, TError,{id: string;data: PatchedMarketProductGroupRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsPartialUpdate>>, TError,{id: string;data: PatchedMarketProductGroupRequest}, TContext> => {
+
+const mutationKey = ['commissioningMarketProductGroupsPartialUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketProductGroupsPartialUpdate>>, {id: string;data: PatchedMarketProductGroupRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningMarketProductGroupsPartialUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketProductGroupsPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketProductGroupsPartialUpdate>>>
+    export type CommissioningMarketProductGroupsPartialUpdateMutationBody = PatchedMarketProductGroupRequest
+    export type CommissioningMarketProductGroupsPartialUpdateMutationError = ErrorResponse
+
+    export const useCommissioningMarketProductGroupsPartialUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsPartialUpdate>>, TError,{id: string;data: PatchedMarketProductGroupRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketProductGroupsPartialUpdate>>,
+        TError,
+        {id: string;data: PatchedMarketProductGroupRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketProductGroupsPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningMarketProductGroupsDestroy = (
+    id: string,
+ ) => {
+      
+      
+      return axiosService<void>(
+      {url: `/api/commissioning/market_product_groups/${id}/`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getCommissioningMarketProductGroupsDestroyMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsDestroy>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsDestroy>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['commissioningMarketProductGroupsDestroy'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningMarketProductGroupsDestroy>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  commissioningMarketProductGroupsDestroy(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningMarketProductGroupsDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningMarketProductGroupsDestroy>>>
+    
+    export type CommissioningMarketProductGroupsDestroyMutationError = ErrorResponse
+
+    export const useCommissioningMarketProductGroupsDestroy = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningMarketProductGroupsDestroy>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningMarketProductGroupsDestroy>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningMarketProductGroupsDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     /**
  * 
     Snapshot ("today") of member and cooperative-share statistics: member counts
@@ -20482,6 +21922,407 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getCommissioningResellersDestroyMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningScaleTaxCodesList = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<ScaleTaxCode[]>(
+      {url: `/api/commissioning/scale_tax_codes/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningScaleTaxCodesListQueryKey = () => {
+    return [
+    `/api/commissioning/scale_tax_codes/`
+    ] as const;
+    }
+
+    
+export const getCommissioningScaleTaxCodesListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError = ErrorResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningScaleTaxCodesListQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>> = ({ signal }) => commissioningScaleTaxCodesList(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningScaleTaxCodesListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>>
+export type CommissioningScaleTaxCodesListQueryError = ErrorResponse
+
+
+export function useCommissioningScaleTaxCodesList<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError = ErrorResponse>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningScaleTaxCodesList<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningScaleTaxCodesList<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningScaleTaxCodesList<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningScaleTaxCodesListQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningScaleTaxCodesCreate = (
+    scaleTaxCodeRequest: ScaleTaxCodeRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<ScaleTaxCode>(
+      {url: `/api/commissioning/scale_tax_codes/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: scaleTaxCodeRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningScaleTaxCodesCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesCreate>>, TError,{data: ScaleTaxCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesCreate>>, TError,{data: ScaleTaxCodeRequest}, TContext> => {
+
+const mutationKey = ['commissioningScaleTaxCodesCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningScaleTaxCodesCreate>>, {data: ScaleTaxCodeRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningScaleTaxCodesCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningScaleTaxCodesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningScaleTaxCodesCreate>>>
+    export type CommissioningScaleTaxCodesCreateMutationBody = ScaleTaxCodeRequest
+    export type CommissioningScaleTaxCodesCreateMutationError = ErrorResponse
+
+    export const useCommissioningScaleTaxCodesCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesCreate>>, TError,{data: ScaleTaxCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningScaleTaxCodesCreate>>,
+        TError,
+        {data: ScaleTaxCodeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningScaleTaxCodesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningScaleTaxCodesRetrieve = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<ScaleTaxCode>(
+      {url: `/api/commissioning/scale_tax_codes/${id}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningScaleTaxCodesRetrieveQueryKey = (id?: string,) => {
+    return [
+    `/api/commissioning/scale_tax_codes/${id}/`
+    ] as const;
+    }
+
+    
+export const getCommissioningScaleTaxCodesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError = ErrorResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningScaleTaxCodesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>> = ({ signal }) => commissioningScaleTaxCodesRetrieve(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningScaleTaxCodesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>>
+export type CommissioningScaleTaxCodesRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningScaleTaxCodesRetrieve<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError = ErrorResponse>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningScaleTaxCodesRetrieve<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningScaleTaxCodesRetrieve<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningScaleTaxCodesRetrieve<TData = Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningScaleTaxCodesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const commissioningScaleTaxCodesUpdate = (
+    id: string,
+    scaleTaxCodeRequest: ScaleTaxCodeRequest,
+ ) => {
+      
+      
+      return axiosService<ScaleTaxCode>(
+      {url: `/api/commissioning/scale_tax_codes/${id}/`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: scaleTaxCodeRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningScaleTaxCodesUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesUpdate>>, TError,{id: string;data: ScaleTaxCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesUpdate>>, TError,{id: string;data: ScaleTaxCodeRequest}, TContext> => {
+
+const mutationKey = ['commissioningScaleTaxCodesUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningScaleTaxCodesUpdate>>, {id: string;data: ScaleTaxCodeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningScaleTaxCodesUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningScaleTaxCodesUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningScaleTaxCodesUpdate>>>
+    export type CommissioningScaleTaxCodesUpdateMutationBody = ScaleTaxCodeRequest
+    export type CommissioningScaleTaxCodesUpdateMutationError = ErrorResponse
+
+    export const useCommissioningScaleTaxCodesUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesUpdate>>, TError,{id: string;data: ScaleTaxCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningScaleTaxCodesUpdate>>,
+        TError,
+        {id: string;data: ScaleTaxCodeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningScaleTaxCodesUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningScaleTaxCodesPartialUpdate = (
+    id: string,
+    patchedScaleTaxCodeRequest: PatchedScaleTaxCodeRequest,
+ ) => {
+      
+      
+      return axiosService<ScaleTaxCode>(
+      {url: `/api/commissioning/scale_tax_codes/${id}/`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchedScaleTaxCodeRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningScaleTaxCodesPartialUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesPartialUpdate>>, TError,{id: string;data: PatchedScaleTaxCodeRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesPartialUpdate>>, TError,{id: string;data: PatchedScaleTaxCodeRequest}, TContext> => {
+
+const mutationKey = ['commissioningScaleTaxCodesPartialUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningScaleTaxCodesPartialUpdate>>, {id: string;data: PatchedScaleTaxCodeRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningScaleTaxCodesPartialUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningScaleTaxCodesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningScaleTaxCodesPartialUpdate>>>
+    export type CommissioningScaleTaxCodesPartialUpdateMutationBody = PatchedScaleTaxCodeRequest
+    export type CommissioningScaleTaxCodesPartialUpdateMutationError = ErrorResponse
+
+    export const useCommissioningScaleTaxCodesPartialUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesPartialUpdate>>, TError,{id: string;data: PatchedScaleTaxCodeRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningScaleTaxCodesPartialUpdate>>,
+        TError,
+        {id: string;data: PatchedScaleTaxCodeRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningScaleTaxCodesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const commissioningScaleTaxCodesDestroy = (
+    id: string,
+ ) => {
+      
+      
+      return axiosService<void>(
+      {url: `/api/commissioning/scale_tax_codes/${id}/`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getCommissioningScaleTaxCodesDestroyMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesDestroy>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesDestroy>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['commissioningScaleTaxCodesDestroy'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningScaleTaxCodesDestroy>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  commissioningScaleTaxCodesDestroy(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningScaleTaxCodesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningScaleTaxCodesDestroy>>>
+    
+    export type CommissioningScaleTaxCodesDestroyMutationError = ErrorResponse
+
+    export const useCommissioningScaleTaxCodesDestroy = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningScaleTaxCodesDestroy>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningScaleTaxCodesDestroy>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningScaleTaxCodesDestroyMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

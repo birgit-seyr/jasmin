@@ -35,4 +35,5 @@ export { default as StationContentsPDFGenerator } from "./exports/StationContent
 export { default as HarvestingListPDF } from "./exports/HarvestingListPDF";
 export { default as HarvestingListPDFGenerator } from "./exports/HarvestingListPDFGenerator";
 export { default as BaseListPDF } from "./exports/BaseListPDF";
+export { default as MarketPriceListPDFGenerator } from "./exports/MarketPriceListPDFGenerator";
 export { default as PurchaseListPDFGenerator } from "./exports/PurchaseListPDFGenerator";

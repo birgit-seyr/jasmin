@@ -36,7 +36,13 @@ from .documentation import (
     WashAmountFactory,
     WasteFactory,
 )
-from .markets import MarketFactory
+from .markets import (
+    MarketArticleFactory,
+    MarketFactory,
+    MarketPriceFactory,
+    MarketProductGroupFactory,
+    ScaleTaxCodeFactory,
+)
 from .members import (
     CoopShareFactory,
     MemberFactory,

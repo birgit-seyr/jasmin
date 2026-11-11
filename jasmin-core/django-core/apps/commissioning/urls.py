@@ -80,6 +80,9 @@ from .viewsets import (
     HarvestViewSet,
     InvoiceResellerContentViewSet,
     InvoiceResellerViewSet,
+    MarketArticleViewSet,
+    MarketPriceViewSet,
+    MarketProductGroupViewSet,
     MemberLoanViewSet,
     MemberViewSet,
     OfferGroupViewSet,
@@ -93,6 +96,7 @@ from .viewsets import (
     PlotViewSet,
     PurchaseViewSet,
     ResellerViewSet,
+    ScaleTaxCodeViewSet,
     SeasonViewSet,
     ShareArticleNetPriceViewSet,
     ShareArticleViewSet,
@@ -202,6 +206,14 @@ router.register(
     basename="crate_invoice_content",
 )
 router.register(r"storages", StorageViewSet, basename="storages")
+router.register(
+    r"market_product_groups",
+    MarketProductGroupViewSet,
+    basename="market_product_groups",
+)
+router.register(r"market_articles", MarketArticleViewSet, basename="market_articles")
+router.register(r"market_prices", MarketPriceViewSet, basename="market_prices")
+router.register(r"scale_tax_codes", ScaleTaxCodeViewSet, basename="scale_tax_codes")
 router.register(r"share_articles", ShareArticleViewSet, basename="share_article")
 router.register(
     r"default_share_articles_in_share",

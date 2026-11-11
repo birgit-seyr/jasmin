@@ -78,6 +78,14 @@ from .logs_serializer import (
     TheoreticalPurchaseSerializer,
     TheoreticalWashAmountSerializer,
 )
+from .markets_serializer import (
+    MarketArticleSerializer,
+    MarketPriceBulkActiveRequestSerializer,
+    MarketPriceCopyResultSerializer,
+    MarketPriceSerializer,
+    MarketProductGroupSerializer,
+    ScaleTaxCodeSerializer,
+)
 from .members_serializer import (
     AdminConfirmationRequestSerializer,
     CoopShareOnboardingSerializer,

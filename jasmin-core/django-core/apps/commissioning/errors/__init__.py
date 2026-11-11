@@ -16,8 +16,11 @@ from .deletion import (
     CrateInUse,
     DeliveryStationDayInUse,
     DeliveryStationInUse,
+    MarketArticleInUse,
+    MarketProductGroupInUse,
     OrdersDeliveryDayInUse,
     PlotInUse,
+    ScaleTaxCodeInUse,
     ShareArticleInUse,
     SharesDeliveryDayInUse,
     ShareTypeInUse,
@@ -65,6 +68,7 @@ from .generic import (
     InvalidUploadedDocument,
     PastWeekError,
 )
+from .markets import ScaleTaxCodeMissing, ScaleUnitUnsupported
 from .members import (
     ConfirmationDateAfterExit,
     ConfirmationDateInFuture,
@@ -473,6 +477,11 @@ __all__ = [
     "StorageInUse",
     "ShareArticleInUse",
     "CrateInUse",
+    "MarketProductGroupInUse",
+    "MarketArticleInUse",
+    "ScaleTaxCodeInUse",
+    "ScaleTaxCodeMissing",
+    "ScaleUnitUnsupported",
     "OrdersDeliveryDayInUse",
     "DeliveryStationInUse",
     "DeliveryStationDayInUse",

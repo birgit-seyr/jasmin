@@ -12,6 +12,9 @@
     "members_member_number_must_be_unique": "Member number must be unique.",
     "name": "Name must be unique.",
     "number": "Number must be unique.",
+    "plu_number": "This PLU number is already taken.",
+    "tax_rate": "This VAT rate already has a code.",
+    "market_price": "This PLU already has a price this week — change its line instead.",
     "time_management_order_days": "Order days must be unique.",
     "sort_order": "This sort order is already assigned to another variation in the same period."
   },

@@ -199,6 +199,27 @@ export function getErrorDetails(
   return undefined;
 }
 
+/**
+ * A request made with `responseType: "blob"` (a file download) gets its error
+ * body as a Blob too, which hides the server's code, message and details from
+ * the readers above. Read a JSON error body back into `response.data`, then
+ * hand the error on:
+ *
+ *   catch (err) { notify.error(getErrorMessage(await readBlobErrorBody(err), fallback)); }
+ */
+export async function readBlobErrorBody(err: unknown): Promise<unknown> {
+  const response = asAxiosError(err)?.response;
+  const body: unknown = response?.data;
+  if (response && body instanceof Blob && body.type.includes("json")) {
+    try {
+      response.data = JSON.parse(await body.text()) as JasminErrorPayload;
+    } catch {
+      // Not JSON after all: the caller's fallback message applies.
+    }
+  }
+  return err;
+}
+
 function firstFieldMessage(data: JasminErrorPayload): string | undefined {
   for (const [key, value] of Object.entries(data)) {
     if (["code", "message", "field", "details", "request_id", "error", "detail"].includes(key)) {

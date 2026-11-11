@@ -149,7 +149,6 @@ export default function ConfigurationCommissioning() {
             label: t("settings.commissioning.has_markets"),
             type: "checkbox",
             defaultValue: false,
-            disabled: true,
           },
           {
             key: "crates_should_be_on_documents",

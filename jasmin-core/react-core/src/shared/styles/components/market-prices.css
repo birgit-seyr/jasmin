@@ -1,0 +1,5 @@
+/* Market prices — the price list's product group picker. */
+
+.market-prices__group-select {
+  min-width: 18em;
+}

@@ -69,8 +69,17 @@ const ListShareArticles = lazy(
 const DefaultShareArticlesInShare = lazy(
   () => import("@features/commissioning/pages/DefaultShareArticlesInShare"),
 );
-const ListMarkets = lazy(
-  () => import("@features/commissioning/pages/ListMarkets"),
+const ListMarketArticles = lazy(
+  () => import("@features/commissioning/pages/ListMarketArticles"),
+);
+const ListMarketProductGroups = lazy(
+  () => import("@features/commissioning/pages/ListMarketProductGroups"),
+);
+const ListScaleTaxCodes = lazy(
+  () => import("@features/commissioning/pages/ListScaleTaxCodes"),
+);
+const MarketPrices = lazy(
+  () => import("@features/commissioning/pages/MarketPrices"),
 );
 const ListOfferGroups = lazy(
   () => import("@features/commissioning/pages/ListOfferGroups"),
@@ -439,10 +448,34 @@ export const commissioningRoutes: AppRoute[] = [
     ),
   },
   {
-    path: "/commissioning/list-markets",
+    path: "/commissioning/list-market-articles",
     element: (
       <RequireRole flag="isStaff">
-        <ListMarkets />
+        <ListMarketArticles />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/commissioning/list-market-product-groups",
+    element: (
+      <RequireRole flag="isStaff">
+        <ListMarketProductGroups />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/commissioning/list-scale-tax-codes",
+    element: (
+      <RequireRole flag="isStaff">
+        <ListScaleTaxCodes />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/commissioning/market-prices",
+    element: (
+      <RequireRole flag="isStaff">
+        <MarketPrices />
       </RequireRole>
     ),
   },

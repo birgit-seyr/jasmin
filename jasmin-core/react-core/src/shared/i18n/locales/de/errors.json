@@ -290,6 +290,19 @@
     "not_found": "Lager nicht gefunden.",
     "in_use": "Dieses Lager wird noch verwendet (etwa von Prognosen oder Dokumentationseinträgen) und kann nicht gelöscht werden."
   },
+  "market_product_group": {
+    "in_use": "Dieser Warengruppe sind noch PLUs zugeordnet, deshalb kann sie nicht gelöscht werden."
+  },
+  "market_article": {
+    "in_use": "Diese PLU hat Preise und kann nicht gelöscht werden. Wird sie nicht mehr verkauft, wird sie auf inaktiv gesetzt."
+  },
+  "scale_tax_code": {
+    "missing": "Für den Steuersatz {{tax_rate}} % gibt es noch keinen Code der Waage. Bitte einen Code wählen oder für diesen Satz einen anlegen.",
+    "in_use": "Unter diesem Code werden noch PLUs verkauft, deshalb kann er nicht gelöscht werden."
+  },
+  "scale_unit": {
+    "unsupported": "PLU {{plu_numbers}} hat eine Einheit, in der die Waage nicht verkaufen kann: Die Waage wiegt nach kg oder zählt Stück und Bund."
+  },
   "offer": {
     "amount_changed": "Die verfügbare Menge dieses Angebots hat sich inzwischen geändert — bitte die Seite neu laden und die Menge erneut eintragen.",
     "already_ordered": "Aus diesem Angebot wurde schon bestellt, deshalb kann es nicht mehr gelöscht werden.",

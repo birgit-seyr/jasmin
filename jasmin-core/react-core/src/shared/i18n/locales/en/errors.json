@@ -290,6 +290,19 @@
     "not_found": "Storage not found.",
     "in_use": "This storage is still in use (by forecasts or documentation entries, say) and can't be deleted."
   },
+  "market_product_group": {
+    "in_use": "PLUs still belong to this product group, so it can't be deleted."
+  },
+  "market_article": {
+    "in_use": "This PLU has prices and can't be deleted. Set it inactive if it's no longer sold."
+  },
+  "scale_tax_code": {
+    "missing": "The scale has no code for the {{tax_rate}} % VAT rate yet. Pick a code, or add one for this rate.",
+    "in_use": "PLUs are still sold under this code, so it can't be deleted."
+  },
+  "scale_unit": {
+    "unsupported": "The scale can't sell PLU {{plu_numbers}} in its unit: it weighs by the kg or counts pieces and bunches."
+  },
   "offer": {
     "amount_changed": "The available amount of this offer has changed in the meantime — please reload the page and enter the amount again.",
     "already_ordered": "This offer has already been ordered from, so it can't be deleted.",

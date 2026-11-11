@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
 import { useDeliveryStationNavItems } from "./useDeliveryStationNavItems";
+import { useMarketNavItems } from "./useMarketNavItems";
 import { usePackingListVisibility } from "./usePackingListVisibility";
 import { usePlanningNavItems } from "./usePlanningNavItems";
 import { useWorkListNavItems } from "./useWorkListNavItems";
@@ -14,7 +15,6 @@ import EggIcon from "@mui/icons-material/Egg";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import GrainIcon from "@mui/icons-material/Grain";
 import HdrWeakIcon from "@mui/icons-material/HdrWeak";
-import StorefrontIcon from "@mui/icons-material/Storefront";
 interface CommissioningSidebarProps {
   openKeys?: string[];
   onOpenChange?: (keys: string[]) => void;
@@ -31,7 +31,6 @@ export default function CommissioningSidebar({
   const { planningComplexItems, planningLongTermItems, additionalLongTermItems } =
     usePlanningNavItems();
 
-  const has_markets = getSetting("has_markets", true);
   const sells_to_resellers = getSetting("sells_to_resellers", true);
   const weekly_upload = getSetting("uploads_weekly_share_amount", false);
   const offersManualShareImport = useCapability("manual_share_import");
@@ -44,6 +43,7 @@ export default function CommissioningSidebar({
   } = usePackingListVisibility();
   const { deliveryStationSection, deliveryStationListItems } =
     useDeliveryStationNavItems();
+  const marketSection = useMarketNavItems();
 
   const baseMenuItems = [
     {
@@ -301,22 +301,7 @@ export default function CommissioningSidebar({
           },
         ]
       : []),
-    ...(has_markets
-      ? [
-          {
-            key: "commissioning-markets",
-
-            requireRole: "isStaff",
-            icon: <StorefrontIcon />,
-            label: (
-              <div className="sidebar-section-header">
-                {t("commissioning.markets")}
-              </div>
-            ),
-            children: [],
-          },
-        ]
-      : []),
+    ...marketSection,
     {
       key: "commissioning-harvesting-packing",
 
@@ -499,20 +484,6 @@ export default function CommissioningSidebar({
             </Link>
           ),
         },
-        ...(has_markets
-          ? [
-              {
-                key: "commissioning-list-markets",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/list-markets">
-                    {t("commissioning.list_markets")}
-                  </Link>
-                ),
-              },
-            ]
-          : []),
         {
           key: "commissioning-list-plots",
           requireRole: "isStaff",

@@ -11139,6 +11139,942 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/market_articles/:
+    get:
+      operationId: commissioning_market_articles_list
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+        description: Filter by active status
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketArticle'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: commissioning_market_articles_create
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketArticleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarketArticleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarketArticleRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketArticle'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_articles/{id}/:
+    get:
+      operationId: commissioning_market_articles_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market article identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketArticle'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: commissioning_market_articles_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market article identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketArticleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarketArticleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarketArticleRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketArticle'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: commissioning_market_articles_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market article identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketArticleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketArticleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketArticleRequest'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketArticle'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: commissioning_market_articles_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market article identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_prices/:
+    get:
+      operationId: commissioning_market_prices_list
+      description: The week's market prices, by product group and PLU number.
+      parameters:
+      - in: query
+        name: delivery_week
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
+        required: true
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
+        name: year
+        schema:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketPrice'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: commissioning_market_prices_create
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketPriceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarketPriceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarketPriceRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPrice'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_prices/{id}/:
+    get:
+      operationId: commissioning_market_prices_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market price identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPrice'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: commissioning_market_prices_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market price identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketPriceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarketPriceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarketPriceRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPrice'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: commissioning_market_prices_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market price identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketPriceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketPriceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketPriceRequest'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPrice'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: commissioning_market_prices_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market price identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_prices/bulk_copy_to_next_week/:
+    post:
+      operationId: commissioning_market_prices_bulk_copy_to_next_week_create
+      description: Copy the selected prices into the week after their own. A PLU that
+        already has a price there keeps it, and its copy is skipped.
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkIdsRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPriceCopyResult'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_prices/bulk_set_active/:
+    post:
+      operationId: commissioning_market_prices_bulk_set_active_create
+      description: Put the selected prices on sale or take them off it.
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketPriceBulkActiveRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarketPriceBulkActiveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarketPriceBulkActiveRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_prices/scale_export/:
+    get:
+      operationId: commissioning_market_prices_scale_export_retrieve
+      description: 'The XLSX the market scales import: the week''s active prices by
+        PLU number.'
+      parameters:
+      - in: query
+        name: delivery_week
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 53
+        description: ISO week number (1-53). Week 53 is accepted only for a year that
+          has one; sent with a 52-week year it is refused.
+        required: true
+        examples:
+          Week1:
+            value: 1
+            summary: Week 1
+          Week26:
+            value: 26
+            summary: Week 26
+          Week52:
+            value: 52
+            summary: Week 52
+      - in: query
+        name: year
+        schema:
+          type: integer
+          minimum: 1900
+          maximum: 2100
+        description: Year (YYYY format)
+        required: true
+        examples:
+          '2024':
+            value: 2024
+          '2025':
+            value: 2025
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_product_groups/:
+    get:
+      operationId: commissioning_market_product_groups_list
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+        description: Filter by active status
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketProductGroup'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: commissioning_market_product_groups_create
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketProductGroupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarketProductGroupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarketProductGroupRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketProductGroup'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/market_product_groups/{id}/:
+    get:
+      operationId: commissioning_market_product_groups_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market product group identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketProductGroup'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: commissioning_market_product_groups_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market product group identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketProductGroupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarketProductGroupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarketProductGroupRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketProductGroup'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: commissioning_market_product_groups_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market product group identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketProductGroupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketProductGroupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMarketProductGroupRequest'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketProductGroup'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: commissioning_market_product_groups_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der market product group identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/member_dashboard_statistics/:
     get:
       operationId: commissioning_member_dashboard_statistics_retrieve
@@ -15945,6 +16881,255 @@ paths:
       responses:
         '204':
           description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/scale_tax_codes/:
+    get:
+      operationId: commissioning_scale_tax_codes_list
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScaleTaxCode'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: commissioning_scale_tax_codes_create
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaleTaxCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScaleTaxCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScaleTaxCodeRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaleTaxCode'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/scale_tax_codes/{id}/:
+    get:
+      operationId: commissioning_scale_tax_codes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der scale tax code identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaleTaxCode'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: commissioning_scale_tax_codes_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der scale tax code identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaleTaxCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScaleTaxCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScaleTaxCodeRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaleTaxCode'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: commissioning_scale_tax_codes_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der scale tax code identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedScaleTaxCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedScaleTaxCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedScaleTaxCodeRequest'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScaleTaxCode'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    delete:
+      operationId: commissioning_scale_tax_codes_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der scale tax code identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -36793,6 +37978,309 @@ components:
       - roles
       - theme
       - user_language
+    MarketArticle:
+      type: object
+      description: |-
+        A PLU. Saved without ``scale_tax_code`` (left out on create, or null),
+        it sells under the scale's code for its share article's VAT rate, or the
+        farm's default rate.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        share_article_name:
+          type: string
+          readOnly: true
+          nullable: true
+        product_group_name:
+          type: string
+          readOnly: true
+          nullable: true
+        is_active:
+          type: boolean
+        plu_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        sort:
+          type: string
+          nullable: true
+          maxLength: 200
+        name:
+          type: string
+          maxLength: 100
+        allows_price_override:
+          type: boolean
+        allows_discount_price:
+          type: boolean
+        share_article:
+          type: string
+          nullable: true
+        product_group:
+          type: string
+          nullable: true
+        scale_tax_code:
+          type: string
+          nullable: true
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+      required:
+      - can_be_deleted
+      - id
+      - name
+      - plu_number
+      - product_group_name
+      - share_article_name
+      - unit
+    MarketArticleRequest:
+      type: object
+      description: |-
+        A PLU. Saved without ``scale_tax_code`` (left out on create, or null),
+        it sells under the scale's code for its share article's VAT rate, or the
+        farm's default rate.
+      properties:
+        is_active:
+          type: boolean
+        plu_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        sort:
+          type: string
+          nullable: true
+          maxLength: 200
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        allows_price_override:
+          type: boolean
+        allows_discount_price:
+          type: boolean
+        share_article:
+          type: string
+          minLength: 1
+          nullable: true
+        product_group:
+          type: string
+          minLength: 1
+          nullable: true
+        scale_tax_code:
+          type: string
+          minLength: 1
+          nullable: true
+      required:
+      - name
+      - plu_number
+      - unit
+    MarketPrice:
+      type: object
+      description: |-
+        A PLU's gross price in one week, with the PLU's own fields and its price
+        the week before. ``is_changed`` is true when the price or the origin differs
+        from that week's, or the PLU had no price then.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        plu_number:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        unit:
+          allOf:
+          - $ref: '#/components/schemas/UnitEnum'
+          readOnly: true
+        size:
+          allOf:
+          - $ref: '#/components/schemas/VegetableSizeEnum'
+          readOnly: true
+        sort:
+          type: string
+          readOnly: true
+          nullable: true
+        product_group_number:
+          type: integer
+          readOnly: true
+          nullable: true
+        product_group_name:
+          type: string
+          readOnly: true
+          nullable: true
+        previous_gross_price:
+          type: string
+          nullable: true
+          readOnly: true
+        previous_origin:
+          type: string
+          nullable: true
+          readOnly: true
+        is_changed:
+          type: boolean
+          readOnly: true
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        gross_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+        origin:
+          type: string
+          nullable: true
+          maxLength: 100
+        is_active:
+          type: boolean
+        market_article:
+          type: string
+      required:
+      - delivery_week
+      - gross_price
+      - id
+      - is_changed
+      - market_article
+      - name
+      - plu_number
+      - previous_gross_price
+      - previous_origin
+      - product_group_name
+      - product_group_number
+      - size
+      - sort
+      - unit
+      - year
+    MarketPriceBulkActiveRequest:
+      type: object
+      description: The prices to put on sale (``is_active`` true) or take off it.
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+        is_active:
+          type: boolean
+      required:
+      - ids
+      - is_active
+    MarketPriceCopyResult:
+      type: object
+      properties:
+        total_requested:
+          type: integer
+        total_copied:
+          type: integer
+        skipped_count:
+          type: integer
+      required:
+      - skipped_count
+      - total_copied
+      - total_requested
+    MarketPriceRequest:
+      type: object
+      description: |-
+        A PLU's gross price in one week, with the PLU's own fields and its price
+        the week before. ``is_changed`` is true when the price or the origin differs
+        from that week's, or the PLU had no price then.
+      properties:
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        gross_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+        origin:
+          type: string
+          nullable: true
+          maxLength: 100
+        is_active:
+          type: boolean
+        market_article:
+          type: string
+          minLength: 1
+      required:
+      - delivery_week
+      - gross_price
+      - market_article
+      - year
+    MarketProductGroup:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+        number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        name:
+          type: string
+          maxLength: 200
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+      required:
+      - can_be_deleted
+      - id
+      - name
+      - number
+    MarketProductGroupRequest:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        is_active:
+          type: boolean
+        number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - name
+      - number
     Member:
       type: object
       description: |-
@@ -40666,6 +42154,96 @@ components:
           type: string
           nullable: true
           maxLength: 500
+    PatchedMarketArticleRequest:
+      type: object
+      description: |-
+        A PLU. Saved without ``scale_tax_code`` (left out on create, or null),
+        it sells under the scale's code for its share article's VAT rate, or the
+        farm's default rate.
+      properties:
+        is_active:
+          type: boolean
+        plu_number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        unit:
+          $ref: '#/components/schemas/UnitEnum'
+        size:
+          $ref: '#/components/schemas/VegetableSizeEnum'
+        sort:
+          type: string
+          nullable: true
+          maxLength: 200
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        allows_price_override:
+          type: boolean
+        allows_discount_price:
+          type: boolean
+        share_article:
+          type: string
+          minLength: 1
+          nullable: true
+        product_group:
+          type: string
+          minLength: 1
+          nullable: true
+        scale_tax_code:
+          type: string
+          minLength: 1
+          nullable: true
+    PatchedMarketPriceRequest:
+      type: object
+      description: |-
+        A PLU's gross price in one week, with the PLU's own fields and its price
+        the week before. ``is_changed`` is true when the price or the origin differs
+        from that week's, or the PLU had no price then.
+      properties:
+        year:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        delivery_week:
+          type: integer
+          maximum: 53
+          minimum: 1
+        gross_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+        origin:
+          type: string
+          nullable: true
+          maxLength: 100
+        is_active:
+          type: boolean
+        market_article:
+          type: string
+          minLength: 1
+    PatchedMarketProductGroupRequest:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        is_active:
+          type: boolean
+        number:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
     PatchedMemberLoanRequest:
       type: object
       description: |-
@@ -41542,6 +43120,25 @@ components:
           type: string
           nullable: true
           maxLength: 34
+    PatchedScaleTaxCodeRequest:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        code:
+          type: integer
+          maximum: 32767
+          minimum: 0
     PatchedSeasonRequest:
       type: object
       properties:
@@ -45207,6 +46804,58 @@ components:
             description: '{batch, plot, start_cell}'
       required:
       - placements
+    ScaleTaxCode:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        code:
+          type: integer
+          maximum: 32767
+          minimum: 0
+        can_be_deleted:
+          type: boolean
+          readOnly: true
+      required:
+      - can_be_deleted
+      - code
+      - id
+      - tax_rate
+    ScaleTaxCodeRequest:
+      type: object
+      description: |-
+        Mixin to add ``can_be_deleted`` to serializers.
+
+        Works with ``fields = '__all__'`` by injecting the field in
+        ``get_fields()``. On list endpoints, the bulk
+        :class:`DeletableListSerializer` precomputes deletability with R
+        queries (one per reverse relation) instead of N*R — see
+        ``apps/payments/tests/test_query_count_locks.py`` for the lock.
+      properties:
+        tax_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        code:
+          type: integer
+          maximum: 32767
+          minimum: 0
+      required:
+      - code
+      - tax_rate
     Season:
       type: object
       properties:
