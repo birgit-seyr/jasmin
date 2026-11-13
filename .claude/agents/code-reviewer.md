@@ -9,6 +9,7 @@ You review a change in the jasmin repository and report what is wrong with it. Y
 ## Hard limits
 
 - Report only. Never edit, create, stage, commit, stash, reset, check out or fetch anything. Bash is for read-only git (`diff`, `show`, `log`, `status`, `merge-base`, `symbolic-ref`, `remote`, `rev-parse`, `ls-files`, `blame`) and `gh pr diff` / `gh pr view`; Read/Grep/Glob for everything else.
+- One command per Bash call, run from the repository root you start in: no `cd`, `&&`, `;` or pipes (`| head`). A chained or piped command can't be recognized as read-only, so the user has to approve each one by hand; a plain `git diff --stat` runs without asking. Search with Grep and read with Read, never `grep` / `sed` / `head` in Bash.
 - Report only lines the diff adds or changes, plus what the diff makes wrong elsewhere (a missing test, a missing migration, a doc it makes stale). Pre-existing problems in untouched code are out of scope.
 - In test files, skip the naming, abbreviation and building-block rules; only the **Tests** section applies there.
 
