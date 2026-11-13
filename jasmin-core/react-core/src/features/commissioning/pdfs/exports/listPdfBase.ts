@@ -97,6 +97,32 @@ export const listStyles = StyleSheet.create({
     color: colors.brand,
     marginBottom: 4,
   },
+  // Dense rows for the long market lists (prices, orders, members), so a few
+  // hundred rows fit on a handful of pages.
+  compactRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border.light,
+  },
+  compactCell: {
+    paddingVertical: 1.5,
+    paddingHorizontal: 4,
+    fontSize: 8.5,
+    justifyContent: "center",
+  },
+  // A group's name as a row of its own between the dense rows.
+  compactGroupHeading: {
+    marginTop: spacing.sm,
+    paddingVertical: 2,
+    paddingLeft: 5,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.brand,
+    fontSize: fontSizes.smaller,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    color: colors.brand,
+  },
   cell: {
     paddingVertical: spacing.sm,
     paddingHorizontal: 5,

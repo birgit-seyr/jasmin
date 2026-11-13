@@ -1,8 +1,8 @@
 /**
  * The market prices of one ISO week: each PLU's gross price and origin. The
  * office copies selected prices into the next week, puts them on sale or takes
- * them off it, exports the week for the scales and prints the price list by
- * product group.
+ * them off it, exports the week for the scales and prints the price list and
+ * the order list by product group, and the member list for the market stand.
  */
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -49,12 +49,15 @@ import {
 } from "@hooks/index";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 import {
+  marketProductGroupLabel,
   useMarketArticles,
+  useMarketOrderListGroups,
   useMarketPricesColumns,
 } from "@features/commissioning/hooks";
+import MarketMemberListPrint from "@features/commissioning/components/MarketMemberListPrint";
 import MarketPriceGroupCounts from "@features/commissioning/components/MarketPriceGroupCounts";
-import MarketPriceListPrint from "@features/commissioning/components/MarketPriceListPrint";
 import MarketPricesBulkActions from "@features/commissioning/components/MarketPricesBulkActions";
+import MarketWeekListsPrint from "@features/commissioning/components/MarketWeekListsPrint";
 import type { MarketPriceListGroup } from "@features/commissioning/pdfs/exports/MarketPriceListPDF";
 
 type MarketPriceRow = MarketPrice & TableRecord;
@@ -170,10 +173,11 @@ export default function MarketPrices() {
     const groups = new Map<string, MarketPriceListGroup>();
     for (const price of prices) {
       if (!price.is_active) continue;
-      const label =
-        price.product_group_number == null
-          ? t("commissioning.market_price_list_without_group")
-          : `${price.product_group_number} ${price.product_group_name ?? ""}`;
+      const label = marketProductGroupLabel(
+        price.product_group_number,
+        price.product_group_name,
+        t,
+      );
       const group = groups.get(label) ?? { label, rows: [] };
       group.rows.push({
         id: price.id,
@@ -186,6 +190,7 @@ export default function MarketPrices() {
     }
     return [...groups.values()];
   }, [prices, t, formatCurrency, getUnitLabel]);
+  const orderListGroups = useMarketOrderListGroups(prices);
 
   return (
     <div>
@@ -197,9 +202,10 @@ export default function MarketPrices() {
         setSelectedWeek={setSelectedWeek}
       />
       <div className="button-row-spaced flex-center-y section-divider">
-        <MarketPriceListPrint
+        <MarketWeekListsPrint
           key={`${selectedYear}-${selectedWeek}`}
-          groups={priceListGroups}
+          priceGroups={priceListGroups}
+          orderGroups={orderListGroups}
           isReady={!isFetching}
           year={selectedYear}
           week={selectedWeek}
@@ -214,6 +220,11 @@ export default function MarketPrices() {
           </Button>
         )}
       </div>
+      {isOffice && (
+        <div className="button-row-spaced flex-center-y section-divider">
+          <MarketMemberListPrint />
+        </div>
+      )}
       <MarketPriceGroupCounts groups={priceListGroups} />
       {isOffice && !isPast && (
         <MarketPricesBulkActions

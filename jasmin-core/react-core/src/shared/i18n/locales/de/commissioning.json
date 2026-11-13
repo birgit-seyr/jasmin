@@ -883,12 +883,19 @@
   "market_prices_copied": "{{count}} Preis(e) in die nächste Woche kopiert",
   "market_prices_copied_some_skipped": "{{count}} Preis(e) in die nächste Woche kopiert, {{skipped}} waren dort schon vorhanden",
   "market_prices_copied_none": "Nichts kopiert: Die nächste Woche hat diese Preise schon",
-  "market_prices_activate": "Aktiv setzen",
-  "market_prices_deactivate": "Inaktiv setzen",
+  "market_prices_activate": "aktiv setzen",
+  "market_prices_deactivate": "inaktiv setzen",
   "market_prices_activated": "{{count}} Preis(e) aktiv gesetzt",
   "market_prices_deactivated": "{{count}} Preis(e) inaktiv gesetzt",
-  "market_price_list_groups": "Warengruppen in der Preisliste",
+  "market_price_list_groups": "Warengruppen in Preis- und Bestellliste",
   "market_price_list_all_groups": "Alle Warengruppen",
   "market_price_list_changed_only": "Nur geänderte Preise",
-  "market_prices_per_group": "Aktive Preise je Warengruppe:"
+  "market_prices_per_group": "Aktive Preise je Warengruppe:",
+  "market_order_list": "Bestellliste Markt",
+  "market_order_list_pdf": "Bestellliste (PDF)",
+  "in_stock": "Vorrat",
+  "order_amount": "Bestellmenge",
+  "market_member_list": "Mitgliederliste Markt",
+  "market_member_list_pdf": "Mitgliederliste (PDF)",
+  "market_member_list_as_of": "Stand {{date}}"
 }

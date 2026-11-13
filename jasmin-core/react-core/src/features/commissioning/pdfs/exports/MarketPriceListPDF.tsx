@@ -6,17 +6,14 @@ import { ListPDFFooter, ListPDFHeader } from "./ListPDFSharedComponents";
 // ─── Market-price-list specific styles ──────────────────────────────────────
 
 const localStyles = StyleSheet.create({
-  section: {
-    marginBottom: 16,
-  },
   colPlu: {
-    width: "15%",
+    width: "12%",
   },
   colName: {
-    width: "55%",
+    flex: 1,
   },
   colPrice: {
-    width: "30%",
+    width: "22%",
   },
 });
 
@@ -53,13 +50,15 @@ export interface MarketPriceListPDFProps {
 function TableHeader({ t }: { t: TFunction }) {
   return (
     <View style={listStyles.tableHeader} fixed>
-      <View style={[listStyles.cell, localStyles.colPlu, listStyles.cellLeft]}>
+      <View style={[listStyles.compactCell, localStyles.colPlu]}>
         <Text>{t("commissioning.plu_number")}</Text>
       </View>
-      <View style={[listStyles.cell, localStyles.colName, listStyles.cellLeft]}>
+      <View style={[listStyles.compactCell, localStyles.colName]}>
         <Text>{t("commissioning.market_label")}</Text>
       </View>
-      <View style={[listStyles.cell, localStyles.colPrice, listStyles.cellRight]}>
+      <View
+        style={[listStyles.compactCell, localStyles.colPrice, listStyles.cellRight]}
+      >
         <Text>{t("commissioning.gross_price")}</Text>
       </View>
     </View>
@@ -68,6 +67,8 @@ function TableHeader({ t }: { t: TFunction }) {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+/** One table for every group, the column header repeated on each page and
+ *  each group's name as a row of its own, so the list stays a few pages. */
 const MarketPriceListPDF = ({
   groups,
   year,
@@ -87,52 +88,40 @@ const MarketPriceListPDF = ({
           {subtitle ? <Text style={listStyles.subtitle}>{subtitle}</Text> : null}
         </ListPDFHeader>
 
-        {groupsWithRows.map((group) => (
-          <View key={group.label} style={localStyles.section}>
-            <View style={listStyles.sectionHeading}>
-              <Text>{group.label}</Text>
-            </View>
+        <View>
+          <TableHeader t={t} />
 
-            <View style={listStyles.table}>
-              <TableHeader t={t} />
+          {groupsWithRows.map((group) => (
+            <View key={group.label}>
+              <Text style={listStyles.compactGroupHeading} minPresenceAhead={30}>
+                {group.label}
+              </Text>
 
-              {group.rows.map((item, index) => (
-                <View
-                  key={item.id}
-                  style={[
-                    listStyles.tableRow,
-                    index === group.rows.length - 1
-                      ? listStyles.tableRowLast
-                      : {},
-                  ]}
-                  wrap={false}
-                >
-                  <View
-                    style={[listStyles.cell, localStyles.colPlu, listStyles.cellLeft]}
-                  >
-                    <Text style={{ fontWeight: item.is_changed ? 700 : 400 }}>
-                      {item.plu_number}
-                    </Text>
+              {group.rows.map((item) => {
+                const weight = { fontWeight: item.is_changed ? 700 : 400 };
+                return (
+                  <View key={item.id} style={listStyles.compactRow} wrap={false}>
+                    <View style={[listStyles.compactCell, localStyles.colPlu]}>
+                      <Text style={weight}>{item.plu_number}</Text>
+                    </View>
+                    <View style={[listStyles.compactCell, localStyles.colName]}>
+                      <Text style={weight}>{item.name}</Text>
+                    </View>
+                    <View
+                      style={[
+                        listStyles.compactCell,
+                        localStyles.colPrice,
+                        listStyles.cellRight,
+                      ]}
+                    >
+                      <Text style={weight}>{item.price_text}</Text>
+                    </View>
                   </View>
-                  <View
-                    style={[listStyles.cell, localStyles.colName, listStyles.cellLeft]}
-                  >
-                    <Text style={{ fontWeight: item.is_changed ? 700 : 400 }}>
-                      {item.name}
-                    </Text>
-                  </View>
-                  <View
-                    style={[listStyles.cell, localStyles.colPrice, listStyles.cellRight]}
-                  >
-                    <Text style={{ fontWeight: item.is_changed ? 700 : 400 }}>
-                      {item.price_text}
-                    </Text>
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
-          </View>
-        ))}
+          ))}
+        </View>
 
         <ListPDFFooter t={t} />
       </Page>

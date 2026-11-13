@@ -13,6 +13,10 @@ export { useOfferGroups } from './useOfferGroups';
 export { useMarketProductGroups } from './useMarketProductGroups';
 export { useScaleTaxCodes } from './useScaleTaxCodes';
 export { useMarketArticles } from './useMarketArticles';
+export {
+  marketProductGroupLabel,
+  useMarketOrderListGroups,
+} from './useMarketOrderListGroups';
 export { useOfferOptions } from './useOfferOptions';
 export { useOfferTiers, resolveOfferTiers } from './useOfferTiers';
 export { useOffersData } from './useOffersData';

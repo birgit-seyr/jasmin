@@ -38,8 +38,10 @@ interface ListPDFGeneratorProps<T, DocProps extends object> {
    * compile error at the wrapper, not a runtime surprise. */
   documentLoader: () => Promise<{ default: ComponentType<DocProps> }>;
   /** All props passed to the loaded document component. Pinned to
-   * the same ``DocProps`` type as ``documentLoader``'s return. */
-  documentProps: DocProps;
+   * the same ``DocProps`` type as ``documentLoader``'s return. A function
+   * fetches them on click instead, for a list whose data the page
+   * doesn't show; its failure reports like the PDF's own. */
+  documentProps: DocProps | (() => Promise<DocProps>);
 }
 
 export default function ListPDFGenerator<T, DocProps extends object>({
@@ -65,12 +67,13 @@ export default function ListPDFGenerator<T, DocProps extends object>({
     try {
       // Parallel: load the PDF library AND the document template
       // concurrently. Both stay in lazy chunks until this point.
-      const [{ pdf }, { default: Document }] = await Promise.all([
+      const [{ pdf }, { default: Document }, props] = await Promise.all([
         import("@react-pdf/renderer"),
         documentLoader(),
+        typeof documentProps === "function" ? documentProps() : documentProps,
       ]);
 
-      const blob = await pdf(<Document {...documentProps} />).toBlob();
+      const blob = await pdf(<Document {...props} />).toBlob();
 
       downloadBlob(blob, `${filename}.pdf`);
     } catch {

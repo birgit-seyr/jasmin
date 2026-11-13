@@ -1,8 +1,9 @@
 /**
  * MarketPrices: one week's PLU prices, the copy into the next week, the scale
- * export and the price list PDF. The generated client is the boundary; the
- * grid is a stub that renders each row through the page's columns and keeps
- * the props it got, and the PDF button keeps the groups it would print.
+ * export, the price and order list PDFs and the member list. The generated
+ * client is the boundary; the grid is a stub that renders each row through the
+ * page's columns and keeps the props it got, and the PDF buttons keep the
+ * groups they would print.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -78,8 +79,30 @@ vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
       useQuery({ queryKey: queryKey(params), queryFn: async () => api.pricesList(params) }),
     getCommissioningMarketPricesListQueryKey: queryKey,
     useCommissioningMarketArticlesList: () => ({
-      data: [{ id: "plu-101", plu_number: 101, name: "Elstar apple" }],
+      data: [
+        { id: "plu-110", plu_number: 110, name: "Boskoop apple", unit: "KG", product_group: "group-4" },
+        { id: "plu-101", plu_number: 101, name: "Elstar apple", unit: "KG", product_group: "group-4" },
+        { id: "plu-102", plu_number: 102, name: "Topaz apple", unit: "KG", product_group: "group-4" },
+        { id: "plu-300", plu_number: 300, name: "Rye bread", unit: "PCS", product_group: null },
+        { id: "plu-205", plu_number: 205, name: "Leek", unit: "KG", product_group: "group-5" },
+        { id: "plu-701", plu_number: 701, name: "Forest honey", unit: "PCS", product_group: "group-7" },
+      ],
       isLoading: false,
+    }),
+    useCommissioningMarketProductGroupsList: (params?: { is_active?: boolean }) => {
+      const groups = [
+        { id: "group-5", number: 5, name: "Roots", is_active: true },
+        { id: "group-4", number: 4, name: "Apples", is_active: true },
+        { id: "group-7", number: 7, name: "Honey", is_active: false },
+      ];
+      return {
+        data: params?.is_active ? groups.filter((group) => group.is_active) : groups,
+        isLoading: false,
+      };
+    },
+    getCommissioningMembersListQueryOptions: (params: unknown) => ({
+      queryKey: ["/api/commissioning/members/", params],
+      queryFn: async () => [],
     }),
     commissioningMarketPricesCreate: vi.fn(),
     commissioningMarketPricesPartialUpdate: vi.fn(),
@@ -107,12 +130,22 @@ vi.mock("@shared/selectors", () => ({
   ),
 }));
 
-const pdfProps = vi.hoisted(() => ({ last: null as Record<string, unknown> | null }));
+const { pdfProps, orderPdfProps } = vi.hoisted(() => ({
+  pdfProps: { last: null as Record<string, unknown> | null },
+  orderPdfProps: { last: null as Record<string, unknown> | null },
+}));
 vi.mock("@features/commissioning/pdfs", () => ({
   MarketPriceListPDFGenerator: (props: Record<string, unknown>) => {
     pdfProps.last = props;
     return <button type="button">{String(props.buttonText)}</button>;
   },
+  MarketOrderListPDFGenerator: (props: Record<string, unknown>) => {
+    orderPdfProps.last = props;
+    return <button type="button">{String(props.buttonText)}</button>;
+  },
+  MarketMemberListPDFGenerator: (props: Record<string, unknown>) => (
+    <button type="button">{String(props.buttonText)}</button>
+  ),
 }));
 
 // The grid's props from its latest render.
@@ -185,6 +218,7 @@ function makePrice(overrides: Record<string, unknown> = {}) {
 
 const UNCHANGED = makePrice({
   id: "price-2",
+  market_article: "plu-102",
   plu_number: 102,
   name: "Topaz apple",
   gross_price: "2.99",
@@ -194,6 +228,7 @@ const UNCHANGED = makePrice({
 });
 const WITHOUT_GROUP = makePrice({
   id: "price-3",
+  market_article: "plu-300",
   plu_number: 300,
   name: "Rye bread",
   unit: "PCS",
@@ -201,7 +236,12 @@ const WITHOUT_GROUP = makePrice({
   product_group_name: null,
   origin: null,
 });
-const INACTIVE = makePrice({ id: "price-4", plu_number: 103, is_active: false });
+const INACTIVE = makePrice({
+  id: "price-4",
+  market_article: "plu-205",
+  plu_number: 205,
+  is_active: false,
+});
 
 function grid() {
   return table.props as EditableTableProps;
@@ -222,6 +262,7 @@ beforeEach(() => {
   authState.roles = ["office"];
   table.props = null;
   pdfProps.last = null;
+  orderPdfProps.last = null;
   Object.values(api).forEach((fn) => fn.mockReset());
   Object.values(notifyMock).forEach((fn) => fn.mockReset());
   downloadBlobMock.mockReset();
@@ -354,6 +395,92 @@ describe("MarketPrices", () => {
     await waitFor(() => expect(pdfProps.last?.subtitle).toBe("4 Apples"));
     const groups = pdfProps.last?.groups as { label: string }[];
     expect(groups.map((group) => group.label)).toEqual(["4 Apples"]);
+    // The order list follows the same choice.
+    expect(orderPdfProps.last?.subtitle).toBe("4 Apples");
+    const orderGroups = orderPdfProps.last?.groups as { label: string }[];
+    expect(orderGroups.map((group) => group.label)).toEqual(["4 Apples"]);
+  });
+
+  it("offers every group of either list, counted by its active prices", async () => {
+    renderPage();
+    await screen.findByTestId("row-price-1");
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "commissioning.market_price_list_groups" }),
+    );
+
+    expect(await screen.findByText("4 Apples (2)")).toBeInTheDocument();
+    expect(screen.getByText("5 Roots (0)")).toBeInTheDocument();
+    expect(
+      screen.getByText("commissioning.market_price_list_without_group (1)"),
+    ).toBeInTheDocument();
+  });
+
+  it("puts every active PLU on the order list, with the week's price where it has one", async () => {
+    renderPage();
+    await screen.findByTestId("row-price-1");
+
+    await waitFor(() => expect(orderPdfProps.last?.groups).toBeTruthy());
+    const kg = "commissioning.units.kg";
+    expect(orderPdfProps.last?.groups).toEqual([
+      {
+        label: "4 Apples",
+        rows: [
+          { id: "plu-101", plu_number: 101, name: "Elstar apple DE", unit_label: kg, price_text: "3.49 €" },
+          { id: "plu-102", plu_number: 102, name: "Topaz apple", unit_label: kg, price_text: "2.99 €" },
+          { id: "plu-110", plu_number: 110, name: "Boskoop apple", unit_label: kg, price_text: "" },
+        ],
+      },
+      {
+        label: "5 Roots",
+        // Off sale this week, but still to count and order.
+        rows: [
+          { id: "plu-205", plu_number: 205, name: "Leek DE", unit_label: kg, price_text: "3.49 €" },
+        ],
+      },
+      {
+        // A group switched off still names the PLUs filed under it.
+        label: "7 Honey",
+        rows: [
+          {
+            id: "plu-701",
+            plu_number: 701,
+            name: "Forest honey",
+            unit_label: "commissioning.units.pcs",
+            price_text: "",
+          },
+        ],
+      },
+      {
+        label: "commissioning.market_price_list_without_group",
+        rows: [
+          {
+            id: "plu-300",
+            plu_number: 300,
+            name: "Rye bread",
+            unit_label: "commissioning.units.pcs",
+            price_text: "3.49 €",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("offers the office the member list in a row of its own", async () => {
+    renderPage();
+    await screen.findByTestId("row-price-1");
+
+    const memberList = screen.getByRole("button", {
+      name: "commissioning.market_member_list_pdf",
+    });
+    const priceList = screen.getByRole("button", {
+      name: "commissioning.market_price_list_pdf",
+    });
+    expect(memberList.parentElement).not.toBe(priceList.parentElement);
+    expect(
+      screen.getByRole("button", { name: "commissioning.market_order_list_pdf" })
+        .parentElement,
+    ).toBe(priceList.parentElement);
   });
 
   it("downloads the week's scale file", async () => {
@@ -452,13 +579,18 @@ describe("MarketPrices", () => {
     expect(screen.getByText("table.past_week_readonly")).toBeInTheDocument();
   });
 
-  it("lets staff read the prices and print the list, but not change or export them", async () => {
+  it("lets staff read the prices and print the lists, but not change or export them", async () => {
     authState.roles = ["staff"];
     renderPage();
     await screen.findByTestId("row-price-1");
 
     expect(screen.getByTestId("prices-grid")).toHaveAttribute("data-can-edit", "false");
     expect(screen.getByRole("button", { name: "commissioning.market_price_list_pdf" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "commissioning.market_order_list_pdf" })).toBeInTheDocument();
+    // The member list is the office's: staff can't read the members.
+    expect(
+      screen.queryByRole("button", { name: "commissioning.market_member_list_pdf" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "commissioning.scale_export" }),
     ).not.toBeInTheDocument();

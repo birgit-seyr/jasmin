@@ -17,10 +17,11 @@ vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-const { notifyMock, downloadBlobMock, toBlobMock } = vi.hoisted(() => ({
+const { notifyMock, downloadBlobMock, toBlobMock, pdfMock } = vi.hoisted(() => ({
   notifyMock: { error: vi.fn() },
   downloadBlobMock: vi.fn(),
   toBlobMock: vi.fn(),
+  pdfMock: vi.fn(),
 }));
 
 vi.mock("@shared/utils", () => ({
@@ -29,21 +30,28 @@ vi.mock("@shared/utils", () => ({
 }));
 
 vi.mock("@react-pdf/renderer", () => ({
-  pdf: () => ({ toBlob: toBlobMock }),
+  pdf: (element: unknown) => {
+    pdfMock(element);
+    return { toBlob: toBlobMock };
+  },
 }));
 
 import ListPDFGenerator from "../ListPDFGenerator";
 
-const ListDocument = () => null;
+const ListDocument = (_props: { rows?: string[] }) => null;
 
-function renderButton() {
+function renderButton(
+  documentProps:
+    | { rows?: string[] }
+    | (() => Promise<{ rows?: string[] }>) = {},
+) {
   render(
     <ListPDFGenerator
       data={[{ id: 1 }]}
       filename="washing-list"
       buttonText="Download"
       documentLoader={async () => ({ default: ListDocument })}
-      documentProps={{}}
+      documentProps={documentProps}
     />,
   );
 }
@@ -52,6 +60,7 @@ beforeEach(() => {
   notifyMock.error.mockReset();
   downloadBlobMock.mockReset();
   toBlobMock.mockReset();
+  pdfMock.mockReset();
 });
 
 describe("ListPDFGenerator", () => {
@@ -77,6 +86,32 @@ describe("ListPDFGenerator", () => {
     await waitFor(() =>
       expect(notifyMock.error).toHaveBeenCalledWith("common.error_exporting"),
     );
+    expect(downloadBlobMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches the document's props on click when given a loader", async () => {
+    toBlobMock.mockResolvedValue(new Blob(["%PDF"]));
+    const loadProps = vi.fn(async () => ({ rows: ["Abel"] }));
+    renderButton(loadProps);
+
+    expect(loadProps).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: /Download/ }));
+
+    await waitFor(() => expect(downloadBlobMock).toHaveBeenCalled());
+    expect(pdfMock.mock.calls[0][0].props).toEqual({ rows: ["Abel"] });
+  });
+
+  it("tells the user when the props could not be fetched", async () => {
+    renderButton(async () => {
+      throw new Error("403");
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Download/ }));
+
+    await waitFor(() =>
+      expect(notifyMock.error).toHaveBeenCalledWith("common.error_exporting"),
+    );
+    expect(pdfMock).not.toHaveBeenCalled();
     expect(downloadBlobMock).not.toHaveBeenCalled();
   });
 });

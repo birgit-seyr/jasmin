@@ -36,4 +36,6 @@ export { default as HarvestingListPDF } from "./exports/HarvestingListPDF";
 export { default as HarvestingListPDFGenerator } from "./exports/HarvestingListPDFGenerator";
 export { default as BaseListPDF } from "./exports/BaseListPDF";
 export { default as MarketPriceListPDFGenerator } from "./exports/MarketPriceListPDFGenerator";
+export { default as MarketOrderListPDFGenerator } from "./exports/MarketOrderListPDFGenerator";
+export { default as MarketMemberListPDFGenerator } from "./exports/MarketMemberListPDFGenerator";
 export { default as PurchaseListPDFGenerator } from "./exports/PurchaseListPDFGenerator";

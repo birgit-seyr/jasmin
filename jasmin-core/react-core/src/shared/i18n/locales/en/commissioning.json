@@ -887,8 +887,15 @@
   "market_prices_deactivate": "Set inactive",
   "market_prices_activated": "{{count}} price(s) set active",
   "market_prices_deactivated": "{{count}} price(s) set inactive",
-  "market_price_list_groups": "Product groups on the price list",
+  "market_price_list_groups": "Product groups on the price and order lists",
   "market_price_list_all_groups": "All product groups",
   "market_price_list_changed_only": "Changed prices only",
-  "market_prices_per_group": "Active prices per product group:"
+  "market_prices_per_group": "Active prices per product group:",
+  "market_order_list": "Market order list",
+  "market_order_list_pdf": "Order list (PDF)",
+  "in_stock": "In stock",
+  "order_amount": "Order amount",
+  "market_member_list": "Market member list",
+  "market_member_list_pdf": "Member list (PDF)",
+  "market_member_list_as_of": "As of {{date}}"
 }

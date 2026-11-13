@@ -73,6 +73,14 @@ describe("MarketPriceListPDF", () => {
     expect(screen.getByText("Changed prices only · 4 Apples")).toBeInTheDocument();
   });
 
+  it("prints one column header, repeated on each page, above all groups", () => {
+    render(<MarketPriceListPDF groups={GROUPS} year={2026} week={46} t={t} />);
+
+    const headers = screen.getAllByText("commissioning.plu_number");
+    expect(headers).toHaveLength(1);
+    expect(headers[0].closest("[data-fixed='true']")).not.toBeNull();
+  });
+
   it("prints a changed price in bold and the others plain", () => {
     render(<MarketPriceListPDF groups={GROUPS} year={2026} week={46} t={t} />);
 

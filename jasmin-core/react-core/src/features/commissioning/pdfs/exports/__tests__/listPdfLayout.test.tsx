@@ -31,6 +31,9 @@ import "../../registerRoboto";
 import BaseListPDF from "../BaseListPDF";
 import CleaningListPDF from "../CleaningListPDF";
 import HarvestingListPDF from "../HarvestingListPDF";
+import MarketMemberListPDF from "../MarketMemberListPDF";
+import MarketOrderListPDF from "../MarketOrderListPDF";
+import MarketPriceListPDF from "../MarketPriceListPDF";
 import WashingListPDF from "../WashingListPDF";
 import {
   ComboColumnHeaderRow,
@@ -59,6 +62,15 @@ const washItems = (count: number) =>
     computed_total_clean_amount_text: `${index} kg`,
     note: index % 3 === 0 ? "A longer note that has to wrap ".repeat(4) : "",
   }));
+
+// A farm's market range: 384 PLUs in 17 product groups.
+const marketGroups = Array.from({ length: 17 }, (_, group) => ({
+  label: `${group + 1} Group ${group + 1}`,
+  rows: Array.from({ length: group < 10 ? 23 : 22 }, (_, index) => {
+    const plu = group * 100 + index;
+    return { id: String(plu), plu_number: plu, name: `Organic produce ${plu} DE/FR` };
+  }),
+}));
 
 const columns = [
   { key: "article", dataIndex: "article", pdf: { include: true, title: "Article", width: "60%" } },
@@ -106,6 +118,59 @@ describe("list PDF layout", () => {
     );
     expect(result.isPdf).toBe(true);
     expect(result.pages).toBeGreaterThan(1);
+  }, 30_000);
+
+  it("keeps a market price list of 384 PLUs in 17 groups to 9 pages", async () => {
+    const result = await layout(
+      <MarketPriceListPDF
+        year={2026}
+        week={47}
+        t={t}
+        groups={marketGroups.map((group) => ({
+          label: group.label,
+          rows: group.rows.map((row) => ({
+            ...row,
+            price_text: "12,90 €/kg",
+            is_changed: row.plu_number % 9 === 0,
+          })),
+        }))}
+      />,
+    );
+    expect(result.isPdf).toBe(true);
+    expect(result.pages).toBeLessThanOrEqual(9);
+  }, 30_000);
+
+  it("keeps the order list of the same PLUs, with room to write, to 10 pages", async () => {
+    const result = await layout(
+      <MarketOrderListPDF
+        year={2026}
+        week={47}
+        t={t}
+        groups={marketGroups.map((group) => ({
+          label: group.label,
+          rows: group.rows.map((row) => ({ ...row, unit_label: "kg", price_text: "12,90 €" })),
+        }))}
+      />,
+    );
+    expect(result.isPdf).toBe(true);
+    expect(result.pages).toBeLessThanOrEqual(10);
+  }, 30_000);
+
+  it("keeps a member list of 300 members to 7 pages", async () => {
+    const result = await layout(
+      <MarketMemberListPDF
+        asOf="12.11.2026"
+        t={t}
+        members={Array.from({ length: 300 }, (_, index) => ({
+          id: String(index),
+          last_name: `Schwarzwälder-Müller ${index}`,
+          first_name: "Maximilian",
+          member_number: index + 1,
+        }))}
+      />,
+    );
+    expect(result.isPdf).toBe(true);
+    expect(result.pages).toBeLessThanOrEqual(7);
   }, 30_000);
 
   it("lays the combination header rows out inside a page", async () => {
