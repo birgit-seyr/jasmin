@@ -106,7 +106,7 @@
   "coop_subscribe_pending_note": "Your subscription will be reviewed and confirmed by the office before it takes effect.",
   "coop_subscribe_error": "Subscription failed — please try again.",
   "coop_subscribe_member_cancelled": "A cancelled membership cannot subscribe new shares.",
-  "export_member_register": "Export member register (CSV)",
+  "export_member_register": "Member register (CSV)",
   "coop_pending_banner": "You subscribed {{count}} shares. We're waiting for the office to confirm them.",
   "confirm_coop_share": "Confirm shares",
   "below_min_shares": "Total ({{total}}) is below the minimum ({{min}}).",

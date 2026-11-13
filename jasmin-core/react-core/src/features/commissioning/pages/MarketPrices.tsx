@@ -49,6 +49,7 @@ import {
 } from "@hooks/index";
 import { useUnitOptions } from "@hooks/useUnitOptions";
 import {
+  isPickedGroup,
   marketProductGroupLabel,
   useMarketArticles,
   useMarketOrderListGroups,
@@ -79,6 +80,8 @@ export default function MarketPrices() {
     [isOffice, isPast],
   );
   const [exporting, setExporting] = useState(false);
+  // The labels of the product groups picked for the lists; none picked is all.
+  const [pickedGroups, setPickedGroups] = useState<string[]>([]);
 
   const listParams = useMemo<CommissioningMarketPricesListParams>(
     () => ({ year: selectedYear, delivery_week: selectedWeek }),
@@ -90,10 +93,24 @@ export default function MarketPrices() {
     useCommissioningMarketPricesList(listParams);
   // The cached rows themselves, not copies: the table keeps a row it saved
   // only while the list hands back the same object for it.
-  const data = useMemo<TableRecord[]>(
+  const allPrices = useMemo<TableRecord[]>(
     () => (prices ?? []) as unknown as TableRecord[],
     [prices],
   );
+  // The product groups picked for the lists narrow the table too.
+  const shownPrices = useMemo<TableRecord[]>(() => {
+    const rows = (prices ?? []).filter((price) =>
+      isPickedGroup(
+        pickedGroups,
+        marketProductGroupLabel(
+          price.product_group_number,
+          price.product_group_name,
+          t,
+        ),
+      ),
+    );
+    return rows as unknown as TableRecord[];
+  }, [prices, pickedGroups, t]);
   const invalidateData = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: getCommissioningMarketPricesListQueryKey(listParams),
@@ -101,16 +118,40 @@ export default function MarketPrices() {
   }, [queryClient, listParams]);
   const { onSaveSuccess, onDeleteSuccess } =
     useInvalidateAfterTableMutation(invalidateData);
+  // A new price is fetched into the week's list, so it shows under its own
+  // product groups only and "select all pages" reaches it.
+  const handleSaveSuccess = useCallback(
+    (saved: TableRecord, action: "create" | "update") => {
+      if (action === "create") invalidateData();
+      onSaveSuccess(saved, action);
+    },
+    [invalidateData, onSaveSuccess],
+  );
 
   const { marketArticles } = useMarketArticles();
-  const columns = useMarketPricesColumns({ marketArticles });
+  const orderListGroups = useMarketOrderListGroups(prices);
+  // A new price can only be for a PLU of the picked groups, so it stays in the
+  // table once saved.
+  const pickableArticles = useMemo(() => {
+    if (pickedGroups.length === 0 || !orderListGroups) return marketArticles;
+    const picked = new Set(
+      orderListGroups
+        .filter((group) => isPickedGroup(pickedGroups, group.label))
+        .flatMap((group) => group.rows.map((row) => row.id)),
+    );
+    return marketArticles.filter((plu) => picked.has(plu.id));
+  }, [marketArticles, orderListGroups, pickedGroups]);
+  const columns = useMarketPricesColumns({ marketArticles: pickableArticles });
 
   const {
     selectedRowKeys,
     onSelectedRowsChange,
     rowSelection,
     clearSelection,
-  } = useTableRowSelection((record: TableRecord) => record.key === -1 || isPast);
+  } = useTableRowSelection(
+    (record: TableRecord) => record.key === -1 || isPast,
+    { allRows: shownPrices },
+  );
 
   // No ``list`` here: the page owns the data, so the table never fetches it.
   const apiFunctions = useMemo<ApiFunctions>(
@@ -190,7 +231,6 @@ export default function MarketPrices() {
     }
     return [...groups.values()];
   }, [prices, t, formatCurrency, getUnitLabel]);
-  const orderListGroups = useMarketOrderListGroups(prices);
 
   return (
     <div>
@@ -206,6 +246,8 @@ export default function MarketPrices() {
           key={`${selectedYear}-${selectedWeek}`}
           priceGroups={priceListGroups}
           orderGroups={orderListGroups}
+          pickedGroups={pickedGroups}
+          onPickedGroupsChange={setPickedGroups}
           isReady={!isFetching}
           year={selectedYear}
           week={selectedWeek}
@@ -214,7 +256,7 @@ export default function MarketPrices() {
           <Button
             onClick={handleScaleExport}
             loading={exporting}
-            disabled={data.length === 0}
+            disabled={allPrices.length === 0}
           >
             {t("commissioning.scale_export")}
           </Button>
@@ -237,21 +279,25 @@ export default function MarketPrices() {
         <PastWarningMessage>{t("table.past_week_readonly")}</PastWarningMessage>
       )}
       <EditableTable
-        key={`${selectedYear}-${selectedWeek}`}
+        // One table per week and choice of groups: the table keeps a row
+        // saved on this mount pinned, whatever its rows become.
+        key={`${selectedYear}-${selectedWeek}-${pickedGroups.join("|")}`}
         columns={columns}
         apiFunctions={apiFunctions}
         focusIndex="name"
-        initialData={data}
+        initialData={shownPrices}
         loading={isFetching}
         customSave={customSave}
         customEdit={customEdit}
-        onSaveSuccess={onSaveSuccess}
+        onSaveSuccess={handleSaveSuccess}
         onDeleteSuccess={onDeleteSuccess}
         permissions={permissions}
         rowSelection={rowSelection}
         onSelectedRowsChange={onSelectedRowsChange}
         selectedRowKeys={selectedRowKeys}
+        pagination={true}
         uniqueCheck={["market_article"]}
+        uniqueCheckRows={allPrices}
         uniqueCheckMessage={t("validation.unique.market_price")}
       />
       <ExplainerText title={t("common.info")}>

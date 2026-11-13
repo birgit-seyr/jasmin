@@ -107,7 +107,7 @@
   "coop_subscribe_pending_note": "Die Zeichnung wird vom Büro geprüft und bestätigt, bevor sie wirksam wird.",
   "coop_subscribe_error": "Zeichnung fehlgeschlagen — bitte erneut versuchen.",
   "coop_subscribe_member_cancelled": "Eine gekündigte Mitgliedschaft kann keine neuen Geschäftsanteile zeichnen.",
-  "export_member_register": "Mitgliederliste exportieren (CSV)",
+  "export_member_register": "Mitgliederliste (CSV)",
   "coop_pending_banner": "{{count}} weitere Anteile gezeichnet. Die Bestätigung des Büros steht noch aus.",
   "confirm_coop_share": "Anteile freigeben",
   "below_min_shares": "Summe ({{total}}) liegt unter dem Minimum ({{min}}).",

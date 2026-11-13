@@ -179,6 +179,10 @@
   margin-inline: 2em;
 }
 
+.market-product-group-selector {
+  width: 18em;
+}
+
 .share-type-selector--outdented {
   margin-left: -1em;
 }

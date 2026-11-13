@@ -290,6 +290,11 @@ describe("MarketPrices", () => {
     const changed = await screen.findByTestId("row-price-1");
 
     expect(api.pricesList).toHaveBeenCalledWith({ year: YEAR, delivery_week: WEEK });
+    expect(grid().pagination).toBe(true);
+    // The selection reaches past the visible page.
+    expect(
+      (grid().rowSelection?.selections as { key?: string }[])[0].key,
+    ).toBe("all-pages");
     expect(within(changed).getByText("3.49 €").tagName).toBe("STRONG");
     expect(within(changed).getByText("3.29 €")).toBeInTheDocument();
     // The same price as last week, in plain type both times.
@@ -399,6 +404,73 @@ describe("MarketPrices", () => {
     expect(orderPdfProps.last?.subtitle).toBe("4 Apples");
     const orderGroups = orderPdfProps.last?.groups as { label: string }[];
     expect(orderGroups.map((group) => group.label)).toEqual(["4 Apples"]);
+  });
+
+  it("shows the picked product groups in the table too and offers only their PLUs", async () => {
+    renderPage();
+    await screen.findByTestId("row-price-1");
+
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "commissioning.market_price_list_groups" }),
+    );
+    await userEvent.click(await screen.findByText("4 Apples (2)"));
+
+    await waitFor(() => expect(screen.queryByTestId("row-price-3")).not.toBeInTheDocument());
+    expect((grid().initialData ?? []).map((row) => row.id)).toEqual([
+      "price-1",
+      "price-2",
+      "price-4",
+    ]);
+    // A PLU that already has a price this week is refused even when its row
+    // is filtered out.
+    expect((grid().uniqueCheckRows ?? []).map((row) => row.id)).toEqual([
+      "price-1",
+      "price-2",
+      "price-3",
+      "price-4",
+    ]);
+    const pluColumn = (grid().columns as EditableColumnConfig<TableRecord>[]).find(
+      (column) => column.dataIndex === "name",
+    );
+    expect((pluColumn?.options as { value: string }[]).map((option) => option.value)).toEqual([
+      "plu-110",
+      "plu-101",
+      "plu-102",
+    ]);
+  });
+
+  it("keeps the picked product groups for another week", async () => {
+    renderPage();
+    await screen.findByTestId("row-price-1");
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "commissioning.market_price_list_groups" }),
+    );
+    await userEvent.click(await screen.findByText("4 Apples (2)"));
+    await waitFor(() => expect(screen.queryByTestId("row-price-3")).not.toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: "previous year" }));
+
+    await waitFor(() =>
+      expect(api.pricesList).toHaveBeenCalledWith({ year: YEAR - 1, delivery_week: WEEK }),
+    );
+    await screen.findByTestId("row-price-1");
+    expect((grid().initialData ?? []).map((row) => row.id)).toEqual([
+      "price-1",
+      "price-2",
+      "price-4",
+    ]);
+    expect(pdfProps.last?.subtitle).toBe("4 Apples");
+  });
+
+  it("fetches the week again after a new price, so it shows under its own groups", async () => {
+    renderPage();
+    await screen.findByTestId("row-price-1");
+
+    act(() =>
+      grid().onSaveSuccess?.({ key: "price-9", id: "price-9" } as TableRecord, "create"),
+    );
+
+    await waitFor(() => expect(api.pricesList).toHaveBeenCalledTimes(2));
   });
 
   it("offers every group of either list, counted by its active prices", async () => {

@@ -28,5 +28,7 @@
   "load_failed_hint": "Please try again.",
   "retry": "Try again",
   "bulk_partial_skipped": "{{skipped}} of {{total}} row(s) skipped: {{reason}}",
-  "bulk_select_at_least_one": "Please select at least one row."
+  "bulk_select_at_least_one": "Please select at least one row.",
+  "select_all_pages": "Select all pages",
+  "select_none": "Clear selection"
 }

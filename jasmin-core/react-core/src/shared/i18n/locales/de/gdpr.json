@@ -14,7 +14,7 @@
   "deletion_log_description": "Admin-Ansicht: Alle bearbeiteten DSGVO-Löschanträge für diese Organisation.",
   "load_deletion_log": "Löschprotokoll laden",
   "my_personal_data": "Meine personenbezogenen Daten",
-  "export_json": "Daten als JSON exportieren",
+  "export_json": "Meine Daten (JSON)",
   "account_data": "Kontodaten",
   "member_data": "Mitgliedsdaten",
   "customer_data": "Kundendaten",
@@ -107,7 +107,7 @@
     "title": "Verzeichnis von Verarbeitungstätigkeiten (Art. 30)",
     "description": "Strukturierter Export des Verarbeitungsverzeichnisses. Enthält den Verantwortlichen, die Auftragsverarbeiter, jede Verarbeitungstätigkeit (Zweck, Rechtsgrundlage, Datenkategorien, Empfänger, Aufbewahrung) und die Art-32-Schutzmaßnahmen.",
     "view": "JSON anzeigen",
-    "download": "JSON herunterladen",
+    "download": "Verarbeitungsverzeichnis (JSON)",
     "error": "Fehler beim Abrufen des Verzeichnisses",
     "modal_title": "Verzeichnis von Verarbeitungstätigkeiten",
     "doc_reference": "Narrative Erklärung in:"
@@ -132,7 +132,7 @@
   "office_actions": {
     "title": "Datenschutz",
     "description": "Für Anfragen per E-Mail, Brief, Telefon oder persönlich — auch von Personen ohne Login.",
-    "export": "Personenbezogene Daten exportieren",
+    "export": "Personenbezogene Daten (JSON)",
     "erase": "Personenbezogene Daten löschen",
     "erase_title": "Personenbezogene Daten löschen",
     "erase_intro": "Löscht die personenbezogenen Daten dieser Person endgültig (Art. 17 DSGVO). Datensätze mit gesetzlicher Aufbewahrungspflicht bleiben erhalten, aber ohne Namen.",

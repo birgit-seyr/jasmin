@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Flex } from "antd";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   commissioningMarketArticlesCreate,
@@ -10,14 +12,16 @@ import {
 import type { MarketArticle } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import {
-  CrudListPage,
+  EditableTable,
   type CrudResource,
   permissionsWithDeletable,
+  useCrudListPage,
 } from "@shared/tables";
 import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
+import { ExplainerText, HideInactiveSwitch } from "@shared/ui";
 import {
   useAmountUnitSizeColumns,
   useIsActiveColumn,
@@ -25,6 +29,7 @@ import {
   useScaleTaxCodes,
   useShareArticleColumn,
 } from "@features/commissioning/hooks";
+import { MarketProductGroupSelector } from "@features/commissioning/selectors";
 
 type MarketArticleRow = MarketArticle & TableRecord;
 
@@ -63,6 +68,49 @@ export default function ListMarketArticles() {
   const permissions = useMemo(
     () => permissionsWithDeletable(isOffice),
     [isOffice],
+  );
+  const [productGroup, setProductGroup] = useState<string | null>(null);
+  // A new PLU goes into the group the list shows, so it stays in view once
+  // saved. The group select's form field holds the group's id under its
+  // display field; the save sends it as ``product_group``.
+  const newRowDefaults = useMemo(
+    () =>
+      productGroup
+        ? { ...NEW_ROW_DEFAULTS, product_group_name: productGroup }
+        : NEW_ROW_DEFAULTS,
+    [productGroup],
+  );
+  const list = useCrudListPage<MarketArticleRow>({
+    resource: marketArticlesResource,
+    permissions,
+    newRowDefaults,
+  });
+  const rows = useMemo(
+    () =>
+      productGroup
+        ? list.filteredData.filter((plu) => plu.product_group === productGroup)
+        : list.filteredData,
+    [list.filteredData, productGroup],
+  );
+  // A save doesn't refetch the list, but the group filter reads it: a new PLU
+  // is fetched into it and an updated one written into it, so each shows
+  // under its own group only.
+  const queryClient = useQueryClient();
+  const { onSaveSuccess, invalidate } = list;
+  const handleSaveSuccess = useCallback(
+    (saved: MarketArticleRow, action: "create" | "update") => {
+      if (action === "create") {
+        invalidate();
+      } else {
+        queryClient.setQueriesData<MarketArticle[]>(
+          { queryKey: getCommissioningMarketArticlesListQueryKey() },
+          (cached) =>
+            cached?.map((plu) => (plu.id === saved.id ? { ...plu, ...saved } : plu)),
+        );
+      }
+      onSaveSuccess?.(saved, action);
+    },
+    [queryClient, invalidate, onSaveSuccess],
   );
 
   const columns = useMemo<EditableColumnConfig<MarketArticleRow>[]>(
@@ -162,17 +210,41 @@ export default function ListMarketArticles() {
   );
 
   return (
-    <CrudListPage<MarketArticleRow>
-      titleKey="commissioning.list_market_articles"
-      explainerKey="explainers.list_market_articles"
-      resource={marketArticlesResource}
-      permissions={permissions}
-      columns={columns}
-      newRowDefaults={NEW_ROW_DEFAULTS}
-      focusIndex="plu_number"
-      uniqueCheck={["plu_number"]}
-      uniqueCheckMessage={t("validation.unique.plu_number")}
-      className="w-max custom-jasmin-table"
-    />
+    <div>
+      <h1>{t("commissioning.list_market_articles")}</h1>
+      <Flex align="center" gap={16}>
+        <MarketProductGroupSelector
+          selectedProductGroup={productGroup}
+          setSelectedProductGroup={setProductGroup}
+        />
+        <HideInactiveSwitch
+          value={list.hideInactive}
+          onChange={list.setHideInactive}
+        />
+      </Flex>
+      <EditableTable<MarketArticleRow>
+        // One table per group: the table keeps a row saved on this mount
+        // pinned, whatever its rows become.
+        key={productGroup ?? "all"}
+        columns={columns}
+        apiFunctions={list.apiFunctions}
+        initialData={rows}
+        loading={list.isLoading}
+        onSaveSuccess={handleSaveSuccess}
+        onDeleteSuccess={list.onDeleteSuccess}
+        customEdit={list.customEdit}
+        permissions={list.permissions}
+        uniqueCheck={["plu_number"]}
+        uniqueCheckMessage={t("validation.unique.plu_number")}
+        uniqueCheckRows={list.data}
+        focusIndex="plu_number"
+        pagination={true}
+        className="w-max custom-jasmin-table"
+        keyboardAddShortcut={true}
+      />
+      <ExplainerText title={t("common.info")}>
+        {t("explainers.list_market_articles")}
+      </ExplainerText>
+    </div>
   );
 }

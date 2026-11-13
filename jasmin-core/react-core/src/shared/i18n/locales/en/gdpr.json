@@ -14,7 +14,7 @@
   "deletion_log_description": "Admin view: all processed GDPR deletion requests for this organization.",
   "load_deletion_log": "Load deletion log",
   "my_personal_data": "My personal data",
-  "export_json": "Export as JSON",
+  "export_json": "My data (JSON)",
   "account_data": "Account data",
   "member_data": "Member data",
   "customer_data": "Customer data",
@@ -107,7 +107,7 @@
     "title": "Record of processing activities (Art. 30)",
     "description": "Structured export of the record of processing activities. Includes the controller, the data processors, each processing activity (purpose, legal basis, data categories, recipients, retention), and the Art. 32 safeguards.",
     "view": "View JSON",
-    "download": "Download JSON",
+    "download": "Record of processing activities (JSON)",
     "error": "Error retrieving the record",
     "modal_title": "Record of processing activities",
     "doc_reference": "Narrative explanation in:"
@@ -132,7 +132,7 @@
   "office_actions": {
     "title": "Data protection",
     "description": "For requests made by email, letter, phone or in person — also from people without a login.",
-    "export": "Export personal data",
+    "export": "Personal data (JSON)",
     "erase": "Erase personal data",
     "erase_title": "Erase personal data",
     "erase_intro": "Erases this person's personal data for good (GDPR Art. 17). Records the law requires us to keep stay, without their name.",

@@ -19,6 +19,11 @@ export const marketProductGroupLabel = (
     ? t("commissioning.market_price_list_without_group")
     : `${number} ${name ?? ""}`;
 
+/** Whether the group labelled `label` is among the picked ones; none picked
+ *  means all of them. */
+export const isPickedGroup = (pickedGroups: string[], label: string) =>
+  pickedGroups.length === 0 || pickedGroups.includes(label);
+
 /**
  * The market's order list for a week: every active PLU by product group (by
  * group number, then PLU, the PLUs without a group last), with the week's

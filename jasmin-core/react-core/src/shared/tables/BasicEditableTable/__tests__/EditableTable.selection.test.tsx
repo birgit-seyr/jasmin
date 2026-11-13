@@ -31,6 +31,7 @@ vi.mock("@hooks/configuration/useTenant", async () => {
   return { useTenant: () => tenant };
 });
 
+import { useTableRowSelection } from "@shared/hooks/useTableRowSelection";
 import EditableTable from "../EditableTable";
 import type { EditableColumnConfig, TableRecord } from "../types";
 
@@ -136,6 +137,60 @@ describe("EditableTable row selection held by the page", () => {
 
     expect(bulkActionIds()).toBe("2");
     expect(checkboxOf("Leeks")).toBeChecked();
+  });
+});
+
+/** A paginated page whose selection reaches past the visible page; the last
+ *  row can't be ticked. */
+function PagedPage({ rows }: { rows: Row[] }) {
+  const { selectedRowKeys, onSelectedRowsChange, rowSelection } =
+    useTableRowSelection<Row>((row) => row.id === "11", { allRows: rows });
+  return (
+    <>
+      <output aria-label="bulk action ids">{selectedRowKeys.join(",")}</output>
+      <EditableTable<Row>
+        columns={[NAME_COLUMN]}
+        initialData={rows}
+        permissions={READ_ONLY}
+        rowSelection={rowSelection}
+        selectedRowKeys={selectedRowKeys}
+        onSelectedRowsChange={onSelectedRowsChange}
+        pagination={true}
+      />
+    </>
+  );
+}
+
+const PEARS: Row[] = Array.from({ length: 12 }, (_, index) => ({
+  key: String(index),
+  id: String(index),
+  name: `Pear ${index}`,
+}));
+
+describe("EditableTable row selection across pages", () => {
+  it("ticks the visible page from the header, and every page or none from its menu", async () => {
+    render(<PagedPage rows={PEARS} />);
+
+    await userEvent.click(selectAll());
+    expect(bulkActionIds()).toBe("0,1,2,3,4,5,6,7,8,9");
+
+    await userEvent.hover(
+      document.querySelector(".ant-table-selection-extra > span") as HTMLElement,
+    );
+    await userEvent.click(await screen.findByText("table.select_all_pages"));
+
+    expect(bulkActionIds()).toBe("0,1,2,3,4,5,6,7,8,9,10");
+    // The pager sits above and below the table.
+    await userEvent.click(screen.getAllByTitle("2")[0]);
+    expect(checkboxOf("Pear 10")).toBeChecked();
+    expect(checkboxOf("Pear 11")).not.toBeChecked();
+
+    await userEvent.hover(
+      document.querySelector(".ant-table-selection-extra > span") as HTMLElement,
+    );
+    await userEvent.click(await screen.findByText("table.select_none"));
+
+    expect(bulkActionIds()).toBe("");
   });
 });
 

@@ -14,6 +14,7 @@ export { useMarketProductGroups } from './useMarketProductGroups';
 export { useScaleTaxCodes } from './useScaleTaxCodes';
 export { useMarketArticles } from './useMarketArticles';
 export {
+  isPickedGroup,
   marketProductGroupLabel,
   useMarketOrderListGroups,
 } from './useMarketOrderListGroups';

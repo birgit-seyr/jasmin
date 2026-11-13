@@ -28,6 +28,8 @@
     "load_failed_hint": "Bitte erneut versuchen.",
     "retry": "Erneut versuchen",
     "bulk_partial_skipped": "{{skipped}} von {{total}} Zeile(n) übersprungen: {{reason}}",
-    "bulk_select_at_least_one": "Bitte mindestens eine Zeile auswählen."
+    "bulk_select_at_least_one": "Bitte mindestens eine Zeile auswählen.",
+    "select_all_pages": "Alle Seiten auswählen",
+    "select_none": "Auswahl aufheben"
 
   }
