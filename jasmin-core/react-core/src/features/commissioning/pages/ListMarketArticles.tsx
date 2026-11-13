@@ -78,7 +78,17 @@ export default function ListMarketArticles() {
         align: "right",
         sortable: true,
       },
-      shareArticleColumn,
+      {
+        title: <>{t("commissioning.market_label")}</>,
+        dataIndex: "name",
+        key: "name",
+        inputType: "text",
+        required: true,
+        width: "16em",
+        align: "left",
+        fixed: true,
+        sortable: true,
+      },
       ...amountUnitSizeColumns,
       {
         title: <>{t("commissioning.sort")}</>,
@@ -90,14 +100,10 @@ export default function ListMarketArticles() {
         align: "left",
       },
       {
-        title: <>{t("commissioning.market_label")}</>,
-        dataIndex: "name",
-        key: "name",
-        inputType: "text",
-        required: true,
-        width: "16em",
-        align: "left",
-        sortable: true,
+        ...shareArticleColumn,
+        title: <>{t("commissioning.market_linked_share_article")}</>,
+        // The scale's name stays in view instead.
+        fixed: false,
       },
       {
         title: <>{t("commissioning.market_product_group")}</>,

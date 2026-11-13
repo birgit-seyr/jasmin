@@ -868,6 +868,7 @@
   "market_product_group": "Product group",
   "plu_number": "PLU",
   "market_label": "Scale label",
+  "market_linked_share_article": "Linked article",
   "allows_price_override": "Price override",
   "allows_discount_price": "Discount price",
   "origin": "Origin",

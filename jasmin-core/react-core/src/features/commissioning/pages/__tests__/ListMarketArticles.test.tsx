@@ -139,10 +139,21 @@ beforeEach(() => {
 });
 
 describe("ListMarketArticles", () => {
-  it("lists each PLU with its article, sort, label and product group", async () => {
+  it("lists each PLU with its label, sort, article and product group", async () => {
     renderList();
 
     await screen.findByText("Elstar apple");
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent ?? "");
+    const columnOf = (title: string) =>
+      headers.findIndex((header) => header.includes(title));
+    expect(columnOf("commissioning.market_label")).toBe(
+      columnOf("commissioning.plu_number") + 1,
+    );
+    expect(columnOf("commissioning.market_linked_share_article")).toBe(
+      columnOf("commissioning.sort") + 1,
+    );
     const elstar = rowOf("Elstar apple");
     expect(within(elstar).getByText("101")).toBeInTheDocument();
     expect(within(elstar).getByText("Apple")).toBeInTheDocument();
@@ -168,7 +179,7 @@ describe("ListMarketArticles", () => {
 
     await user.click(screen.getByRole("button", { name: /table\.add_record/ }));
     const row = screen.getByRole("button", { name: "table.save" }).closest("tr")!;
-    const [pluNumber, , name] = within(row).getAllByRole("textbox");
+    const [pluNumber, name] = within(row).getAllByRole("textbox");
     await user.type(pluNumber, "3502");
     await user.type(name, "Acacia honey 500g");
     await user.click(within(row).getByRole("combobox", { name: "commissioning.unit" }));
@@ -221,7 +232,7 @@ describe("ListMarketArticles", () => {
     await screen.findByText("Topaz apple");
 
     await user.click(within(rowOf("Topaz apple")).getByRole("button", { name: "table.edit" }));
-    const name = editedInputs().at(-1)!;
+    const [, name] = editedInputs();
     await user.clear(name);
     await user.type(name, "Topaz apple, organic");
     await user.click(screen.getByRole("button", { name: "table.save" }));

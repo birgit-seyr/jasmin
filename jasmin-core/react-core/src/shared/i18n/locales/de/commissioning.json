@@ -868,6 +868,7 @@
   "market_product_group": "Warengruppe",
   "plu_number": "PLU",
   "market_label": "Name auf der Waage",
+  "market_linked_share_article": "Verknüpfter Artikel",
   "allows_price_override": "Preis überschreibbar",
   "allows_discount_price": "Rabattpreis erlaubt",
   "origin": "Herkunft",
