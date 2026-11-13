@@ -353,6 +353,7 @@ services:
       # it with
       #   docker compose run --rm --entrypoint rclone backup --config /backups/rclone.conf config
       # then set RCLONE_REMOTE and RCLONE_CONFIG=/backups/rclone.conf in .env.
+      # An sftp remote also pins its host keys (the steps are in backup.sh).
       - ./postgres/app_db_role.sh:/usr/local/bin/app_db_role.sh:ro
     depends_on:
       postgres: { condition: service_healthy }

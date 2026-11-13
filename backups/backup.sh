@@ -39,6 +39,18 @@ BACKUP_ENCRYPTION_KEY="${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY must be se
 # Optional off-host push. The rclone config lives at /backups/rclone.conf (the
 # ./backups mount), created with
 #   docker compose run --rm --entrypoint rclone backup --config /backups/rclone.conf config
+# An sftp remote, such as a storage box, also needs the server's host keys
+# pinned, or rclone hands the backups to any server that answers under its
+# name. rclone looks them up by the host and port in the remote's section of
+# rclone.conf, so scan exactly those, on the host:
+#   ssh-keyscan -p <port> <host> > backups/<remote>_known_hosts
+#   ssh-keygen -lf backups/<remote>_known_hosts
+# Compare those fingerprints with the ones the provider publishes, then:
+#   docker compose run --rm --entrypoint rclone backup --config /backups/rclone.conf \
+#       config update <remote> known_hosts_file /backups/<remote>_known_hosts
+#   docker compose run --rm --entrypoint rclone backup --config /backups/rclone.conf lsd <remote>:
+# A key that doesn't match fails every push with "knownhosts: key is unknown",
+# which only warns, so check the push after the provider changes its keys.
 # With RCLONE_REMOTE (e.g. "storagebox:jasmin-backups") and
 # RCLONE_CONFIG=/backups/rclone.conf set in .env, every freshly written,
 # already-encrypted artifact is copied off-host. Unset -> local-only backups.
