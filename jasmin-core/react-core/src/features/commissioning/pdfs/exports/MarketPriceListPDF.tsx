@@ -6,6 +6,11 @@ import { ListPDFFooter, ListPDFHeader } from "./ListPDFSharedComponents";
 // ─── Market-price-list specific styles ──────────────────────────────────────
 
 const localStyles = StyleSheet.create({
+  // Narrower than the page, so each price sits close to its name; the
+  // longest names still fit on one line.
+  table: {
+    width: "65%",
+  },
   colPlu: {
     width: "12%",
   },
@@ -13,7 +18,7 @@ const localStyles = StyleSheet.create({
     flex: 1,
   },
   colPrice: {
-    width: "22%",
+    width: "24%",
   },
 });
 
@@ -88,7 +93,7 @@ const MarketPriceListPDF = ({
           {subtitle ? <Text style={listStyles.subtitle}>{subtitle}</Text> : null}
         </ListPDFHeader>
 
-        <View>
+        <View style={localStyles.table}>
           <TableHeader t={t} />
 
           {groupsWithRows.map((group) => (
