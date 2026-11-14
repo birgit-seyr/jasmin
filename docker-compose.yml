@@ -513,7 +513,7 @@ services:
     # migrations against the SHARED prod postgres (glitchtip DB on the same
     # instance). Bump deliberately via the docker Dependabot entry; the three
     # glitchtip services run the same image.
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     restart: unless-stopped
     logging: *default-logging
     # Non-critical observability — capped (incl. CPU) so an event spike can
@@ -541,7 +541,7 @@ services:
     # GlitchTip's web and worker roles don't migrate their database: this
     # one-shot run does (migrations, cache table, event partitions) before
     # either starts, then exits.
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     restart: "no"
     logging: *default-logging
     mem_limit: 768m
@@ -564,7 +564,7 @@ services:
     # migrations against the SHARED prod postgres (glitchtip DB on the same
     # instance). Bump deliberately via the docker Dependabot entry; the three
     # glitchtip services run the same image.
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     restart: unless-stopped
     logging: *default-logging
     # Non-critical observability — capped (incl. CPU) so a burst of events

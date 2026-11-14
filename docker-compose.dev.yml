@@ -238,7 +238,7 @@ services:
     #     "CREATE DATABASE glitchtip OWNER ${POSTGRES_USER:-jasmin};"
     # Pinned to a published patch tag; keep this in sync with the prod compose
     # pin and with glitchtip-migrate and glitchtip-worker below.
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     # Opt-in (see uptime-kuma): excluded from ``make dev-up``. Enable with
     # ``docker compose --profile observability up``.
     profiles: ["observability"]
@@ -263,7 +263,7 @@ services:
   glitchtip-migrate:
     # GlitchTip's web and worker roles don't migrate their database: this
     # one-shot run does before either starts, then exits.
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     profiles: ["observability"] # opt-in (see glitchtip-web)
     command: ./bin/run-migrate.sh
     environment:
@@ -277,7 +277,7 @@ services:
 
   glitchtip-worker:
     # Pinned patch tag — keep in sync with glitchtip-web above and the prod pin.
-    image: glitchtip/glitchtip:6.2.6
+    image: glitchtip/glitchtip:7.0.0
     profiles: ["observability"] # opt-in (see glitchtip-web)
     environment:
       SERVER_ROLE: worker # the image's start script runs the task worker
