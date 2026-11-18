@@ -6,6 +6,7 @@ import {
   dateForWeekDayNumber,
   formatWeekKey,
   hasWeekBegun,
+  isDayInPast,
   isWeekInPast,
   mondayOfIsoWeek,
   nextIsoWeek,
@@ -92,6 +93,32 @@ describe("isWeekInPast", () => {
     expect(isWeekInPast(2027, 1)).toBe(false);
     expect(isWeekInPast(2026, 52)).toBe(false);
     expect(isWeekInPast(2026, 51)).toBe(true);
+  });
+});
+
+describe("isDayInPast", () => {
+  it("counts the days before today as past, and not today", () => {
+    at("2026-11-12"); // the Thursday of week 46
+
+    expect(isDayInPast(2026, 46, 2)).toBe(true);
+    expect(isDayInPast(2026, 46, 3)).toBe(false);
+    expect(isDayInPast(2026, 46, 4)).toBe(false);
+    expect(isDayInPast(2026, 45, 6)).toBe(true);
+  });
+
+  it("finds the day across New Year", () => {
+    at("2027-01-01"); // the Friday of week 53 of 2026
+
+    expect(isDayInPast(2026, 53, 3)).toBe(true);
+    expect(isDayInPast(2026, 53, 4)).toBe(false);
+    expect(isDayInPast(2027, 1, 0)).toBe(false);
+  });
+
+  it("does not count a missing day as past", () => {
+    at("2026-11-12");
+
+    expect(isDayInPast(2026, 46, null)).toBe(false);
+    expect(isDayInPast(2026, null, 0)).toBe(false);
   });
 });
 

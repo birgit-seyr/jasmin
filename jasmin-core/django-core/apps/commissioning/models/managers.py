@@ -29,6 +29,16 @@ def active_on_date_q(target_date: date, *, prefix: str = "") -> Q:
     )
 
 
+def before_day_q(day: date) -> Q:
+    """The documentation rows (``year``, ``delivery_week``, ``day_number``, an
+    ISO year and week) of a day before ``day``. A row without a day counts as
+    before it only from an earlier week."""
+    iso = day.isocalendar()
+    return iso_week_bound((iso.year, iso.week), "lt") | Q(
+        year=iso.year, delivery_week=iso.week, day_number__lt=iso.weekday - 1
+    )
+
+
 class CurrentActiveManagerMixin:
     """Mixin that adds current-active filtering to any Manager."""
 

@@ -66,6 +66,7 @@ from .generic import (
     DocumentPdfMissing,
     FinalizedError,
     InvalidUploadedDocument,
+    PastDayAdditionalAmount,
     PastWeekError,
 )
 from .markets import ScaleTaxCodeMissing, ScaleUnitUnsupported
@@ -268,6 +269,7 @@ __all__ = [
     "DocumentNotFinalized",
     "InvalidUploadedDocument",
     "DocumentPdfMissing",
+    "PastDayAdditionalAmount",
     "PastWeekError",
     "InvalidQueryParam",
     "DeliveryDayNotFound",

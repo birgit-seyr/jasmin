@@ -78,6 +78,22 @@ export function hasWeekBegun(
 }
 
 /**
+ * Is the day (``dayNumber`` 0 = Monday … 6 = Sunday) of the selected ISO week
+ * before today? Today is not past. A missing year, week or day is not past.
+ */
+export function isDayInPast(
+  selectedYear: number | null | undefined,
+  selectedWeek: number | null | undefined,
+  dayNumber: number | null | undefined,
+): boolean {
+  if (!selectedYear || !selectedWeek || dayNumber == null) return false;
+  return dateForWeekDayNumber(selectedYear, selectedWeek, dayNumber).isBefore(
+    dayjs(),
+    "day",
+  );
+}
+
+/**
  * Is the selected year before the current year?
  */
 export function isYearInPast(

@@ -426,6 +426,7 @@ class ShareContentPlanning(ShareContentStock):
         # rebuild's own cascades only cover the NEW storages, so an old
         # theoretical storage the rebuild relocates away from (e.g.
         # comes-from-long-term flips) would otherwise stay stranded.
+        from .past_days import not_yet_past
         from .snapshot_service import SnapshotService
         from .theoretical_objects import recalculate_actual_corrections
 
@@ -434,11 +435,17 @@ class ShareContentPlanning(ShareContentStock):
         )
 
         # Theoreticals cascade-delete their is_theoretical=True
-        # MovementShareArticle rows (FK on_delete=CASCADE).
-        TheoreticalHarvest.objects.filter(share_content__in=share_contents).delete()
+        # MovementShareArticle rows (FK on_delete=CASCADE). A harvest, washing
+        # or cleaning amount of a day before today stays as it was.
+        for model in (
+            TheoreticalHarvest,
+            TheoreticalWashAmount,
+            TheoreticalCleanAmount,
+        ):
+            not_yet_past(
+                model.objects.filter(share_content__in=share_contents)
+            ).delete()
         TheoreticalPurchase.objects.filter(share_content__in=share_contents).delete()
-        TheoreticalWashAmount.objects.filter(share_content__in=share_contents).delete()
-        TheoreticalCleanAmount.objects.filter(share_content__in=share_contents).delete()
 
         # SHARECONTENT-type movements point at ShareContent (which still
         # exists), so they don't cascade-delete — wipe them explicitly.
@@ -683,9 +690,10 @@ class ShareContentPlanning(ShareContentStock):
         # Capture BOTH movement halves before the cascade-delete: the
         # SHARECONTENT rows AND the theoretical HARVEST/PURCHASE/WASH/CLEAN
         # movements (share_content=NULL, linked via their Theoretical* parent).
-        # Deleting the content cascade-kills the theoretical rows + movements, so
-        # a dimension whose theoreticals vanish would keep a stale actual
-        # correction (entity total ≠ counted) — mirror ``recompute_for_shares``.
+        # Deleting the content cascade-kills the theoretical rows from today on
+        # + their movements, so a dimension whose theoreticals vanish would keep
+        # a stale actual correction (entity total ≠ counted) — mirror
+        # ``recompute_for_shares``.
         from .theoretical_objects import recalculate_actual_corrections
 
         affected_movements = list(

@@ -107,3 +107,11 @@ class PastWeekError(ConflictError):
     """
 
     code = "commissioning.past_week"
+
+
+class PastDayAdditionalAmount(ConflictError):
+    """The additional harvest, washing or cleaning amount of a day before today
+    stays as it is: that day's list is done. Its other fields, such as the
+    crate, still change."""
+
+    code = "documentation.past_day_additional_amount"

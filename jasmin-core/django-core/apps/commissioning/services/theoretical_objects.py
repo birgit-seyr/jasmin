@@ -33,6 +33,7 @@ from ..models import (
 )
 from ..models.choices import UnitOptions
 from ..utils.iso_week_utils import compute_rolled_back_week, make_noon_datetime
+from .past_days import PastDays
 
 logger = logging.getLogger(__name__)
 
@@ -142,13 +143,21 @@ class TheoreticalSourceData:
             return {"share_content": self.share_content}
         return {"order_content": self.order_content}
 
+    @property
+    def source_key(self) -> tuple[str, str]:
+        if self.share_content is not None:
+            return ("share_content", self.share_content.pk)
+        return ("order_content", self.order_content.pk)
+
 
 # ──────────────────────────────────────────────────────
 # Builder functions for individual theoretical objects
 # ──────────────────────────────────────────────────────
 
 
-def _build_theoretical_harvest(src: TheoreticalSourceData) -> TheoreticalHarvest | None:
+def _build_theoretical_harvest(
+    src: TheoreticalSourceData, past_days: PastDays
+) -> TheoreticalHarvest | None:
     if src.harvesting_day is None:
         return None
 
@@ -159,7 +168,7 @@ def _build_theoretical_harvest(src: TheoreticalSourceData) -> TheoreticalHarvest
         src.delivery_day,
     )
 
-    return TheoreticalHarvest(
+    theoretical = TheoreticalHarvest(
         year=harvest_year,
         delivery_week=harvest_week,
         day_number=src.harvesting_day,
@@ -170,8 +179,12 @@ def _build_theoretical_harvest(src: TheoreticalSourceData) -> TheoreticalHarvest
         forecast=src.forecast,
         note=src.note,
         storage=src.storage,
+        for_order_content=src.order_content is not None,
         **src.content_kwargs,
     )
+    if past_days.leave_out("harvests", src, theoretical):
+        return None
+    return theoretical
 
 
 def _ensure_harvest_placeholder(
@@ -319,10 +332,11 @@ _PROCESSING: list[_ProcessingSpec] = [
 def _build_theoretical_processing(
     spec: _ProcessingSpec,
     src: TheoreticalSourceData,
-    short_term_storage: Storage | None = None,
+    short_term_storage: Storage | None,
+    past_days: PastDays,
 ):
     """Build the theoretical Wash/Clean object for *src* (or ``None`` when the
-    source has no processing day for *spec*)."""
+    source has no processing day for *spec*, or the build leaves it out)."""
     day_number = getattr(src, spec.day_field)
     if day_number is None:
         return None
@@ -334,7 +348,7 @@ def _build_theoretical_processing(
         src.delivery_day,
     )
 
-    return spec.theoretical_model(
+    theoretical = spec.theoretical_model(
         year=processing_year,
         delivery_week=processing_week,
         day_number=day_number,
@@ -346,6 +360,9 @@ def _build_theoretical_processing(
         note=src.note,
         **src.content_kwargs,
     )
+    if past_days.leave_out(spec.created_key, src, theoretical):
+        return None
+    return theoretical
 
 
 def _ensure_processing_placeholder(
@@ -372,6 +389,29 @@ def _ensure_processing_placeholder(
             "storage": _processing_storage(src, short_term_storage),
         },
     )
+
+
+def _bulk_create_theoreticals(
+    harvests: list[TheoreticalHarvest],
+    purchases: list[TheoreticalPurchase],
+    processing: dict[str, list],
+) -> dict[str, list]:
+    """Save the built theoreticals, keyed as ``create_theoretical_objects``
+    returns them; a kind with none built is left out."""
+    created_objects: dict[str, list] = {}
+    if harvests:
+        created_objects["harvests"] = TheoreticalHarvest.objects.bulk_create(harvests)
+    if purchases:
+        created_objects["purchases"] = TheoreticalPurchase.objects.bulk_create(
+            purchases
+        )
+    for spec in _PROCESSING:
+        items = processing[spec.created_key]
+        if items:
+            created_objects[spec.created_key] = (
+                spec.theoretical_model.objects.bulk_create(items)
+            )
+    return created_objects
 
 
 # ──────────────────────────────────────────────────────
@@ -430,6 +470,13 @@ def create_theoretical_objects(
     # Resolved once for the whole batch (avoids an N+1 across sources): wash/
     # clean theoreticals must land in the short-term harvest storage.
     short_term_storage = Storage.short_term_harvest()
+    past_days = PastDays(
+        sources,
+        {
+            "harvests": TheoreticalHarvest,
+            **{spec.created_key: spec.theoretical_model for spec in _PROCESSING},
+        },
+    )
 
     for src in sources:
         if not src.has_positive_amount:
@@ -437,7 +484,7 @@ def create_theoretical_objects(
 
         # ── Harvest ──
         if src.needs_harvest:
-            theoretical_harvest = _build_theoretical_harvest(src)
+            theoretical_harvest = _build_theoretical_harvest(src, past_days)
             if theoretical_harvest is not None:
                 theoretical_harvests.append(theoretical_harvest)
                 if create_placeholders:
@@ -481,7 +528,9 @@ def create_theoretical_objects(
         for spec in _PROCESSING:
             if not getattr(src, spec.needs_field):
                 continue
-            theoretical = _build_theoretical_processing(spec, src, short_term_storage)
+            theoretical = _build_theoretical_processing(
+                spec, src, short_term_storage, past_days
+            )
             if theoretical is None:
                 continue
             processing_theoreticals[spec.created_key].append(theoretical)
@@ -508,21 +557,9 @@ def create_theoretical_objects(
                         short_term_storage,
                     )
 
-    created_objects: dict[str, list] = {}
-    if theoretical_harvests:
-        created_objects["harvests"] = TheoreticalHarvest.objects.bulk_create(
-            theoretical_harvests
-        )
-    if theoretical_purchases:
-        created_objects["purchases"] = TheoreticalPurchase.objects.bulk_create(
-            theoretical_purchases
-        )
-    for spec in _PROCESSING:
-        items = processing_theoreticals[spec.created_key]
-        if items:
-            created_objects[spec.created_key] = (
-                spec.theoretical_model.objects.bulk_create(items)
-            )
+    created_objects = _bulk_create_theoreticals(
+        theoretical_harvests, theoretical_purchases, processing_theoreticals
+    )
 
     # ── Create theoretical movements for the new objects ──
     movements = _create_theoretical_movements(

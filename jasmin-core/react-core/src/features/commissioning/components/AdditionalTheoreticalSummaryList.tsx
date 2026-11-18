@@ -56,6 +56,7 @@ import {
   formatWeekLabel,
   generatePdfFilename,
   getDayName,
+  isDayInPast,
 } from "@shared/utils";
 
 const shareArticleFilters = {
@@ -151,6 +152,8 @@ export default function AdditionalTheoreticalSummaryList(
     customSaveBase,
     tableKey,
   } = useDocumentationSummaryPage({ model });
+  // A day before today keeps its additional amounts: its work is done.
+  const isPastDay = isDayInPast(selectedYear, selectedWeek, selectedDay);
 
   // The summary list and the add/update endpoints return DIFFERENT row
   // shapes (summary = joined Theoretical + Additional + Actual; create =
@@ -344,6 +347,7 @@ export default function AdditionalTheoreticalSummaryList(
         required: false,
         align: "center",
         width: "8em",
+        disabled: isPastDay,
         hidden: isMobile || isGardenerView,
         render: (_: unknown, record: TableRecord) =>
           amountCellText(record[additionalField], record.unit as string, format),
@@ -394,6 +398,7 @@ export default function AdditionalTheoreticalSummaryList(
       amountColumnTitleKey,
       renderAmount,
       format,
+      isPastDay,
     ],
   );
 
@@ -428,14 +433,15 @@ export default function AdditionalTheoreticalSummaryList(
   );
 
   // Add is hidden in the gardener/mobile views; add + edit both require a
-  // non-past week and edit permission; rows are never deleted here.
+  // non-past week and edit permission, add also a day from today on; rows are
+  // never deleted here.
   const permissions = useMemo(
     () => ({
-      canAdd: !isPast && !isGardenerView && !isMobile && canEdit,
+      canAdd: !isPast && !isPastDay && !isGardenerView && !isMobile && canEdit,
       canEdit: !isPast && !isMobile && canEdit,
       canDelete: false,
     }),
-    [isPast, isGardenerView, isMobile, canEdit],
+    [isPast, isPastDay, isGardenerView, isMobile, canEdit],
   );
 
   return (

@@ -30,6 +30,7 @@ from ..models import (
     WashAmount,
 )
 from ..models.choices import MovementTypeOptions
+from ..services.additional_amounts import additional_writes, refuse_past_day_change
 from ..services.documentation_service import GenericDocumentationService
 from ..services.documentation_stock import StockKey, calculate_theoretical_stock
 from ..services.stock_service import StockService
@@ -99,20 +100,6 @@ class DocumentationSummaryService:
         "washamount": MovementTypeOptions.WASH,
         "cleanamount": MovementTypeOptions.CLEAN,
     }
-
-    # HARVEST additional entries split per content source (share vs order):
-    # (payload amount key, for_*_content flags). Drives both the add and update
-    # upsert paths so the two never drift.
-    _CONTENT_TYPE_FLAGS: list[tuple[str, dict[str, bool]]] = [
-        (
-            "amount_share_content",
-            {"for_share_content": True, "for_order_content": False},
-        ),
-        (
-            "amount_order_content",
-            {"for_share_content": False, "for_order_content": True},
-        ),
-    ]
 
     @staticmethod
     def _get_managers(model: ModelType, is_past: bool = False) -> ModelManagers:
@@ -351,12 +338,12 @@ class DocumentationSummaryService:
             theoretical_sum_share = sum(
                 entry.amount or 0
                 for entry in theoretical_entries
-                if entry.share_content is not None
+                if not entry.for_order_content
             )
             theoretical_sum_order = sum(
                 entry.amount or 0
                 for entry in theoretical_entries
-                if entry.order_content is not None
+                if entry.for_order_content
             )
             additional_sum_share = sum(
                 entry.amount or 0
@@ -880,23 +867,14 @@ class DocumentationSummaryService:
         movement_type: str,
         partial: bool,
     ) -> None:
-        """Upsert the additional-theoretical row(s) for this grouping and resync
-        their movement(s).
-
-        HARVEST splits into a share-content and an order-content entry (see
-        ``_CONTENT_TYPE_FLAGS``); every other model carries a single ``amount``
-        entry. ``share_article``/``storage`` are the movement dimensions — the
-        caller passes them from the request payload (add) or the existing
-        instance (update).
-
-        ``partial=True`` (update) touches only the keys present in ``data`` (a
-        harvest edit may send just one content amount); ``partial=False`` (add)
-        always writes both harvest entries. A harvest payload carrying a plain
-        ``amount`` instead of the content keys falls through to the single entry,
-        preserving the update path's ``elif "amount" in data`` behaviour.
-        """
-
-        def _upsert(amount: Any, flags: dict[str, bool] | None = None) -> None:
+        """Upsert the additional-theoretical row(s) for this grouping that
+        ``additional_writes`` names and resync their movement(s), unless one of
+        a day before today would change. ``share_article``/``storage`` are the
+        movement dimensions — the caller passes them from the request payload
+        (add) or the existing instance (update)."""
+        writes = additional_writes(data, model_key, partial=partial)
+        refuse_past_day_change(models["additional"], common_fields, writes, model_key)
+        for amount, flags in writes:
             additional_entry, _ = models["additional"].objects.update_or_create(
                 **common_fields, **(flags or {}), defaults={"amount": amount}
             )
@@ -909,21 +887,6 @@ class DocumentationSummaryService:
                 fk_field,
                 movement_type,
             )
-
-        if model_key == "harvest":
-            handled = False
-            for amount_key, flags in DocumentationSummaryService._CONTENT_TYPE_FLAGS:
-                if partial and amount_key not in data:
-                    continue
-                _upsert(data.get(amount_key) or 0, flags)
-                handled = True
-            if handled:
-                return
-
-        # Non-harvest model, or a harvest payload with no content keys present.
-        if partial and "amount" not in data:
-            return
-        _upsert(data.get("amount"))
 
     @staticmethod
     def _propagate_note(

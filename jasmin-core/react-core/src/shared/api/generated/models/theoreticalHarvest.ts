@@ -40,6 +40,7 @@ export interface TheoreticalHarvest {
   size?: VegetableSizeEnum;
   /** @nullable */
   note?: string | null;
+  readonly for_order_content: boolean;
   /** @nullable */
   readonly created_by: string | null;
   share_article: string;

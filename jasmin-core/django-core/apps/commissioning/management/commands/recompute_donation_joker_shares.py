@@ -5,7 +5,8 @@ movements, share_type_variation amounts). They are now excluded — a donation
 joker is billed but not grown/packed. Existing ``TheoreticalHarvest`` /
 ``MovementShareArticle`` rows were built with the old, inflated counts, so this
 recomputes the affected shares to drop those contributions. Run ONCE after
-deploying the counting change.
+deploying the counting change. A harvest, washing or cleaning amount of a day
+before today stays as it was planned, so only today's and later ones change.
 
 Idempotent (``recompute_shares`` is) — no data migration, forward-only-safe.
 Recomputes per (year, week) so each transaction stays bounded.

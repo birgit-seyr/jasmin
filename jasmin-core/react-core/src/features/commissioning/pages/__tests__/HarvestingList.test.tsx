@@ -823,16 +823,16 @@ describe("correcting the plan", () => {
 });
 
 describe("past weeks and roles", () => {
-  it("still lets last week's plan be corrected but shows the week before read-only", async () => {
+  it("still lets last week's rows be corrected, but not their added amounts, and shows the week before read-only", async () => {
     await openPage();
 
     await userEvent.click(arrow(WEEK, "common.previous"));
     await waitFor(() => expect(totalOf("Celeriac")).toBe(`36,0 ${PCS}`));
     expect(lastListRequest()).toEqual(listRequest({ delivery_week: 40 }));
     expect(screen.queryByText(PAST_WEEK)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: ADD_ROW })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: ADD_ROW })).not.toBeInTheDocument();
     await userEvent.click(within(rowOf("Celeriac")).getByRole("button", { name: EDIT }));
-    expect(field(SHARES)).toBeInTheDocument();
+    expect(within(editingRow()).queryByRole("textbox", { name: SHARES })).not.toBeInTheDocument();
 
     await userEvent.click(arrow(WEEK, "common.previous"));
     await waitFor(() => expect(lastListRequest()).toEqual(listRequest({ delivery_week: 39, is_past: true })));

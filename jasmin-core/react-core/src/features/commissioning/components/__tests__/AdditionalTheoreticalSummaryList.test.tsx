@@ -849,7 +849,7 @@ describe("past weeks", () => {
     await expectReadOnly("Carrots", "2,00");
   });
 
-  it("still lets last week's amounts be corrected", async () => {
+  it("still lets last week's notes be corrected, but not its additional amounts", async () => {
     renderPage(WashingList);
     await loaded();
 
@@ -860,9 +860,9 @@ describe("past weeks", () => {
     );
     expect(lastListRequest()).toMatchObject({ delivery_week: 40, is_past: false });
     expect(screen.queryByText(PAST_WEEK)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: ADD_ROW })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: ADD_ROW })).not.toBeInTheDocument();
     await userEvent.click(within(rowOf("Carrots")).getByRole("button", { name: EDIT }));
-    expect(additionalInput(WASHING)).toBeInTheDocument();
+    expect(within(editingRow()).queryByRole("textbox", { name: WASHING.additionalHeader })).not.toBeInTheDocument();
   });
 });
 

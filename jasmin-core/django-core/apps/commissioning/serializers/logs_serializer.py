@@ -24,8 +24,10 @@ class TheoreticalHarvestSerializer(NameFieldMixin, serializers.ModelSerializer):
         read_only_fields = (
             *AUDIT_READONLY_FIELDS,
             *PROVENANCE_READONLY_FIELDS,
-            # A harvest row also records the forecast it was planned from.
+            # A harvest row also records the forecast it was planned from, and
+            # whether it was planned for an order.
             "forecast",
+            "for_order_content",
         )
 
 

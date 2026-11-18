@@ -101,9 +101,12 @@ function pairWidth(width: EditableColumnConfig<TableRecord>["width"]) {
 export function useHarvestingListColumns({
   isMobile,
   isGardenerView,
+  isPastDay = false,
 }: {
   isMobile: boolean;
   isGardenerView: boolean;
+  /** A day before today, whose additional amounts stay as they are. */
+  isPastDay?: boolean;
 }) {
   const { t } = useTranslation();
   const { getSetting } = useTenant();
@@ -342,6 +345,7 @@ export function useHarvestingListColumns({
         // from the matching ``additional_theoretical_harvest_amount_*``.
         children: makeShareOrderChildren("amount", {
           inputType: "negative_integer",
+          readOnly: isPastDay,
           bold: true,
           renderText: (record, key) =>
             amountCellText(
@@ -390,7 +394,7 @@ export function useHarvestingListColumns({
         })),
       },
     ],
-    [t, makeShareOrderChildren, titleShareContent, titleOrderContent, format],
+    [t, makeShareOrderChildren, titleShareContent, titleOrderContent, format, isPastDay],
   );
 
   const columns: EditableColumnConfig<TableRecord>[] = useMemo(

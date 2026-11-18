@@ -80,6 +80,7 @@ function theoretical(
     created_at: `${isoDate}T08:00:00Z`,
     created_by: null,
     forecast: null,
+    for_order_content: Boolean(links.order_content),
     ...isoDay(isoDate),
     amount,
     unit: article.default_movement_unit,

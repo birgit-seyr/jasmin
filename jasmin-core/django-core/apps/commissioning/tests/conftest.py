@@ -158,6 +158,16 @@ def clock_in_factory_week():
 
 
 @pytest.fixture()
+def clock_before_the_planned_weeks():
+    """The clock on Monday of ISO week 10 of 2026, before the weeks the
+    planning tests plan (from week 15, harvested from week 14 on).
+    A harvest, washing or cleaning amount is built only for a day from today
+    on, so a test that plans one stands before its day."""
+    with time_machine.travel(datetime.datetime(2026, 3, 2, 12, 0), tick=False):
+        yield
+
+
+@pytest.fixture()
 def email_config(tenant):
     """Give the test tenant an SMTP host of its own, for the office actions that
     refuse to run without one (``assert_tenant_can_send_email``). Nothing is

@@ -86,6 +86,7 @@ class TestCorrectionGateCarriesTheoreticals:
 
 
 @pytest.mark.django_db
+@pytest.mark.usefixtures("clock_before_the_planned_weeks")
 class TestWashCleanPlaceholderStorage:
     def test_placeholders_land_on_short_term_for_long_term_line(self, tenant):
         """The wash/clean ACTUAL placeholders for a long-term line must

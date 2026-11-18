@@ -558,6 +558,7 @@
   },
   "documentation": {
     "invalid_model": "Invalid documentation model.",
+    "past_day_additional_amount": "This day is in the past, so its additional amount can no longer be changed.",
     "week_mismatch": "This entry belongs to another week — please reload the page and try again."
   },
   "finalize": {

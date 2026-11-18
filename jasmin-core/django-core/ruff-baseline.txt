@@ -2,7 +2,7 @@
 # Managed by scripts/ruff_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/ruff_baseline.py freeze
-# 177 finding(s).
+# 176 finding(s).
 
 apps/accounts/backends.py: N806 Variable `UserModel` in function should be lowercase
 apps/accounts/models.py: N806 Variable `CHUNK_SIZE` in function should be lowercase
@@ -105,9 +105,8 @@ apps/commissioning/services/shares_delivery_day_service.py: C901 `update_share_d
 apps/commissioning/services/snapshot_service.py: PLR0913 Too many arguments in function definition (6 > 5)
 apps/commissioning/services/snapshot_service.py: PLR0913 Too many arguments in function definition (8 > 5)
 apps/commissioning/services/theoretical_objects.py: C901 `_create_theoretical_movements` is too complex (16 > 10)
-apps/commissioning/services/theoretical_objects.py: C901 `create_theoretical_objects` is too complex (21 > 10)
+apps/commissioning/services/theoretical_objects.py: C901 `create_theoretical_objects` is too complex (17 > 10)
 apps/commissioning/services/theoretical_objects.py: PLR0913 Too many arguments in function definition (22 > 5)
-apps/commissioning/services/theoretical_objects.py: PLR0915 Too many statements (56 > 50)
 apps/commissioning/tasks.py: PLR0913 Too many arguments in function definition (7 > 5)
 apps/commissioning/tests/tests_lifecycle/test_lifecycle_multi_dn_invoice.py: N806 Variable `N_ORDERS_PER_RESELLER` in function should be lowercase
 apps/commissioning/tests/tests_lifecycle/test_lifecycle_multi_dn_invoice.py: N806 Variable `N_RESELLERS` in function should be lowercase

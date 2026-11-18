@@ -558,6 +558,7 @@
   },
   "documentation": {
     "invalid_model": "Ungültiger Modelltyp für die Dokumentation.",
+    "past_day_additional_amount": "Dieser Tag liegt in der Vergangenheit, seine zusätzliche Menge lässt sich nicht mehr ändern.",
     "week_mismatch": "Dieser Eintrag gehört zu einer anderen Woche — bitte die Seite neu laden und erneut versuchen."
   },
   "finalize": {

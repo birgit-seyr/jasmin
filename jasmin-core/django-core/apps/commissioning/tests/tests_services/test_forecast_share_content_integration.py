@@ -46,6 +46,9 @@ from apps.commissioning.tests.factories import (
     StorageFactory,
 )
 
+pytestmark = pytest.mark.usefixtures("clock_before_the_planned_weeks")
+
+
 # ── Helpers ──────────────────────────────────────────
 
 TOTALS_PATCH = (

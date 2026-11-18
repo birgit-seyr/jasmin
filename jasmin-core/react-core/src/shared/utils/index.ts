@@ -47,7 +47,7 @@ export { downloadBlob } from './downloadBlob';
 export { openStoredPdf } from './openStoredPdf';
 export { zipFilesToBlob } from './zip';
 export type { ZipEntry } from './zip';
-export { activeAtDateForWeek, dateForWeekDayNumber, formatWeekKey, hasWeekBegun, isoWeekRangeLabel, isWeekInPast, isYearInPast, mondayOfIsoWeek, nextIsoWeek, previousIsoWeek, termWeekKeys, weeksInIsoYear } from './weekRange';
+export { activeAtDateForWeek, dateForWeekDayNumber, formatWeekKey, hasWeekBegun, isDayInPast, isoWeekRangeLabel, isWeekInPast, isYearInPast, mondayOfIsoWeek, nextIsoWeek, previousIsoWeek, termWeekKeys, weeksInIsoYear } from './weekRange';
 export { hasTierPrice, pickTierPrice, pickTierPriceFromAmount } from './tierPrice';
 export { isSepaMandateActiveForTerm } from './sepaMandate';
 export { variationAllowsTrial, filterVariationsForTrial } from './trialVariations';

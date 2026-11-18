@@ -859,6 +859,7 @@ class TestForwardSeedNextWeek:
 
 
 @pytest.mark.django_db
+@pytest.mark.usefixtures("clock_before_the_planned_weeks")
 class TestReimportPropagatesIntoTheoreticals:
     """The single integration test that proves the WHOLE chain works:
 

@@ -27,6 +27,8 @@ from apps.commissioning.tests.factories import (
     StorageFactory,
 )
 
+pytestmark = pytest.mark.usefixtures("clock_before_the_planned_weeks")
+
 
 def _setup_order_content(amount: Decimal = Decimal("10")):
     storage = StorageFactory(is_short_term_harvest_storage=True)

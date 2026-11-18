@@ -570,9 +570,10 @@ class OrderContentService:
         # inventories. BOTH halves: the ORDERCONTENT rows AND the theoretical
         # HARVEST/PURCHASE/WASH/CLEAN movements (order_content=NULL, linked via
         # their Theoretical* parent). Deleting the content cascade-kills the
-        # theoretical rows + their movements, so a dimension whose theoreticals
-        # vanish would otherwise keep a stale actual correction (entity total ≠
-        # counted) — mirror recompute_for_order_contents and re-derive below.
+        # theoretical rows from today on + their movements, so a dimension whose
+        # theoreticals vanish would otherwise keep a stale actual correction
+        # (entity total ≠ counted) — mirror recompute_for_order_contents and
+        # re-derive below.
         from .theoretical_objects import recalculate_actual_corrections
 
         affected_movements = list(
@@ -656,22 +657,24 @@ class OrderContentService:
         # latter carry order_content=NULL (their source FK is ``theoretical_*``),
         # so they are reached via their Theoretical* parent's order_content link.
         # The rebuild's own cascades only cover the NEW storages.
+        from .past_days import not_yet_past
         from .theoretical_objects import recalculate_actual_corrections
 
         old_movements = list(
             MovementShareArticle.objects.for_order_contents(loaded_order_contents)
         )
 
-        TheoreticalHarvest.objects.filter(
-            order_content__in=loaded_order_contents
-        ).delete()
+        # A harvest, washing or cleaning amount of a day before today stays as
+        # it was.
+        for model in (
+            TheoreticalHarvest,
+            TheoreticalWashAmount,
+            TheoreticalCleanAmount,
+        ):
+            not_yet_past(
+                model.objects.filter(order_content__in=loaded_order_contents)
+            ).delete()
         TheoreticalPurchase.objects.filter(
-            order_content__in=loaded_order_contents
-        ).delete()
-        TheoreticalWashAmount.objects.filter(
-            order_content__in=loaded_order_contents
-        ).delete()
-        TheoreticalCleanAmount.objects.filter(
             order_content__in=loaded_order_contents
         ).delete()
 

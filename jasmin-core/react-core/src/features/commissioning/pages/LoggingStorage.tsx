@@ -352,11 +352,12 @@ export default function LoggingStorage() {
       width: "9em",
       render: (_: unknown, record: WorkflowEntry) => {
         // The theoretical models carry no ``type`` field — the tag is only
-        // derivable from a linked share/order content. Rows without either
-        // link get no tag.
+        // derivable from a linked share/order content, or for a harvest from
+        // its order flag, which it keeps once a past day's line is deleted.
+        // Rows without either get no tag.
         const type = record.share_content
           ? "SHARECONTENT"
-          : record.order_content
+          : record.order_content || ("for_order_content" in record && record.for_order_content)
             ? "ORDERCONTENT"
             : null;
         if (!type) return null;

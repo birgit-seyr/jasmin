@@ -55,6 +55,9 @@ from apps.commissioning.tests.factories import (
     SubscriptionFactory,
 )
 
+pytestmark = pytest.mark.usefixtures("clock_before_the_planned_weeks")
+
+
 # ── Shared fixture builder ──────────────────────────────────────────────
 #
 # Builds a realistic share-content scenario with the requested subscription

@@ -19,6 +19,8 @@ from apps.commissioning.tests.factories import (
 )
 from apps.commissioning.utils.iso_week_utils import compute_rolled_back_week
 
+pytestmark = pytest.mark.usefixtures("clock_before_the_planned_weeks")
+
 
 # ---------------------------------------------------------------------------
 # _AMOUNT_PER_PU_MAP  (pure — no DB)

@@ -27,6 +27,8 @@ from apps.commissioning.tests.factories import (
     SubscriptionFactory,
 )
 
+pytestmark = pytest.mark.usefixtures("clock_before_the_planned_weeks")
+
 
 def _setup(*, with_forecast: bool = True):
     """Build a Share + Forecast + DeliveryStationDay + ShareContent (amount=5)."""

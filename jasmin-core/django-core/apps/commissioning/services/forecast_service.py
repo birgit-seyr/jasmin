@@ -30,6 +30,7 @@ from ..utils import (
     split_forecast_amount_by_weight,
 )
 from ..utils.iso_week_utils import saturday_of_iso_week
+from .past_days import not_yet_past
 from .recompute import recompute_shares
 
 logger = logging.getLogger(__name__)
@@ -206,7 +207,8 @@ class ForecastService:
         # We deliberately do NOT delete the harvest theoreticals here. The
         # recompute (``recompute_for_shares``) owns that: it captures each
         # share's existing ``MovementShareArticle`` rows as ``old_movements``,
-        # deletes ALL theoreticals + movements, rebuilds from the new forecast
+        # deletes the theoreticals from today on + their movements, rebuilds
+        # from the new forecast
         # state, then cascades those old movements through the stock snapshots.
         # Pre-deleting the harvest theoreticals (and their cascade-deleted
         # movements) here would strand the snapshots — the recompute would find
@@ -894,10 +896,13 @@ class ForecastService:
             # ``TheoreticalCleanAmount`` link via ``share_content`` only,
             # so the bulk_update on ShareContent above already brings
             # them in line implicitly.
-            TheoreticalHarvest.objects.filter(
-                share_content_id__in=[
-                    share_content.id for share_content in share_contents_to_update
-                ]
+            # A harvest of a day before today keeps its forecast as it was.
+            not_yet_past(
+                TheoreticalHarvest.objects.filter(
+                    share_content_id__in=[
+                        share_content.id for share_content in share_contents_to_update
+                    ]
+                )
             ).update(forecast=forecast)
 
         # Recompute does NOT run here — the two callers own that decision

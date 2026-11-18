@@ -43,6 +43,8 @@ from apps.commissioning.tests.factories import (
 
 YEAR, WEEK = 2026, 15
 
+pytestmark = pytest.mark.usefixtures("clock_before_the_planned_weeks")
+
 _RECALC = (
     "apps.commissioning.services.theoretical_objects.recalculate_actual_corrections"
 )

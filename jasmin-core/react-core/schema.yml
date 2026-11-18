@@ -52740,6 +52740,9 @@ components:
         note:
           type: string
           nullable: true
+        for_order_content:
+          type: boolean
+          readOnly: true
         created_by:
           type: string
           readOnly: true
@@ -52767,6 +52770,7 @@ components:
       - created_at
       - created_by
       - delivery_week
+      - for_order_content
       - forecast
       - id
       - order_content

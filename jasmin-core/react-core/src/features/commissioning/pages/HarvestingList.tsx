@@ -54,6 +54,7 @@ import {
   formatWeekLabel,
   generatePdfFilename,
   getDayName,
+  isDayInPast,
   isWeekInPast,
   toDayNumber,
 } from "@shared/utils";
@@ -74,6 +75,8 @@ export default function HarvestingList() {
     () => isWeekInPast(selectedYear, selectedWeek),
     [selectedYear, selectedWeek],
   );
+  // A day before today keeps its additional amounts: its harvest is done.
+  const isPastDay = isDayInPast(selectedYear, selectedWeek, selectedDay);
   const isMobile = useIsMobile();
   const { canEdit, isOffice } = useRoles();
   const { dateFormat } = useDateFormat();
@@ -114,6 +117,7 @@ export default function HarvestingList() {
   const { columns, pdfColumns } = useHarvestingListColumns({
     isMobile,
     isGardenerView,
+    isPastDay,
   });
 
   const harvestConfirmation = useHarvestConfirmation({
@@ -193,14 +197,15 @@ export default function HarvestingList() {
   );
 
   // Harvesting: add is hidden in the gardener/mobile views; edit + add both
-  // require a non-past week and edit permission; rows are never deleted here.
+  // require a non-past week and edit permission, add also a day from today
+  // on; rows are never deleted here.
   const permissions = useMemo(
     () => ({
-      canAdd: !isPast && !isGardenerView && !isMobile && canEdit,
+      canAdd: !isPast && !isPastDay && !isGardenerView && !isMobile && canEdit,
       canEdit: !isPast && !isMobile && canEdit,
       canDelete: false,
     }),
-    [isPast, isGardenerView, isMobile, canEdit],
+    [isPast, isPastDay, isGardenerView, isMobile, canEdit],
   );
 
   return (

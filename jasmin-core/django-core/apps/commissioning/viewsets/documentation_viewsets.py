@@ -359,8 +359,8 @@ class ForecastViewSet(BaseArchivableViewSet):
     @transaction.atomic
     def perform_destroy(self, instance: Forecast) -> None:
         # Deleting a Forecast cascade-deletes its ShareContent rows + the
-        # forecast-linked TheoreticalHarvest rows, and with them their stock
-        # movements — but the plain DRF destroy never recomputes. Capture those
+        # forecast-linked TheoreticalHarvest rows from today on, and with them
+        # their stock movements — but the plain DRF destroy never recomputes. Capture those
         # movements first, then re-cascade snapshots + re-derive actual
         # corrections so the stock projection isn't left permanently too high
         # (mirrors delete_share_planning; the create/update paths warn about

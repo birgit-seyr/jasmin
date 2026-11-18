@@ -1,13 +1,32 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import QuerySet
+from django.utils import timezone
 
 from .base import JasminModel
 from .basics import ShareArticle
 from .choices import DayNumberOptions
 from .fields import delivery_week_field, size_vegetable_field, unit_field
+from .managers import before_day_q
 from .mixin import ArchivableMixin, CreatedMixin, FinalizableMixin
+
+
+def cascade_unless_past(
+    collector: Any, field: models.ForeignKey, sub_objs: Any, using: str
+) -> None:
+    """``on_delete`` of a theoretical harvest, washing or cleaning amount's
+    source. An amount of a day before today stays as it was, only no longer
+    linked to the deleted source, so the past day's lists keep what was
+    planned; the others go with their source."""
+    if not isinstance(sub_objs, QuerySet):
+        sub_objs = field.model._base_manager.filter(pk__in=[obj.pk for obj in sub_objs])
+    past = before_day_q(timezone.localdate())
+    models.SET_NULL(collector, field, sub_objs.filter(past), using)
+    models.CASCADE(collector, field, sub_objs.exclude(past), using)
 
 
 def documentation_daily_unique(
@@ -210,14 +229,17 @@ class TheoreticalHarvest(
     ArchivableMixin,
 ):
     share_content = models.ForeignKey(
-        "ShareContent", on_delete=models.CASCADE, blank=True, null=True
+        "ShareContent", on_delete=cascade_unless_past, blank=True, null=True
     )
     order_content = models.ForeignKey(
-        "OrderContent", on_delete=models.CASCADE, blank=True, null=True
+        "OrderContent", on_delete=cascade_unless_past, blank=True, null=True
     )
     forecast = models.ForeignKey(
-        "Forecast", on_delete=models.CASCADE, blank=True, null=True
+        "Forecast", on_delete=cascade_unless_past, blank=True, null=True
     )
+    # Whether the amount is for an order rather than the shares. Kept apart
+    # from the links, which a past day's amount loses with its deleted line.
+    for_order_content = models.BooleanField(default=False, db_default=False)
 
     class Meta:
         indexes = documentation_year_week_indexes()
@@ -305,6 +327,9 @@ class TheoreticalPurchase(
     CreatedMixin,
     ArchivableMixin,
 ):
+    # A purchase goes with its source whatever its day, unlike a harvest,
+    # washing or cleaning amount: it sits on a fixed day of the delivery week
+    # rather than a planned one, so a late change still reaches the purchases.
     share_content = models.ForeignKey(
         "ShareContent", on_delete=models.CASCADE, blank=True, null=True
     )
@@ -425,10 +450,10 @@ class TheoreticalWashAmount(
     ArchivableMixin,
 ):
     share_content = models.ForeignKey(
-        "ShareContent", on_delete=models.CASCADE, blank=True, null=True
+        "ShareContent", on_delete=cascade_unless_past, blank=True, null=True
     )
     order_content = models.ForeignKey(
-        "OrderContent", on_delete=models.CASCADE, blank=True, null=True
+        "OrderContent", on_delete=cascade_unless_past, blank=True, null=True
     )
 
     class Meta:
@@ -467,10 +492,10 @@ class TheoreticalCleanAmount(
     ArchivableMixin,
 ):
     share_content = models.ForeignKey(
-        "ShareContent", on_delete=models.CASCADE, blank=True, null=True
+        "ShareContent", on_delete=cascade_unless_past, blank=True, null=True
     )
     order_content = models.ForeignKey(
-        "OrderContent", on_delete=models.CASCADE, blank=True, null=True
+        "OrderContent", on_delete=cascade_unless_past, blank=True, null=True
     )
 
     class Meta:

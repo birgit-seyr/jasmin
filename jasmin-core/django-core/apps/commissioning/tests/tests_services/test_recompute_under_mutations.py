@@ -53,6 +53,9 @@ from apps.commissioning.tests.factories import (
 YEAR, WEEK = 2026, 15
 
 
+pytestmark = pytest.mark.usefixtures("clock_before_the_planned_weeks")
+
+
 def _make_delivery(*, share, dsd, variation, quantity=1):
     """A non-joker ShareDelivery on a real Subscription (adds ``quantity`` demand)."""
     member = MemberFactory()

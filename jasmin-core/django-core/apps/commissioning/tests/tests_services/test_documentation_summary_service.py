@@ -71,7 +71,7 @@ class TestCalculateSums:
     def test_harvest_sums(self):
         theo = [
             self._mock_entry(10, share_content="sc1"),
-            self._mock_entry(5, order_content="oc1"),
+            self._mock_entry(5, order_content="oc1", for_order=True),
         ]
         addl = [
             self._mock_entry(3, for_share=True),
