@@ -1301,6 +1301,60 @@ class TestGetPackingListBulk:
         # 3 KG × 10 boxes × 1.20 buffer = 36.0
         assert result[0]["total_amount"] == pytest.approx(36.0)
 
+    @patch(
+        "apps.commissioning.services.packing_list_service.batch_get_physical_variation_totals_for_week"
+    )
+    def test_adds_the_station_percentage_to_the_article_buffer(
+        self, mock_variation_totals, tenant
+    ):
+        variation = ShareTypeVariationFactory()
+        delivery_day = SharesDeliveryDayFactory(day_number=2, default_packing_day=2)
+        # Its members take more than planned, the other station's don't.
+        generous = DeliveryStationDayFactory(
+            delivery_day=delivery_day,
+            delivery_station__percentage_added_to_bulk_packing_list=10,
+        ).delivery_station
+        plain = DeliveryStationDayFactory(delivery_day=delivery_day).delivery_station
+
+        share = ShareFactory(
+            year=2026,
+            delivery_week=15,
+            delivery_day=delivery_day,
+            share_type_variation=variation,
+        )
+        share.packing_day = 2
+        share.save()
+
+        article = ShareArticleFactory(percentage_added_to_bulk_packing_list=20)
+        for station in (generous, plain):
+            ShareContentFactory(
+                share=share,
+                share_article=article,
+                delivery_station=station,
+                amount=Decimal("3"),
+                unit="KG",
+                size="M",
+            )
+
+        mock_variation_totals.return_value = _bulk_station_totals(
+            delivery_day,
+            {generous.id: {variation.pk: 10}, plain.id: {variation.pk: 10}},
+        )
+
+        result = PackingListService.get_packing_list_bulk(
+            year=2026,
+            delivery_week=15,
+            day_number=2,
+            share_type=str(variation.share_type_id),
+            is_past=False,
+        )
+
+        totals = {row["delivery_station"]: row["total_amount"] for row in result}
+        # 3 KG × 10 boxes × (1 + 20 % + 10 %) at the generous station, × 1.20
+        # at the other.
+        assert totals[generous.id] == pytest.approx(39.0)
+        assert totals[plain.id] == pytest.approx(36.0)
+
 
 # ---------------------------------------------------------------------------
 # Default-content materialization → packing-list visibility

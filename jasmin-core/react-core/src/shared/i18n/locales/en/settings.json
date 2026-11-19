@@ -150,26 +150,42 @@
     "title": "Share settings"
   },
   "commissioning": {
-    "layout": {
-      "title": "Layout"
+    "packing": {
+      "title": "Packing"
     },
-    "logistics": {
-      "title": "Logistics"
+    "work_steps": {
+      "title": "Work steps"
     },
-    "percentage_added_to_bulk_packing_list_description": "Can be adjusted directly for each vegetable",
-    "percentage_added_to_bulk_packing_list": "Additional % for packing lists (only relevant if members pack their own crates)",
+    "share_planning": {
+      "title": "Share planning"
+    },
+    "lists": {
+      "title": "Lists and printouts"
+    },
+    "member_pages": {
+      "title": "Member pages"
+    },
+    "percentage_added_to_bulk_packing_list_description": "Each vegetable has its own surcharge; this is only what a new one starts with. A delivery station can add its own on top.",
+    "percentage_added_to_bulk_packing_list": "Loose packing list surcharge in % – default for new articles",
+    "station_bulk_percentages": {
+      "button": "% per delivery station",
+      "title": "Surcharge per delivery station",
+      "description": "Added to each vegetable's own surcharge on the station's loose packing list, e.g. salad 5 % + station 10 % = 15 %. Empty adds nothing.",
+      "column": "Extra %"
+    },
     "allow_upload_for_data_lists": "Data uploadable via CSV",
     "allow_upload_for_data_lists_desc": "To load larger amounts of data into the data lists (e.g. vegetables for shares), CSV files can be used for upload.",
     "uploads_weekly_amount_desc": "Via a CSV file",
     "show_seller_name_in_share": "Show the supplier name for bought-in items in crates to members.",
-    "number_packing_stations": "Number of packing stations (only relevant where shares are pre-packed)",
+    "number_packing_stations": "Number of packing stations",
     "number_packing_stations_description": "How many stations on the farm put the boxes together.",
     "show_size_column": "Show vegetable sizes column",
     "show_washing": "Show washing",
     "show_washing_description": "Off hides the washing days, the washing list and the washing columns. The planning behind them stays the same.",
     "show_cleaning": "Show cleaning",
     "show_cleaning_description": "Off hides the cleaning days, the cleaning list and the cleaning columns. The planning behind them stays the same.",
-    "distribute_forecast_by_weight": "Distribute forecast amount across sizes by weight (prefill empty cells)",
+    "distribute_forecast_by_weight": "Split the harvest forecast across sizes right away",
+    "distribute_forecast_by_weight_description": "The amount of a harvest forecast is split across all sizes by weight (e.g. 500 lettuces → 1.4 per S, 3.2 per M) and can be changed afterwards. Amounts already planned stay as they are; a size without an average weight gets its standard amount.",
     "show_summary_in_harvest_share_planning_on_top": "Show summary rows at the top of crate planning",
     "sales": {
       "title": "Sales and purchasing"

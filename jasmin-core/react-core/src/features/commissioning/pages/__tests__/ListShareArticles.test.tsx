@@ -331,6 +331,7 @@ describe("ListShareArticles loading and layout", () => {
   });
 
   it("shows the title, the columns in order and the explainer", async () => {
+    tenantState.settings = { number_packing_stations: 2 };
     await renderLoaded();
 
     expect(screen.getByRole("heading", { level: 1, name: "commissioning.share_articles" })).toBeVisible();
@@ -382,6 +383,7 @@ describe("ListShareArticles loading and layout", () => {
 
 describe("ListShareArticles rows", () => {
   it("shows each article's values, numbers in the tenant's format and crates by name", async () => {
+    tenantState.settings = { number_packing_stations: 2 };
     await renderLoaded();
     const carrots = rowOf("Carrots");
     await within(carrots).findByText("Harvest bin");
@@ -827,13 +829,31 @@ describe("ListShareArticles tenant settings", () => {
   });
 
   it.each([
+    ["runs one", { number_packing_stations: 1 }],
+    ["packs every size loose", { packing_mode: "BULK", number_packing_stations: 3 }],
+  ])("leaves the packing station out where the farm %s", async (_, settings) => {
+    tenantState.settings = settings;
+    await renderLoaded();
+
+    expect(columnTitles()).not.toContain("commissioning.packing_station");
+  });
+
+  it.each([
     ["BULK", true], ["MIXED", true], ["BOXES", false],
-  ])("shows the bulk packing surcharge, after the packing station, when the farm packs %s: %s", async (mode, shown) => {
+  ])("shows the bulk packing surcharge, after the pieces per kg, when the farm packs %s: %s", async (mode, shown) => {
     tenantState.settings = { packing_mode: mode };
     await renderLoaded();
 
     const titles = columnTitles();
-    expect(titles.indexOf(BULK_SURCHARGE)).toBe(shown ? titles.indexOf("commissioning.packing_station") + 1 : -1);
+    expect(titles.indexOf(BULK_SURCHARGE)).toBe(shown ? titles.indexOf("commissioning.pieces_per_kg_L") + 1 : -1);
+  });
+
+  it("shows the bulk packing surcharge after the packing station where the sizes differ", async () => {
+    tenantState.settings = { packing_mode: "MIXED", number_packing_stations: 2 };
+    await renderLoaded();
+
+    const titles = columnTitles();
+    expect(titles.indexOf(BULK_SURCHARGE)).toBe(titles.indexOf("commissioning.packing_station") + 1);
   });
 });
 

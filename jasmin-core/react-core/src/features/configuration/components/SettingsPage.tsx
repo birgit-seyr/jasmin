@@ -340,6 +340,9 @@ export default function SettingsPage({
                   >
                     <div className="settings-item">
                       {renderSetting(setting)}
+                      {setting.extra && (
+                        <div className="mt-8">{setting.extra}</div>
+                      )}
                     </div>
                   </Col>
                 ))}

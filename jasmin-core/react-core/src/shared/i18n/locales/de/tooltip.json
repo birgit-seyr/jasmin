@@ -11,7 +11,7 @@
   "additional_theoretical_harvest": "Diese Menge wird zur errechneten Menge addiert oder subtrahiert. An einem vergangenen Tag bleiben sie und die geplante Menge, wie sie waren; der Lagerbestand kann sich noch ändern.",
   "additional_theoretical_wash_amount": "Diese Menge wird zur errechneten Menge addiert oder subtrahiert. An einem vergangenen Tag bleiben sie und die geplante Menge, wie sie waren; der Lagerbestand kann sich noch ändern.",
   "additional_theoretical_clean_amount": "Diese Menge wird zur errechneten Menge addiert oder subtrahiert. An einem vergangenen Tag bleiben sie und die geplante Menge, wie sie waren; der Lagerbestand kann sich noch ändern.",
-  "needed_harvesting_crates": "Hier kann man sehen, wieviele und welche Ernte-Kisten am Feld benötigt werden.",
+  "needed_harvesting_crates": "Hier kann man sehen, wie viel und welches Leergut am Feld für die Ernte benötigt wird.",
   "weekly_plan_absent_employees": "MitarbeiterInnen, die von Montag bis Freitag abwesend sind, erscheinen hier nicht.",
   "still_in_stock_purchase": "Theoretischer Bestand am Montag.",
   "invoice_creation": "Rechnung für diesen Lieferschein. Lieferschein wird finalisiert. Wenn die Rechnung über mehrere Lieferscheine gehen soll, dann unter --> Rechnungen. e-PDF wird mit Zugferd-XML erstellt = elektronische Rechnung.",

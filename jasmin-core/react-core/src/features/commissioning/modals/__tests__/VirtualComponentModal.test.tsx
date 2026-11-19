@@ -142,12 +142,14 @@ interface RenderOptions {
   visible?: boolean;
   shareType?: string | null;
   variationId?: string | null;
+  size?: string | null;
 }
 
 function renderModal({
   visible = true,
   shareType = "st-veg",
   variationId = FAMILY.id!,
+  size = FAMILY.size,
 }: RenderOptions = {}) {
   const onClose = vi.fn();
   const onSave = vi.fn();
@@ -167,7 +169,7 @@ function renderModal({
           onClose={onClose}
           share_type={shareType}
           share_type_variation={variationId}
-          share_type_variation_name="Family box"
+          share_type_variation_size={size}
           onSave={onSave}
         />,
       )}
@@ -209,7 +211,7 @@ describe("VirtualComponentModal contents", () => {
     expect(api.listVariations).toHaveBeenCalledWith({ share_type: "st-veg", physical: true });
     expect(api.listComponents).toHaveBeenCalledWith({ virtual_variation: "var-family" });
     expect(within(dialog()).getByText(/commissioning\.virtual_components_for/)).toHaveTextContent(
-      "commissioning.virtual_components_for Family box",
+      "commissioning.virtual_components_for commissioning.XL",
     );
     expect(within(dialog()).getAllByRole("checkbox")).toHaveLength(2);
     expect(checkbox(SMALL_LABEL)).not.toBeChecked();
@@ -227,6 +229,33 @@ describe("VirtualComponentModal contents", () => {
     expect(checkbox(SMALL_LABEL)).not.toBeChecked();
     expect(quantityOf(LARGE_LABEL)).toHaveValue("3");
     expect(quantityOf(SMALL_LABEL)).toBeNull();
+  });
+
+  it("offers only the sizes smaller than the one it packs", async () => {
+    const medium = variation("var-medium", "M");
+    api.listVariations.mockImplementation(async () => [SMALL, medium, LARGE]);
+    renderModal({ variationId: medium.id, size: "M" });
+    await loaded();
+
+    expect(within(dialog()).getAllByRole("checkbox")).toHaveLength(1);
+    expect(within(dialog()).queryByText(LARGE_LABEL)).not.toBeInTheDocument();
+  });
+
+  it("keeps listing a larger size it is already packed from, so it can be taken out", async () => {
+    const medium = variation("var-medium", "M");
+    api.listVariations.mockImplementation(async () => [SMALL, medium, LARGE]);
+    serverComponents = [component("var-large", 1)];
+    renderModal({ variationId: medium.id, size: "M" });
+    await loaded();
+
+    await waitFor(() => expect(checkbox(LARGE_LABEL)).toBeChecked());
+  });
+
+  it("says so when the share type has no smaller size", async () => {
+    renderModal({ variationId: SMALL.id, size: "S" });
+
+    expect(await screen.findByText("commissioning.no_other_variations")).toBeInTheDocument();
+    expect(within(dialog()).queryByRole("checkbox")).not.toBeInTheDocument();
   });
 
   it("says so when the share type has no other physical variation", async () => {

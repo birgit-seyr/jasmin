@@ -4,9 +4,12 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import { useCrates } from "@features/commissioning/hooks";
+import type { CrateOption } from "@features/commissioning/hooks/useCrates";
 import ShareTypeVariationPriceModal from "@features/commissioning/modals/prices/ShareTypeVariationPriceModal";
 import {
+  isSmallerShareSize,
   useActiveStatusColumn,
+  useCapability,
   useNumberFormat,
   useShareTypeVariationSizeOptions,
   useTenant,
@@ -22,6 +25,7 @@ import {
   useCommissioningShareTypeVariationsList,
 } from "@shared/api/generated/commissioning/commissioning";
 import type { CommissioningShareTypeVariationsListParams } from "@shared/api/generated/models/commissioningShareTypeVariationsListParams";
+import type { ShareTypeVariation } from "@shared/api/generated/models/shareTypeVariation";
 import type { ShareTypeVariationRequest } from "@shared/api/generated/models/shareTypeVariationRequest";
 import { useRoles } from "@shared/auth";
 import ModalCloseFooter from "@shared/modals/ModalCloseFooter";
@@ -29,8 +33,9 @@ import RichTextEditorModal from "@shared/modals/RichTextEditorModal";
 import {
   EditableTable,
   RowSaveRefused,
-  gatedByPermission,
+  gatedByPermissionOnlyEdit,
   periodsOverlap,
+  permissionsWithDeletable,
   sameCellValue,
   withNewRowDefaults,
   wrapApiFunctions,
@@ -123,6 +128,101 @@ function packingColumn(t: TFunction): EditableColumnConfig<ShareTypeVariationRec
     disabled: isVirtual,
     width: "7em",
     align: "center",
+  };
+}
+
+/**
+ * The button to the sizes a size is packed from, green for a virtual size. A
+ * size is packed from smaller ones only, so one with no smaller physical size
+ * beside it gets none, unless it is virtual already and its components need
+ * taking out.
+ */
+function compositionColumn(
+  t: TFunction,
+  physicalSizes: string[],
+  onOpen: (record: ShareTypeVariationRecord) => void,
+): EditableColumnConfig<ShareTypeVariationRecord> {
+  const canBeComposed = (record: ShareTypeVariationRecord) =>
+    isVirtual(record) ||
+    physicalSizes.some((size) => isSmallerShareSize(size, record.size));
+  return {
+    title: (
+      <div className="text-xs">
+        {t("commissioning.variation_type")}
+        <ToolTipIcon title={t("tooltip.variation_type")} />
+      </div>
+    ),
+    dataIndex: "variation_type",
+    key: "variation_type",
+    width: "6em",
+    readOnly: true,
+    disabled: true,
+    align: "center",
+    render: (_: unknown, record: ShareTypeVariationRecord) => (
+      <Space>
+        {record.key !== -1 && record.id && canBeComposed(record) && (
+          <Button
+            type="link"
+            size="small"
+            icon={
+              <BubbleChartIcon
+                style={{
+                  color: isVirtual(record)
+                    ? "var(--color-success)"
+                    : "var(--color-text-primary)",
+                }}
+              />
+            }
+            onClick={() => onOpen(record)}
+            title={t("commissioning.configure_virtual_components")}
+          />
+        )}
+      </Space>
+    ),
+  };
+}
+
+/** What a share of the size weighs on average. A virtual size weighs what
+ *  the sizes it is made of weigh, so it has no weight of its own to set. */
+function weightColumn(
+  t: TFunction,
+  format: ReturnType<typeof useNumberFormat>["format"],
+): EditableColumnConfig<ShareTypeVariationRecord> {
+  return {
+    title: t("commissioning.average_weight"),
+    dataIndex: "average_weight",
+    key: "average_weight",
+    inputType: "positive_decimal2",
+    width: "7em",
+    suffix: "kg",
+    align: "center",
+    disabled: isVirtual,
+    render: (weight, record) =>
+      isVirtual(record)
+        ? "—"
+        : weight
+          ? `${format(parseFloat(weight as string), 2)} kg`
+          : null,
+  };
+}
+
+/** The crate a size goes out to the delivery stations in. */
+function crateColumn(
+  t: TFunction,
+  crates: CrateOption[],
+): EditableColumnConfig<ShareTypeVariationRecord> {
+  return {
+    title: <>{t("commissioning.used_crate")}</>,
+    dataIndex: "used_crate_name",
+    key: "used_crate_name",
+    inputType: "select",
+    options: crates,
+    required: false,
+    width: "10em",
+    foreignKey: {
+      valueField: "used_crate",
+      displayField: "used_crate_name",
+    },
   };
 }
 
@@ -380,15 +480,16 @@ export default function ShareTypeVariationModal({
     (parentShareType?.amount_of_donation_jokers ?? 0) > 0;
   const showOptinColumns =
     allows_share_type_variation_optin && !shareTypeHasJokers;
+  // Where a host syncs the share types in, the office edits their sizes but
+  // adds and deletes none.
+  const offersShareTypes = useCapability("share_types");
+  const offersDeliveryStations = useCapability("delivery_stations");
   const permissions = useMemo(
-    () => ({
-      ...gatedByPermission(isOffice),
-      canDeleteRecord: (record: TableRecord) => {
-        if (record.key === -1 || !record.id) return true;
-        return isOffice && record.can_be_deleted !== false;
-      },
-    }),
-    [isOffice],
+    () =>
+      offersShareTypes
+        ? permissionsWithDeletable(isOffice)
+        : gatedByPermissionOnlyEdit(isOffice),
+    [isOffice, offersShareTypes],
   );
   const queryClient = useQueryClient();
 
@@ -443,6 +544,11 @@ export default function ShareTypeVariationModal({
     [rawData],
   );
 
+  const physicalSizes = useMemo(
+    () => data.filter((row) => !isVirtual(row)).map((row) => row.size ?? ""),
+    [data],
+  );
+
   const invalidateData = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: getCommissioningShareTypeVariationsListQueryKey(listParams),
@@ -456,17 +562,28 @@ export default function ShareTypeVariationModal({
   // skips invalidation so an edited row stays where the office
   // put it (no spring). DELETE always invalidates so the row
   // vanishes. ``EditableTable``'s internal ``recentlyAddedIds`` pin
-  // keeps the just-added row at the top across the create refetch. The
-  // farm's packing mode follows from its sizes, so every change reloads the
-  // tenant's settings too.
+  // keeps the just-added row at the top across the create refetch. An update
+  // patches the saved size into the cached list instead: the table lays the
+  // response over the row it has, and the response carries no ``packing``,
+  // which only the list derives from ``is_packed_bulk``. The farm's packing
+  // mode follows from its sizes, so every change reloads the tenant's
+  // settings too.
   const handleSaveSuccess = useCallback(
-    (_record: TableRecord, action: "create" | "update") => {
+    (record: TableRecord, action: "create" | "update") => {
       if (action === "create") {
         invalidateData();
+      } else {
+        // The table hands an update's response over as it came.
+        const saved = record as unknown as ShareTypeVariation;
+        queryClient.setQueryData<ShareTypeVariation[]>(
+          getCommissioningShareTypeVariationsListQueryKey(listParams),
+          (rows) =>
+            rows?.map((row) => (row.id === saved.id ? { ...row, ...saved } : row)),
+        );
       }
       void refreshTenant();
     },
-    [invalidateData, refreshTenant],
+    [invalidateData, refreshTenant, queryClient, listParams],
   );
 
   // A deleted size, or one its components turn virtual or physical, changes
@@ -610,68 +727,13 @@ export default function ShareTypeVariationModal({
           width: "5em",
           align: "center",
         },
-        {
-          title: (
-            <div className="text-xs">
-              {t("commissioning.variation_type")}
-              <ToolTipIcon title={t("tooltip.variation_type")} />
-            </div>
-          ),
-          dataIndex: "variation_type",
-          key: "variation_type",
-          width: "6em",
-          readOnly: true,
-          disabled: true,
-          align: "center",
-          render: (_: unknown, record: ShareTypeVariationRecord) => (
-            <Space>
-              {record.key !== -1 && record.id && (
-                <Button
-                  type="link"
-                  size="small"
-                  icon={
-                    <BubbleChartIcon
-                      style={{
-                        color:
-                          record.variation_type === "virtual"
-                            ? "green"
-                            : "var(--color-text-primary)",
-                      }}
-                    />
-                  }
-                  onClick={() => handleOpenVirtualComponentModal(record)}
-                  title={t("commissioning.configure_virtual_components")}
-                />
-              )}
-            </Space>
-          ),
-        },
-        {
-          title: t("commissioning.average_weight"),
-          dataIndex: "average_weight",
-          key: "average_weight",
-          inputType: "positive_decimal2",
-          width: "7em",
-          suffix: "kg",
-          align: "center",
-          render: (text: unknown) =>
-            text ? `${format(parseFloat(text as string), 2)} kg` : null,
-        },
+        compositionColumn(t, physicalSizes, handleOpenVirtualComponentModal),
+        weightColumn(t, format),
         ...capacityColumns,
         ...pickerColumns,
-        {
-          title: <>{t("commissioning.used_crate")}</>,
-          dataIndex: "used_crate_name",
-          key: "used_crate_name",
-          inputType: "select",
-          options: crates,
-          required: false,
-          width: "10em",
-          foreignKey: {
-            valueField: "used_crate",
-            displayField: "used_crate_name",
-          },
-        },
+        // Where a host runs the delivery stations, the crates going out to
+        // them are its business too.
+        ...(offersDeliveryStations ? [crateColumn(t, crates)] : []),
         ...trialColumns,
         packingColumn(t),
         // ---- On-off (per-delivery opt-in) columns ------------------
@@ -730,6 +792,7 @@ export default function ShareTypeVariationModal({
       activeStatusColumn,
       format,
       priceColumns,
+      physicalSizes,
       handleOpenVirtualComponentModal,
       validFromColumn,
       validUntilColumn,
@@ -737,12 +800,15 @@ export default function ShareTypeVariationModal({
       capacityColumns,
       pickerColumns,
       trialColumns,
+      offersDeliveryStations,
     ],
   );
 
   const customSave = useCallback(
     (transformedData: Record<string, unknown>, record: TableRecord) => {
-      const { packing, ...fields } = transformedData;
+      // The picture has its own upload. Where its column isn't shown, the row
+      // still holds its address, which the backend refuses as no file.
+      const { packing, picture: _picture, ...fields } = transformedData;
       const choosesPacking = packing && !isVirtual(record);
       const variation: Record<string, unknown> = {
         ...fields,
@@ -848,9 +914,7 @@ export default function ShareTypeVariationModal({
         onClose={handleCloseVirtualComponentModal}
         share_type={share_type}
         share_type_variation={selectedVirtualComponentRecord?.id ?? null}
-        share_type_variation_name={getShareTypeVariationSizeLabel(
-          selectedVirtualComponentRecord?.size ?? "",
-        )}
+        share_type_variation_size={selectedVirtualComponentRecord?.size}
         onSave={reloadSizes}
       />
 

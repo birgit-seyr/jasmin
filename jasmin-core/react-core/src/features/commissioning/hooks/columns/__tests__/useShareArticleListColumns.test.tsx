@@ -181,6 +181,31 @@ describe("useShareArticleListColumns column set", () => {
     expect(findColumn(columns, "for_markets").hidden).toBe(false);
   });
 
+  const saleColumns = [
+    "default_commissioning_unit",
+    "default_kg_per_pu_reseller",
+    "default_pieces_per_pu_reseller",
+    "default_bunches_per_pu_reseller",
+    "default_crate_reseller_name",
+  ];
+
+  it("hides the offer unit and the sale PU columns on a farm without resellers", () => {
+    const columns = buildColumns({ sells_to_resellers: false });
+
+    for (const key of saleColumns) {
+      expect(findColumn(columns, key).hidden, key).toBe(true);
+    }
+    expect(findColumn(columns, "default_kg_per_pu_harvest").hidden).toBeFalsy();
+  });
+
+  it("shows them on a farm that sells to resellers", () => {
+    const columns = buildColumns();
+
+    for (const key of saleColumns) {
+      expect(findColumn(columns, key).hidden, key).toBe(false);
+    }
+  });
+
   const purchaseColumns = [
     "is_purchased",
     "default_kg_per_pu_purchase",
@@ -369,6 +394,16 @@ describe("useShareArticleListColumns cells", () => {
     expect(
       findColumn(buildColumns({ number_packing_stations: 0 }), "default_packing_station").options,
     ).toEqual([]);
+  });
+
+  it("shows the packing station only where there are several to pick from", () => {
+    for (const [count, hidden] of [[0, true], [1, true], [2, false]] as const) {
+      expect(
+        findColumn(buildColumns({ number_packing_stations: count }), "default_packing_station")
+          .hidden,
+        `${count} stations`,
+      ).toBe(hidden);
+    }
   });
 
   it("offers the page's crates for both default crates, writing the crate id", () => {

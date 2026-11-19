@@ -50,6 +50,25 @@ export const useShareTypeVariationSizeOptions = () => {
   };
 };
 
+// The sizes from small to large, each scale on its own: a half and a whole
+// share don't compare with an S or an L, and one size compares with none.
+const SIZE_SCALES: readonly (readonly string[])[] = [
+  ["XS", "S", "M", "L", "XL", "XXL"],
+  ["HALF", "FULL"],
+];
+
+/** Whether a share of ``size`` is smaller than one of ``than``, so that a
+ *  ``than`` can be packed from it. */
+export function isSmallerShareSize(
+  size: string | null | undefined,
+  than: string | null | undefined,
+): boolean {
+  return SIZE_SCALES.some((scale) => {
+    const position = scale.indexOf(size ?? "");
+    return position >= 0 && position < scale.indexOf(than ?? "");
+  });
+}
+
 /** Pure (non-hook) label getter — safe inside ``pdf()`` rendering, where
  * hooks can't run. Same label + multi-value handling as the hook version. */
 export const getShareTypeVariationSizeLabelPure = (

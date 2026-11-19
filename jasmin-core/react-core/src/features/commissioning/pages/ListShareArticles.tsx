@@ -40,6 +40,7 @@ import {
 import {
   useCrates,
   useIsActiveColumn,
+  usePackingStationCount,
   useShareArticleListColumns,
   useShareArticlePriceColumn,
   useShareOptions,
@@ -104,10 +105,7 @@ export default function ListShareArticles() {
   const has_markets = getSetting("has_markets", true) as boolean;
   const sells_to_resellers = getSetting("sells_to_resellers", true) as boolean;
   const has_purchases = getSetting("has_purchases", true) as boolean;
-  const number_packing_stations = getSetting(
-    "number_packing_stations",
-    1,
-  ) as number;
+  const number_packing_stations = usePackingStationCount();
   const uploadAllowed =
     (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
   const packing_mode = getSetting("packing_mode", "BOXES") as

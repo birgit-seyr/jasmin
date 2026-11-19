@@ -52,7 +52,11 @@ import {
   useTenant,
   useTimeBoundColumns,
 } from "@hooks/index";
-import { isFieldDisabled, toApiDate } from "@shared/utils";
+import { getDateRangeStatus, isFieldDisabled, toApiDate } from "@shared/utils";
+import {
+  missingWorkDays,
+  shownWorkDayFields,
+} from "@features/commissioning/utils/workDays";
 
 type SharesDeliveryDayRecord = SharesDeliveryDay & TableRecord;
 type OrdersDeliveryDayRecord = OrdersDeliveryDay & TableRecord;
@@ -87,23 +91,6 @@ function useOrderDayColumns(
             width: "8em",
             options: weekdayChoices,
             render: renderWeekday,
-            disabled: isFieldDisabled,
-          },
-
-          {
-            title: t("configuration.default_get_current_stock_day"),
-            dataIndex: "default_get_current_stock_day",
-            key: "default_get_current_stock_day",
-            inputType: "select",
-            required: false,
-            align: "center",
-            width: "8em",
-            options: weekdayChoices,
-            render: (value: unknown) => {
-              if (typeof value !== "number") return "-";
-              const day = weekdayChoices.find((d) => d.value === value);
-              return day ? day.label : value;
-            },
             disabled: isFieldDisabled,
           },
           {
@@ -201,8 +188,8 @@ export default function ConfigurationDeliveryDays() {
     [isOffice],
   );
   // A host that keeps its pickup locations itself brings the share delivery
-  // days with their weekday and validity; only their work days and tours are
-  // set here.
+  // days with their weekday and validity, and puts the stations on its own
+  // tours; only the days' work days are set here.
   const offersDeliveryStations = useCapability("delivery_stations");
   // Order days are the resellers' delivery days; a farm that doesn't sell to
   // resellers has none to set.
@@ -213,8 +200,9 @@ export default function ConfigurationDeliveryDays() {
   const isShownColumn = useCallback(
     (column: EditableColumnConfig<TableRecord>) =>
       (showsWashing || column.dataIndex !== "default_washing_day") &&
-      (showsCleaning || column.dataIndex !== "default_cleaning_day"),
-    [showsWashing, showsCleaning],
+      (showsCleaning || column.dataIndex !== "default_cleaning_day") &&
+      (offersDeliveryStations || column.dataIndex !== "number_of_tours"),
+    [showsWashing, showsCleaning, offersDeliveryStations],
   );
   const sharesPermissions = useMemo(
     () =>
@@ -242,6 +230,28 @@ export default function ConfigurationDeliveryDays() {
   const data = useMemo(
     () => (rawShareData ?? []) as SharesDeliveryDayRecord[],
     [rawShareData],
+  );
+
+  // A delivery day in use keeps its work days, except while it lacks one and
+  // the banner over the commissioning pages names it: a host's sync brings
+  // days without them, and they could otherwise never be set. The stored row
+  // decides, so the cells don't close while the last one is being picked.
+  const incompleteDayIds = useMemo(() => {
+    const fields = shownWorkDayFields(showsWashing, showsCleaning);
+    return new Set(
+      data
+        .filter(
+          (day) =>
+            getDateRangeStatus(day.valid_from, day.valid_until) !== "inactive" &&
+            missingWorkDays(day, fields).length > 0,
+        )
+        .map((day) => String(day.id)),
+    );
+  }, [data, showsWashing, showsCleaning]);
+  const workDayDisabled = useCallback(
+    (record: TableRecord) =>
+      isFieldDisabled(record) && !incompleteDayIds.has(String(record.id)),
+    [incompleteDayIds],
   );
 
   const validFromEarlierMove = useEarlierStartWindow({
@@ -300,9 +310,23 @@ export default function ConfigurationDeliveryDays() {
     });
   }, [queryClient]);
   const {
-    onSaveSuccess: onSharesSaveSuccess,
+    onSaveSuccess: trackSharesSave,
     onDeleteSuccess: onSharesDeleteSuccess,
   } = useInvalidateAfterTableMutation(invalidateShares);
+  // An update reloads nothing, but whether a day's work days are open goes by
+  // its stored row, so the saved one takes its place in the cached list.
+  const onSharesSaveSuccess = useCallback(
+    (record: TableRecord, action: "create" | "update") => {
+      trackSharesSave(record, action);
+      if (action !== "update") return;
+      const saved = record as unknown as SharesDeliveryDay;
+      queryClient.setQueryData<SharesDeliveryDay[]>(
+        getCommissioningSharesDeliveryDaysListQueryKey(shareParams),
+        (rows) => rows?.map((row) => (row.id === saved.id ? { ...row, ...saved } : row)),
+      );
+    },
+    [trackSharesSave, queryClient, shareParams],
+  );
   const {
     onSaveSuccess: onOrdersSaveSuccess,
     onDeleteSuccess: onOrdersDeleteSuccess,
@@ -365,22 +389,6 @@ export default function ConfigurationDeliveryDays() {
             ? validUntilColumn
             : { ...validUntilColumn, disabled: true },
           {
-            title: t("configuration.default_get_current_stock_day"),
-            dataIndex: "default_get_current_stock_day",
-            key: "default_get_current_stock_day",
-            inputType: "select",
-            required: false,
-            align: "center",
-            width: "8em",
-            options: weekdayChoices,
-            render: (value: unknown) => {
-              if (typeof value !== "number") return "-";
-              const day = weekdayChoices.find((d) => d.value === value);
-              return day ? day.label : value;
-            },
-            disabled: isFieldDisabled,
-          },
-          {
             title: t("configuration.default_washing_day"),
             dataIndex: "default_washing_day",
             key: "default_washing_day",
@@ -390,7 +398,7 @@ export default function ConfigurationDeliveryDays() {
             align: "center",
             options: weekdayChoices,
             render: renderWeekday,
-            disabled: isFieldDisabled,
+            disabled: workDayDisabled,
           },
           {
             title: t("configuration.default_cleaning_day"),
@@ -402,7 +410,7 @@ export default function ConfigurationDeliveryDays() {
             width: "8em",
             options: weekdayChoices,
             render: renderWeekday,
-            disabled: isFieldDisabled,
+            disabled: workDayDisabled,
           },
           {
             title: t("configuration.default_harvesting_day"),
@@ -414,7 +422,7 @@ export default function ConfigurationDeliveryDays() {
             align: "center",
             options: weekdayChoices,
             render: renderWeekday,
-            disabled: isFieldDisabled,
+            disabled: workDayDisabled,
           },
           {
             title: t("configuration.default_packing_day"),
@@ -426,7 +434,7 @@ export default function ConfigurationDeliveryDays() {
             align: "center",
             options: weekdayChoices,
             render: renderWeekday,
-            disabled: isFieldDisabled,
+            disabled: workDayDisabled,
           },
           {
             title: (
@@ -453,6 +461,7 @@ export default function ConfigurationDeliveryDays() {
       validUntilColumn,
       offersDeliveryStations,
       isShownColumn,
+      workDayDisabled,
     ],
   );
 

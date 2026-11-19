@@ -35560,6 +35560,11 @@ components:
           maxLength: 512
         self_service:
           type: boolean
+        percentage_added_to_bulk_packing_list:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
         fee_per_box_net:
           type: string
           format: decimal
@@ -35984,6 +35989,11 @@ components:
           maxLength: 512
         self_service:
           type: boolean
+        percentage_added_to_bulk_packing_list:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
         fee_per_box_net:
           type: string
           format: decimal
@@ -37668,6 +37678,9 @@ components:
         module_choice:
           type: boolean
           readOnly: true
+        share_types:
+          type: boolean
+          readOnly: true
       required:
       - about
       - delivery_stations
@@ -37676,6 +37689,7 @@ components:
       - manual_share_import
       - module_choice
       - operating_mode_choice
+      - share_types
       - support_tickets
       - user_accounts
       - web_app
@@ -42181,6 +42195,11 @@ components:
           maxLength: 512
         self_service:
           type: boolean
+        percentage_added_to_bulk_packing_list:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
         fee_per_box_net:
           type: string
           format: decimal

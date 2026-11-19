@@ -209,17 +209,9 @@ class SharesDeliveryDayService:
             )
         ]
 
-        day_fields_mapping: dict[str, str] = {
-            "harvesting_day": "default_harvesting_day",
-            "packing_day": "default_packing_day",
-            "washing_day": "default_washing_day",
-            "cleaning_day": "default_cleaning_day",
-            "get_current_stock_day": "default_get_current_stock_day",
-        }
-
         for share in future_shares:
             share.delivery_day = new_delivery_day
-            for share_field, delivery_day_field in day_fields_mapping.items():
+            for share_field, delivery_day_field in Share.DAY_FIELD_DEFAULTS.items():
                 old_default = getattr(old_delivery_day, delivery_day_field)
                 current = getattr(share, share_field)
                 # Inherited (or unset) → follow the successor's default, INCLUDING
@@ -236,7 +228,7 @@ class SharesDeliveryDayService:
                     )
 
         if future_shares:
-            update_fields = ["delivery_day", *day_fields_mapping]
+            update_fields = ["delivery_day", *Share.DAY_FIELD_DEFAULTS]
             Share.objects.bulk_update(future_shares, fields=update_fields)
 
             # The reassigned harvesting/packing/washing/cleaning/stock days are
@@ -251,6 +243,51 @@ class SharesDeliveryDayService:
             recompute_shares({share.id for share in future_shares})
 
         return len(future_shares)
+
+    @staticmethod
+    @transaction.atomic
+    def follow_changed_work_days(
+        delivery_day: SharesDeliveryDay, old_defaults: dict[str, int | None]
+    ) -> int:
+        """Hand a delivery day's changed default work days to its shares of
+        this week and later, the way a successor day hands its own on: a share
+        takes the new day where it has none or the old default, and keeps a
+        day set for its week. A delivery day synced in without work days is
+        in use at once, so its shares wait for these. The shares are then
+        recomputed, which leaves whatever lies before today as it was.
+        ``old_defaults`` holds the defaults before the change, by field name.
+        Returns how many shares changed."""
+        changed = {
+            share_field: default_field
+            for share_field, default_field in Share.DAY_FIELD_DEFAULTS.items()
+            if getattr(delivery_day, default_field) != old_defaults[default_field]
+        }
+        if not changed:
+            return 0
+
+        this_week = Week.withdate(timezone.localdate())
+        shares = Share.objects.filter(
+            iso_week_bound((this_week.year, this_week.week), "gte"),
+            delivery_day=delivery_day,
+        )
+        updated: list[Share] = []
+        for share in shares:
+            follows = [
+                share_field
+                for share_field, default_field in changed.items()
+                if getattr(share, share_field) in (None, old_defaults[default_field])
+            ]
+            for share_field in follows:
+                setattr(share, share_field, getattr(delivery_day, changed[share_field]))
+            if follows:
+                updated.append(share)
+
+        if updated:
+            Share.objects.bulk_update(updated, fields=list(changed))
+            from .recompute import recompute_shares
+
+            recompute_shares({share.id for share in updated})
+        return len(updated)
 
     @staticmethod
     @transaction.atomic

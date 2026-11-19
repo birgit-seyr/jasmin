@@ -364,6 +364,15 @@ describe("PlanningShareContentBase", () => {
     expect(total).toHaveTextContent("27,00 €");
   });
 
+  it("shows no buy-in cost on a farm that buys nothing in", () => {
+    tenantSettings.values = { has_purchases: false };
+    renderPage();
+
+    expect(
+      screen.queryByText("commissioning.total_purchase_cost_week"),
+    ).not.toBeInTheDocument();
+  });
+
   it("makes a past week read-only and hides the bulk actions", async () => {
     renderPage();
 

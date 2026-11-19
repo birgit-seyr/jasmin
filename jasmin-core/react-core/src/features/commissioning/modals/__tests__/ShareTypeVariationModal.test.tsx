@@ -67,6 +67,14 @@ vi.mock("@hooks/configuration/useTenant", async () => {
   return { useTenant: () => tenant };
 });
 
+// The deployment offers everything a test doesn't take away.
+const capabilities = vi.hoisted(() => ({
+  withheld: {} as Record<string, boolean>,
+}));
+vi.mock("@hooks/configuration/useCapability", () => ({
+  useCapability: (name: string) => !capabilities.withheld[name],
+}));
+
 const auth = vi.hoisted(() => ({ roles: ["office"] as string[] }));
 vi.mock("@shared/contexts/AuthContext", () => ({
   useAuth: () => ({ user: { roles: auth.roles } }),
@@ -154,10 +162,14 @@ vi.mock("../VirtualComponentModal", () => ({
   default: (props: {
     visible: boolean;
     share_type_variation: string | number | null;
+    share_type_variation_size: string | null;
     onSave: () => void;
   }) =>
     props.visible ? (
-      <div data-testid="components-modal">
+      <div
+        data-testid="components-modal"
+        data-size={props.share_type_variation_size}
+      >
         {props.share_type_variation}
         <button type="button" onClick={props.onSave}>
           Save components
@@ -353,6 +365,7 @@ beforeEach(() => {
   vi.setSystemTime(NOW);
   tenantSettings.values = {};
   tenantSettings.refreshTenant.mockClear();
+  capabilities.withheld = {};
   auth.roles = ["office"];
   Object.values(notify).forEach((fn) => fn.mockReset());
   serverRows = [MEDIUM, SMALL_SPRING, SMALL_AUTUMN, LARGE_OLD];
@@ -434,18 +447,20 @@ describe("ShareTypeVariationModal loading", () => {
     expect(within(rowWithCapacity(100)).getByText("commissioning.packing_boxed")).toBeInTheDocument();
   });
 
-  it("leaves the packing of a virtual size to the sizes it is made of", async () => {
+  it("leaves the packing and weight of a virtual size to the sizes it is made of", async () => {
     serverRows = [
       ...serverRows,
       variation({ id: "v-mix", size: "XL", sort_order: 5, capacity: 30, variation_type: "virtual", is_packed_bulk: true }),
     ];
     renderModal();
     await loaded();
-    expect(within(rowWithCapacity(30)).getByText("—")).toBeInTheDocument();
+    expect(within(rowWithCapacity(30)).getAllByText("—")).toHaveLength(2);
+    expect(within(rowWithCapacity(100)).getByText("2,50 kg")).toBeInTheDocument();
 
     await userEvent.click(within(rowWithCapacity(30)).getByRole("button", { name: "table.edit" }));
 
     expect(within(editingRow()).queryByRole("combobox", { name: "commissioning.packing" })).toBeNull();
+    expect(within(editingRow()).queryByLabelText("commissioning.average_weight")).toBeNull();
   });
 
   it("offers the optional columns the tenant has switched on", async () => {
@@ -481,11 +496,9 @@ describe("ShareTypeVariationModal loading", () => {
     renderModal();
     // ``loaded`` finds the rows by their capacity, which this tenant doesn't see.
     await waitFor(() =>
-      expect(
-        screen.getAllByRole("button", {
-          name: "commissioning.configure_virtual_components",
-        }),
-      ).toHaveLength(serverRows.length),
+      expect(screen.getAllByRole("button", { name: "table.edit" })).toHaveLength(
+        serverRows.length,
+      ),
     );
 
     const headers = screen
@@ -504,6 +517,19 @@ describe("ShareTypeVariationModal loading", () => {
     ]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
+  });
+
+  it("leaves the crate out where a host runs the delivery stations", async () => {
+    capabilities.withheld = { delivery_stations: true };
+    renderModal();
+    await loaded();
+
+    const headers = screen
+      .getAllByRole("columnheader")
+      .map((header) => header.textContent ?? "")
+      .join("|");
+    expect(headers).not.toMatch(/commissioning\.used_crate/);
+    expect(headers).toMatch(/commissioning\.packing/);
   });
 
   it("hides the opt-in columns for a share type with jokers", async () => {
@@ -661,6 +687,47 @@ describe("ShareTypeVariationModal sizes over time", () => {
     );
   });
 
+  it("shows a size switched to loose as loose after the save", async () => {
+    renderModal();
+    await loaded();
+
+    await userEvent.click(
+      within(rowWithCapacity(100)).getByRole("button", { name: "table.edit" }),
+    );
+    await pick("commissioning.packing", "commissioning.packing_loose");
+    await save();
+
+    await waitFor(() =>
+      expect(api.update).toHaveBeenCalledWith(
+        "v-m",
+        expect.objectContaining({ is_packed_bulk: true }),
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        within(rowWithCapacity(100)).getByText("commissioning.packing_loose"),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("leaves the picture out of a row save where its column isn't shown", async () => {
+    tenantSettings.values = { uploads_weekly_share_amount: true };
+    serverRows = [{ ...MEDIUM, picture: "/media/medium.jpg" }];
+    renderModal();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "table.edit" }),
+    );
+    await typeInto(SORT_ORDER, "4");
+    await save();
+
+    await waitFor(() => expect(api.update).toHaveBeenCalledTimes(1));
+    const [id, payload] = api.update.mock.calls[0];
+    expect(id).toBe("v-m");
+    expect(payload).toMatchObject({ sort_order: "4" });
+    expect(payload).not.toHaveProperty("picture");
+  });
+
   it("refuses stretching a variation into the next one of its size", async () => {
     renderModal();
     await loaded();
@@ -742,6 +809,26 @@ describe("ShareTypeVariationModal details", () => {
     );
 
     expect(screen.getByTestId("components-modal")).toHaveTextContent("v-m");
+    expect(screen.getByTestId("components-modal")).toHaveAttribute("data-size", "M");
+  });
+
+  it("offers no components to a size with no smaller one beside it, unless it has some", async () => {
+    const composition = { name: "commissioning.configure_virtual_components" };
+    serverRows = [
+      ...serverRows,
+      variation({ id: "v-xs", size: "XS", sort_order: 0, capacity: 20, variation_type: "virtual" }),
+    ];
+    renderModal();
+    await loaded();
+
+    // The small sizes have no physical size below them; the virtual XS keeps
+    // its button to take its components out.
+    for (const capacity of [60, 50]) {
+      expect(within(rowWithCapacity(capacity)).queryByRole("button", composition)).toBeNull();
+    }
+    for (const capacity of [100, 40, 20]) {
+      expect(within(rowWithCapacity(capacity)).getByRole("button", composition)).toBeInTheDocument();
+    }
   });
 
   it("reloads the packing mode once components turn a size virtual or physical", async () => {
@@ -836,6 +923,22 @@ describe("ShareTypeVariationModal deleting and roles", () => {
       expect(screen.queryByText("28.12.2025")).not.toBeInTheDocument(),
     );
     expect(tenantSettings.refreshTenant).toHaveBeenCalled();
+  });
+
+  it("lets the office edit sizes but add and delete none where a host syncs the share types in", async () => {
+    capabilities.withheld = { share_types: true };
+    renderModal();
+    await loaded();
+
+    expect(
+      screen.queryByRole("button", { name: /table\.add_record/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "table.delete" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: "table.edit" }),
+    ).not.toHaveLength(0);
   });
 
   it("shows the variations read-only to staff without the office role", async () => {

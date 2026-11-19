@@ -61,6 +61,12 @@ export interface DeliveryStationRequest {
    */
   photo_link?: string | null;
   self_service?: boolean;
+  /**
+   * @minimum 0
+   * @maximum 32767
+   * @nullable
+   */
+  percentage_added_to_bulk_packing_list?: number | null;
   /** @pattern ^-?\d{0,6}(?:\.\d{0,2})?$ */
   fee_per_box_net?: string;
   /** @pattern ^-?\d{0,6}(?:\.\d{0,2})?$ */

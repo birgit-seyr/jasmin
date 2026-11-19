@@ -4,31 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { useCommissioningSharesDeliveryDaysList } from "@shared/api/generated/commissioning/commissioning";
-import type { SharesDeliveryDay } from "@shared/api/generated/models";
 import { useRoles } from "@shared/auth";
 import { useDateFormat, useWashingCleaningVisibility } from "@hooks/index";
 import { todayApiDate } from "@shared/utils/apiDate";
 import { WEEKDAY_KEYS } from "@shared/utils/weekdayNames";
-
-// The work days a delivery day's shares take their harvest, packing, washing
-// and cleaning from. The stock-count day computes nothing, so it isn't one.
-const WORK_DAY_LABELS = {
-  default_harvesting_day: "configuration.default_harvesting_day",
-  default_packing_day: "configuration.default_packing_day",
-  default_washing_day: "configuration.default_washing_day",
-  default_cleaning_day: "configuration.default_cleaning_day",
-} as const;
-
-type WorkDayField = keyof typeof WORK_DAY_LABELS;
-
-/** The label keys of the ``shownFields`` that ``day`` lacks. */
-const missingWorkDays = (
-  day: SharesDeliveryDay,
-  shownFields: WorkDayField[],
-): string[] =>
-  shownFields
-    .filter((field) => day[field] == null)
-    .map((field) => WORK_DAY_LABELS[field]);
+import { missingWorkDays, shownWorkDayFields } from "../utils/workDays";
 
 /**
  * Red banner over the commissioning pages while a delivery day running today
@@ -49,11 +29,7 @@ export default function MissingWorkDaysBanner() {
   });
 
   const incompleteDays = useMemo(() => {
-    const shownFields = (Object.keys(WORK_DAY_LABELS) as WorkDayField[]).filter(
-      (field) =>
-        (showsWashing || field !== "default_washing_day") &&
-        (showsCleaning || field !== "default_cleaning_day"),
-    );
+    const shownFields = shownWorkDayFields(showsWashing, showsCleaning);
     return (data ?? [])
       .map((day) => ({ day, missing: missingWorkDays(day, shownFields) }))
       .filter(({ missing }) => missing.length > 0);

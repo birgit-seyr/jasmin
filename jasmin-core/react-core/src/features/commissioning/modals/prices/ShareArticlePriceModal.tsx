@@ -15,7 +15,7 @@ import {
   useNumberFormat,
   useTimeBoundColumns,
 } from "@hooks/index";
-import { useOfferTiers } from "@features/commissioning/hooks";
+import { useOfferTiers, useTaxesArticles } from "@features/commissioning/hooks";
 import type { EditableColumnConfig, TableRecord } from "@shared/tables/BasicEditableTable/types";
 import PriceEditorModal, { type PriceModalApi } from "./PriceEditorModal";
 import { buildCurrencyPriceColumn, buildTaxRateColumn } from "./priceColumns";
@@ -60,6 +60,9 @@ export default function ShareArticlePriceModal({
   });
 
   const { articles: defaultTaxRateArticles } = useDefaultTaxRates();
+  // A farm that charges no tax on articles leaves every price at the default
+  // rate.
+  const showsTaxRate = useTaxesArticles();
 
   // Single-tier mode when the tenant hasn't configured tier thresholds:
   // one column per unit using ``price_1`` only. No silent default to
@@ -109,7 +112,7 @@ export default function ShareArticlePriceModal({
       activeStatusColumn,
       validFromColumn,
       validUntilColumn,
-      buildTaxRateColumn(t, { locale }),
+      ...(showsTaxRate ? [buildTaxRateColumn(t, { locale })] : []),
       {
         title: t("commissioning.for_shares"),
         key: "for_shares",
@@ -133,6 +136,7 @@ export default function ShareArticlePriceModal({
     activeStatusColumn,
     validFromColumn,
     validUntilColumn,
+    showsTaxRate,
   ]);
 
   return (

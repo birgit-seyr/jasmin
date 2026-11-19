@@ -151,26 +151,42 @@
     "title": "Anteils-Einstellungen"
   },
   "commissioning": {
-    "layout": {
-      "title": "Layout"
+    "packing": {
+      "title": "Packen"
     },
-    "logistics": {
-      "title": "Logistik"
+    "work_steps": {
+      "title": "Arbeitsschritte"
     },
-    "percentage_added_to_bulk_packing_list_description": "kann direkt bei jedem Gemüse angepasst werden",
-    "percentage_added_to_bulk_packing_list": "zusätzliche % für Packlisten (nur relevant, wenn Mitglieder ihre Kisten selbst packen)",
+    "share_planning": {
+      "title": "Kistenplanung"
+    },
+    "lists": {
+      "title": "Listen und Ausdrucke"
+    },
+    "member_pages": {
+      "title": "Mitgliederseiten"
+    },
+    "percentage_added_to_bulk_packing_list_description": "Jedes Gemüse hat seinen eigenen Aufschlag; dieser Wert ist nur der Startwert für neu angelegte. Pro Verteilstation kann noch ein Aufschlag dazukommen.",
+    "percentage_added_to_bulk_packing_list": "% Aufschlag auf lose Packlisten – Vorgabe für neue Artikel",
+    "station_bulk_percentages": {
+      "button": "% pro Verteilstation",
+      "title": "Aufschlag pro Verteilstation",
+      "description": "Kommt auf der losen Packliste der Station zum Aufschlag jedes Gemüses dazu, z. B. Salat 5 % + Station 10 % = 15 %. Leer: kein zusätzlicher Aufschlag.",
+      "column": "% zusätzlich"
+    },
     "allow_upload_for_data_lists": "Daten über csv hinaufladbar",
     "allow_upload_for_data_lists_desc": "Um größere Datenmenge in die Daten-Listen zu laden (z.b. Gemüse für Anteile), können csv Dateien verwenden werden zum Upload.",
     "uploads_weekly_amount_desc": "über eine csv-Datei",
     "show_seller_name_in_share": "Name des Lieferanten für Zukaufs-Artikel in Kisten für die Mitglieder anzeigen.",
-    "number_packing_stations": "Anzahl Packstationen (nur relevant, wenn Kisten vorgepackt werden)",
+    "number_packing_stations": "Anzahl Packstationen",
     "number_packing_stations_description": "Wie viele Stationen am Hof die Kisten zusammenstellen.",
     "show_size_column": "Gemüse-Größen Spalte anzeigen",
     "show_washing": "Waschen anzeigen",
     "show_washing_description": "Aus: Waschtage, Wasch-Liste und Waschen-Spalten werden ausgeblendet. Die Planung im Hintergrund bleibt gleich.",
     "show_cleaning": "Putzen anzeigen",
     "show_cleaning_description": "Aus: Putztage, Putz-Liste und Putzen-Spalten werden ausgeblendet. Die Planung im Hintergrund bleibt gleich.",
-    "distribute_forecast_by_weight": "Prognosemenge nach Gewicht auf Größen verteilen (leere Zellen vorausfüllen)",
+    "distribute_forecast_by_weight": "Ernteprognose sofort auf die Größen verteilen",
+    "distribute_forecast_by_weight_description": "Die Menge einer Ernteprognose wird gleich nach Gewicht auf alle Größen aufgeteilt (z. B. 500 Salate → je S 1,4, je M 3,2) und lässt sich danach ändern. Schon geplante Mengen bleiben, wie sie sind; eine Größe ohne Durchschnittsgewicht bekommt ihre Standardmenge.",
     "show_summary_in_harvest_share_planning_on_top": "Summen-Zeilen in Kistenplanung oben anzeigen", 
     "sales": {
       "title": "Vertrieb und Zukauf"

@@ -46,10 +46,12 @@ interface UseShareArticleListColumnsArgs {
   crates: CrateOption[];
   visibleShareOptions: ShareOptionLite[];
   activeFilter: string;
+  /** Without resellers, their flag, the offer unit and the sale PU columns go. */
   sells_to_resellers: boolean;
   has_markets: boolean;
   /** Without purchases, the purchased flag and the purchase PU columns go. */
   has_purchases: boolean;
+  /** One station or none leaves the packing station column out. */
   number_packing_stations: number;
   packingBulk: boolean;
   renderHarvestNumber: (
@@ -294,6 +296,7 @@ export function useShareArticleListColumns({
           className: "column-group-start",
           align: "center",
           sortable: true,
+          hidden: number_packing_stations <= 1,
           options: Array.from({ length: number_packing_stations }, (_, i) => ({
             label: i + 1,
             value: i + 1,
@@ -429,6 +432,7 @@ export function useShareArticleListColumns({
           fixed: true,
           options: unitOptions,
           className: "column-group-start",
+          hidden: !sells_to_resellers,
           render: (value: unknown) => {
             const unitOption = unitOptions.find(
               (option: { value: string; label: string }) =>
@@ -450,6 +454,7 @@ export function useShareArticleListColumns({
           required: false,
           align: "center",
           width: "6em",
+          hidden: !sells_to_resellers,
 
           render: renderNumber(format, 3),
         },
@@ -465,6 +470,7 @@ export function useShareArticleListColumns({
           required: false,
           align: "center",
           width: "6.5em",
+          hidden: !sells_to_resellers,
 
           render: renderNumber(format, 0),
         },
@@ -480,6 +486,7 @@ export function useShareArticleListColumns({
           required: false,
           align: "center",
           width: "7em",
+          hidden: !sells_to_resellers,
 
           render: renderNumber(format, 0),
         },
@@ -501,6 +508,7 @@ export function useShareArticleListColumns({
             displayField: "default_crate_reseller_name",
           },
           sortable: true,
+          hidden: !sells_to_resellers,
         },
         {
           title: (

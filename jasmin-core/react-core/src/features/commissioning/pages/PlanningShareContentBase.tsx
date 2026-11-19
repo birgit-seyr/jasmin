@@ -1071,12 +1071,14 @@ export default function PlanningShareContentBase({
           </div>
 
           {/* Weekly buy-in ("Zukauf") cost, computed from the loaded grid. */}
-          <div className="flex-col planning-controls__purchase-cost">
-            <span className="text-secondary">
-              {t("commissioning.total_purchase_cost_week")}
-            </span>
-            <strong>{formatCurrency(totalPurchaseMoney)}</strong>
-          </div>
+          {hasPurchases && (
+            <div className="flex-col planning-controls__purchase-cost">
+              <span className="text-secondary">
+                {t("commissioning.total_purchase_cost_week")}
+              </span>
+              <strong>{formatCurrency(totalPurchaseMoney)}</strong>
+            </div>
+          )}
         </div>
       )}
 

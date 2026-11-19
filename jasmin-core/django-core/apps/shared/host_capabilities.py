@@ -84,13 +84,19 @@ def host_capabilities() -> dict[str, bool]:
       the host and doesn't present itself.
     * ``delivery_stations`` — jasmin's delivery-station pages: the station list,
       the delivery tours, the tour and pickup lists and the station fees, the
-      "also a delivery station" flag of resellers and sellers, and adding,
-      deleting and setting the validity of the share delivery days. Tapir syncs its pickup
+      "also a delivery station" flag of resellers and sellers, the crate a
+      share size goes out to the stations in, and adding, deleting and
+      setting the validity of the share delivery days. Tapir syncs its pickup
       locations into jasmin, with the delivery days they follow from, knows the
       members at each and handles them itself.
     * ``module_choice`` — the office's choice of jasmin's modules
       (``Tenant.navigation``); a host that installs only some of them fixes the
       choice, see ``navigation_in_effect``.
+    * ``share_types`` — adding and deleting share types and their sizes,
+      renaming a share type, and the share options without any. Tapir syncs
+      its product types and products into jasmin as share types and sizes,
+      recognises a share type by its name, and ends every one it doesn't have,
+      so one added or renamed in jasmin wouldn't last.
     """
     standalone = jasmin_host() == STANDALONE
     return {
@@ -104,6 +110,7 @@ def host_capabilities() -> dict[str, bool]:
         "delivery_stations": standalone,
         "about": standalone,
         "module_choice": standalone,
+        "share_types": standalone,
     }
 
 

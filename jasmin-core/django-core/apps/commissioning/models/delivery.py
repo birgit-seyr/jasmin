@@ -50,6 +50,12 @@ class DeliveryStation(JasminModel):
     photo_link = models.CharField(max_length=512, blank=True, null=True)
 
     self_service = models.BooleanField(default=False)
+    # Added in percent to each article's own surcharge on the station's loose
+    # packing list, for a station whose members take more than the planned
+    # amounts. Empty adds nothing.
+    percentage_added_to_bulk_packing_list = models.PositiveSmallIntegerField(
+        blank=True, null=True
+    )
     # Station fees the solawi owes the pickup station, NET (no VAT). DecimalField
     # (not Integer) per the repo money/Decimal hygiene rule — keeps cents and
     # stays Decimal end-to-end into the billing. Either/or: at most one of the

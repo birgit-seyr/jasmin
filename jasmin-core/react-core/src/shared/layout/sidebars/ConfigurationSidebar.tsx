@@ -170,16 +170,6 @@ export default function ConfigurationSidebar({
       label: t("configuration.group.commissioning"),
       children: [
         {
-          key: "configuration-commissioning",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/commissioning">
-              {t("configuration.commissioning")}
-            </Link>
-          ),
-        },
-        {
           key: "configuration-share-type-variations",
           requireRole: "isAdmin",
           icon: <SettingOutlined />,
@@ -189,6 +179,17 @@ export default function ConfigurationSidebar({
             </Link>
           ),
         },
+        {
+          key: "configuration-commissioning",
+          requireRole: "isAdmin",
+          icon: <SettingOutlined />,
+          label: (
+            <Link to="/configuration/commissioning">
+              {t("configuration.commissioning")}
+            </Link>
+          ),
+        },
+
         {
           key: "configuration-time-management",
           requireRole: "isAdmin",

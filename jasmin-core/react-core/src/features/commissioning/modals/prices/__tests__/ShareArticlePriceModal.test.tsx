@@ -331,6 +331,26 @@ describe("ShareArticlePriceModal columns", () => {
     expect(headerTexts()).toContain(boxField("kg", "CHF"));
   });
 
+  it("leaves out the VAT rate on a farm that sells to no reseller and at no market", async () => {
+    tenantSettings.values = { sells_to_resellers: false, has_markets: false };
+    renderModal();
+    await screen.findByText("2,40 €");
+
+    expect(headerTexts()).not.toContain("commissioning.tax_rate");
+    expect(within(rowOf("2,40 €")).queryByText("7,00 %")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["sells to resellers", { has_markets: false }],
+    ["sells at markets", { sells_to_resellers: false }],
+  ])("shows the VAT rate on a farm that %s", async (_, settings) => {
+    tenantSettings.values = settings;
+    renderModal();
+    await screen.findByText("2,40 €");
+
+    expect(headerTexts()).toContain("commissioning.tax_rate");
+  });
+
   it("settles after mounting instead of re-rendering in a loop", async () => {
     const { profiler } = renderModal();
     await screen.findByText("2,40 €");
@@ -368,6 +388,28 @@ describe("ShareArticlePriceModal saving", () => {
     expect(
       within(editingRow()).getByLabelText("commissioning.tax_rate"),
     ).toHaveValue("7");
+  });
+
+  it("saves a new price at the article VAT rate where the rate isn't shown", async () => {
+    tenantSettings.values = {
+      sells_to_resellers: false,
+      has_markets: false,
+      default_tax_rate_articles: "10.00",
+    };
+    renderModal();
+    await screen.findByText("2,40 €");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /table\.add_record/ }),
+    );
+    await pickValidFrom("2026-10-12");
+    await typeInto(boxField("kg"), "2,60");
+    await save();
+
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    expect(api.create.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ tax_rate: "10.00", net_price_for_boxes_kg: "2.60" }),
+    );
   });
 
   it("adds a price with a share price and a reseller price per tier", async () => {

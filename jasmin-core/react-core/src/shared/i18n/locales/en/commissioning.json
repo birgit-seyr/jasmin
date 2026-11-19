@@ -800,7 +800,7 @@
   "no_delivery_days_in_week": "No delivery days this week",
   "no_offers_created": "No offers created — nothing to offer for this week.",
   "no_offer_groups_found": "No offer groups found — please create at least one before creating offers.",
-  "no_other_variations": "No other variants",
+  "no_other_variations": "No smaller sizes to make this one up from",
   "no_variation_columns_title": "No share sizes configured.",
   "no_variation_columns_message": "There are no share sizes for the selected week. Please set up share types and delivery days (with delivery stations) so that this table can be displayed.",
   "missing_work_days": {

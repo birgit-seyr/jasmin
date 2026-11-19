@@ -276,8 +276,9 @@ class PackingListService:
             s.id: s for s in DeliveryStation.objects.filter(id__in=station_ids)
         }
 
-        # Buffer percentages per article — bulk totals get multiplied by
-        # ``(pct / 100 + 1)``. NULL / 0 keeps the multiplier at 1.0.
+        # Buffer percentages per article, to which a station adds its own —
+        # bulk totals get multiplied by ``(pct / 100 + 1)``. NULL / 0 keeps the
+        # multiplier at 1.0.
         bulk_pct_by_article: dict[str, int] = dict(
             ShareArticle.objects.values_list(
                 "id", "percentage_added_to_bulk_packing_list"
@@ -333,6 +334,7 @@ class PackingListService:
             ]
 
             variation_count_map: dict[str, int] = totals_by_station.get(station_id, {})
+            station_pct = station.percentage_added_to_bulk_packing_list or 0
 
             for item in station_packing_list:
                 # Keep the running total in Decimal end-to-end — ``float(amount)``
@@ -349,7 +351,9 @@ class PackingListService:
                 if total_amount <= 0:
                     continue
 
-                pct = bulk_pct_by_article.get(item["share_article"]) or 0
+                pct = (
+                    bulk_pct_by_article.get(item["share_article"]) or 0
+                ) + station_pct
                 total_amount = quantize_weight(
                     total_amount * (Decimal(pct) / Decimal(100) + 1)
                 )

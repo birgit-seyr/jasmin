@@ -33,6 +33,7 @@ from ..models import (
     DeliveryStationDay,
     OrdersDeliveryDay,
     PaymentCycle,
+    Share,
     SharesDeliveryDay,
 )
 from ..schemas import (
@@ -320,7 +321,16 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                     new_valid_from=new_valid_from,
                     stranded_count=stranded,
                 )
-        serializer.save()
+
+        # The shares copied the day's work days when they were built, so a
+        # changed one reaches them only when handed on.
+        old_work_days = {
+            field: getattr(instance, field)
+            for field in Share.DAY_FIELD_DEFAULTS.values()
+        }
+        with transaction.atomic():
+            serializer.save()
+            SharesDeliveryDayService.follow_changed_work_days(instance, old_work_days)
 
     def perform_destroy(self, instance):
         # Share.delivery_day CASCADEs — deleting a used delivery day would wipe

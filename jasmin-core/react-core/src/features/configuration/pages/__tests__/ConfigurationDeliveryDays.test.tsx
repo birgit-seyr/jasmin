@@ -4,11 +4,12 @@
  * generated commissioning client is the mocking boundary, its list hooks real
  * TanStack queries around spies.
  *
- * Nothing these tests check depends on today's date, so the clock runs free.
+ * Only whether a delivery day has ended depends on today's date, and the one
+ * that has ended did so in January 2026, so the clock runs free.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -56,6 +57,7 @@ const api = vi.hoisted(() => ({
   listShareDays: vi.fn(),
   listOrderDays: vi.fn(),
   createShareDay: vi.fn(),
+  updateShareDay: vi.fn(),
 }));
 
 vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
@@ -77,7 +79,8 @@ vi.mock("@shared/api/generated/commissioning/commissioning", async () => {
         enabled: options?.query?.enabled,
       }),
     commissioningSharesDeliveryDaysCreate: (day: unknown) => api.createShareDay(day),
-    commissioningSharesDeliveryDaysPartialUpdate: vi.fn(),
+    commissioningSharesDeliveryDaysPartialUpdate: (id: string, day: unknown) =>
+      api.updateShareDay(id, day),
     commissioningSharesDeliveryDaysDestroy: vi.fn(),
     commissioningOrdersDeliveryDaysCreate: vi.fn(),
     commissioningOrdersDeliveryDaysPartialUpdate: vi.fn(),
@@ -145,6 +148,10 @@ function cellOf(row: HTMLElement, columnTitle: string): HTMLElement {
   return cell;
 }
 
+/** The titles of every column on the page. */
+const columnTitles = () =>
+  screen.getAllByRole("columnheader").map((header) => header.textContent ?? "");
+
 async function startNewShareDay() {
   await screen.findAllByText("configuration.acronym_wednesday");
   const [shareDaysAdd] = screen.getAllByRole("button", { name: /table\.add_record/ });
@@ -168,6 +175,9 @@ beforeEach(() => {
     ...day,
     id: "day-new",
   }));
+  api.updateShareDay
+    .mockReset()
+    .mockImplementation(async (id: string, day: SharesDeliveryDay) => ({ ...WEDNESDAY, ...day, id }));
 });
 
 describe("ConfigurationDeliveryDays new delivery day", () => {
@@ -175,6 +185,7 @@ describe("ConfigurationDeliveryDays new delivery day", () => {
     renderPage();
     await startNewShareDay();
 
+    expect(columnTitles()).toContain(TOURS);
     expect(within(editingRow()).getByLabelText(TOURS)).toHaveValue("1");
   });
 
@@ -206,7 +217,7 @@ describe("ConfigurationDeliveryDays where the host brings the delivery days", ()
     }
   });
 
-  it("keeps a share delivery day's weekday and validity, and lets the office set its tours", async () => {
+  it("keeps a share delivery day's weekday and validity, and lets the office set its work days", async () => {
     renderPage();
     await screen.findAllByText("configuration.acronym_wednesday");
 
@@ -216,7 +227,119 @@ describe("ConfigurationDeliveryDays where the host brings the delivery days", ()
     expect(within(row).queryByLabelText("configuration.valid_from")).not.toBeInTheDocument();
     expect(within(row).queryByLabelText("configuration.valid_until")).not.toBeInTheDocument();
     expect(within(row).queryByLabelText("configuration.delivery_day")).not.toBeInTheDocument();
-    expect(within(row).getByLabelText(TOURS)).toBeEnabled();
+    expect(
+      within(row).getByRole("combobox", { name: "configuration.default_harvesting_day" }),
+    ).toBeEnabled();
+  });
+
+  it("leaves the tours to the host", async () => {
+    renderPage();
+    await screen.findAllByText("configuration.acronym_wednesday");
+
+    expect(columnTitles()).not.toContain(TOURS);
+    expect(columnTitles()).toContain("configuration.default_harvesting_day");
+  });
+});
+
+describe("ConfigurationDeliveryDays work days of a day in use", () => {
+  const HARVESTING = "configuration.default_harvesting_day";
+  const PACKING = "configuration.default_packing_day";
+
+  async function editWednesday(): Promise<HTMLElement> {
+    await screen.findAllByText("configuration.acronym_wednesday");
+    const row = document.querySelector<HTMLElement>('tr[data-row-key="day-wednesday"]');
+    if (!row) throw new Error("Wednesday is not listed");
+    await userEvent.click(within(row).getByRole("button", { name: "table.edit" }));
+    return editingRow();
+  }
+
+  beforeEach(() => {
+    // A host's sync brings the days, and they are in use at once.
+    deployment.capabilities = { delivery_stations: false };
+  });
+
+  it("keeps them once the day has them all", async () => {
+    renderPage();
+    const row = await editWednesday();
+
+    expect(within(row).queryByRole("combobox", { name: HARVESTING })).not.toBeInTheDocument();
+    expect(within(row).queryByRole("combobox", { name: PACKING })).not.toBeInTheDocument();
+  });
+
+  it("opens them while the day lacks one, as the banner over the commissioning pages asks", async () => {
+    api.listShareDays.mockResolvedValue([
+      { ...WEDNESDAY, default_harvesting_day: null },
+      FRIDAY,
+    ]);
+    renderPage();
+    const row = await editWednesday();
+
+    expect(within(row).getByRole("combobox", { name: HARVESTING })).toBeEnabled();
+    expect(within(row).getByRole("combobox", { name: PACKING })).toBeEnabled();
+  });
+
+  it("saves the work day picked for a day that lacked it", async () => {
+    api.listShareDays.mockResolvedValue([
+      { ...WEDNESDAY, default_harvesting_day: null },
+      FRIDAY,
+    ]);
+    renderPage();
+    const row = await editWednesday();
+
+    await userEvent.click(within(row).getByRole("combobox", { name: HARVESTING }));
+    const monday = await waitFor(() => {
+      const option = document.querySelector<HTMLElement>(
+        '.ant-select-dropdown:not(.ant-select-dropdown-hidden) [title="configuration.acronym_monday"]',
+      );
+      if (!option) throw new Error("Monday is not offered");
+      return option;
+    });
+    await userEvent.click(monday);
+    await userEvent.click(screen.getByRole("button", { name: "table.save" }));
+
+    await waitFor(() =>
+      expect(api.updateShareDay).toHaveBeenCalledWith(
+        "day-wednesday",
+        expect.objectContaining({ default_harvesting_day: 0, default_packing_day: 2 }),
+      ),
+    );
+
+    // With every work day saved, the day in use keeps them again.
+    const again = await editWednesday();
+    expect(within(again).queryByRole("combobox", { name: HARVESTING })).not.toBeInTheDocument();
+  });
+
+  it("keeps them on a farm that hides washing and cleaning once the day has the rest", async () => {
+    tenantSettings.values = { show_washing: false, show_cleaning: false };
+    api.listShareDays.mockResolvedValue([
+      { ...WEDNESDAY, default_washing_day: null, default_cleaning_day: null },
+      FRIDAY,
+    ]);
+    renderPage();
+    const row = await editWednesday();
+
+    expect(within(row).queryByRole("combobox", { name: HARVESTING })).not.toBeInTheDocument();
+    expect(within(row).queryByRole("combobox", { name: PACKING })).not.toBeInTheDocument();
+  });
+
+  it("keeps them on a day that has ended, which the banner no longer names", async () => {
+    api.listShareDays.mockResolvedValue([
+      { ...WEDNESDAY, valid_until: "2026-01-11", default_harvesting_day: null },
+      FRIDAY,
+    ]);
+    renderPage();
+    const row = await editWednesday();
+
+    expect(within(row).queryByRole("combobox", { name: HARVESTING })).not.toBeInTheDocument();
+  });
+});
+
+describe("ConfigurationDeliveryDays stock-count day", () => {
+  it("is shown on neither table, as nothing reads it", async () => {
+    renderPage();
+    await screen.findAllByText("configuration.acronym_wednesday");
+
+    expect(columnTitles()).not.toContain("configuration.default_get_current_stock_day");
   });
 });
 

@@ -3,3 +3,4 @@ export { default as ConsentDocumentModal } from './ConsentDocumentModal';
 export type { ConsentDocumentModalMode } from './ConsentDocumentModal';
 export { default as EditUserRolesModal } from './EditUserRolesModal';
 export { default as EmailTemplateEditorModal } from './EmailTemplateEditorModal';
+export { default as StationBulkPercentagesModal } from './StationBulkPercentagesModal';

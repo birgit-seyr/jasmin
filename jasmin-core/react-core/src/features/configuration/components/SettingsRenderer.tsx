@@ -118,6 +118,9 @@ export interface SettingConfig {
    * where the backend would also reject the value at save time.
    */
   validate?: (value: string) => string | null;
+  /** Shown right under the control, e.g. a button to a window of related
+   *  settings kept elsewhere. */
+  extra?: ReactNode;
 }
 
 interface RenderOptions {

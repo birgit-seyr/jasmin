@@ -21,6 +21,7 @@ import { useRoles } from "@shared/auth";
 import { ShareTypeVariationModal } from "@features/commissioning/modals";
 import {
   EditableTable,
+  gatedByPermissionOnlyEdit,
   permissionsWithDeletable,
   wrapApiFunctions,
 } from "@shared/tables";
@@ -33,6 +34,7 @@ import { DateRangeStatusLegend, ToolTipIcon } from "@shared/ui";
 import {
   useActiveShareOptions,
   useActiveStatusColumn,
+  useCapability,
   useInvalidateAfterTableMutation,
   useShareTypeVariationSizeOptions,
   useTenant,
@@ -58,13 +60,18 @@ function ShareTypeTable({
   const { t } = useTranslation();
   const { isOffice } = useRoles();
   const queryClient = useQueryClient();
+  const offersShareTypes = useCapability("share_types");
 
   // ``permissionsWithDeletable`` gates the delete button on ``can_be_deleted``
   // (false when the ShareType has share-type variations — the PROTECT FK from
-  // ShareTypeVariation). ``gatedByPermission`` alone always showed delete.
+  // ShareTypeVariation). Where a host syncs the share types in, the office
+  // edits them but adds and deletes none.
   const permissions = useMemo(
-    () => permissionsWithDeletable(isOffice),
-    [isOffice],
+    () =>
+      offersShareTypes
+        ? permissionsWithDeletable(isOffice)
+        : gatedByPermissionOnlyEdit(isOffice),
+    [isOffice, offersShareTypes],
   );
 
   const listParams = useMemo<CommissioningShareTypesListParams>(
@@ -295,6 +302,10 @@ export default function ConfigurationShareTypeVariations() {
     "uploads_weekly_share_amount",
     false,
   ) as boolean;
+  // Where a host syncs the share types in, it recognises them by their names
+  // and adds none here: the names stay as synced, and a share option without
+  // any has nothing to show.
+  const offersShareTypes = useCapability("share_types");
 
   const shareTypeColumns = useMemo(
     () =>
@@ -329,6 +340,7 @@ export default function ConfigurationShareTypeVariations() {
           required: true,
           align: "left",
           width: "10em",
+          disabled: !offersShareTypes,
         },
         {
           title: t("commissioning.delivery_cycle"),
@@ -484,15 +496,28 @@ export default function ConfigurationShareTypeVariations() {
       getShareTypeVariationSizeLabel,
       t,
       weeklyUpload,
+      offersShareTypes,
     ],
   );
 
+  const { data: allShareTypes } = useCommissioningShareTypesList(undefined, {
+    query: { enabled: !offersShareTypes },
+  });
   // Single source of truth for the share-option codes is the generated
   // ``ShareTypeEnum`` (mirrors the backend ShareType.share_option choices) —
   // keep the on-screen accordion order matching the enum declaration order.
+  const shownShareOptions = useMemo(() => {
+    const shareOptions = Object.values(ShareTypeEnum);
+    if (offersShareTypes) return shareOptions;
+    const withShareTypes = new Set(
+      allShareTypes?.map((shareType) => shareType.share_option),
+    );
+    return shareOptions.filter((option) => withShareTypes.has(option));
+  }, [offersShareTypes, allShareTypes]);
+
   const shareOptionCollapseItems = useMemo(
     () =>
-      Object.values(ShareTypeEnum).map((option) => {
+      shownShareOptions.map((option) => {
         const isActive = activeShareOptions[option];
         return {
           key: option,
@@ -531,6 +556,7 @@ export default function ConfigurationShareTypeVariations() {
         };
       }),
     [
+      shownShareOptions,
       activeShareOptions,
       getShareOptionLabel,
       t,

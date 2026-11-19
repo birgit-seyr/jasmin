@@ -19,7 +19,10 @@ import {
 } from "@shared/api/generated/commissioning/commissioning";
 import { notify } from '@shared/utils';
 import { getErrorMessage } from "@shared/utils/apiError";
-import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
+import {
+  getShareTypeVariationSizeLabelPure,
+  isSmallerShareSize,
+} from "@hooks/index";
 
 import "./VirtualComponentModal.css";
 
@@ -30,7 +33,9 @@ interface VirtualComponentModalProps {
   onClose: () => void;
   share_type: string | number | null;
   share_type_variation: string | number | null;
-  share_type_variation_name?: string;
+  /** The size it packs, which names it; only smaller sizes are offered as
+   *  its components. */
+  share_type_variation_size?: string | null;
   onSave?: (data: {
     share_type_variation: string | number | null;
     components: { physical_variation: string; quantity: number }[];
@@ -45,7 +50,7 @@ export default function VirtualComponentModal({
   onClose,
   share_type,
   share_type_variation,
-  share_type_variation_name,
+  share_type_variation_size,
   onSave,
   zIndex = 1100,
 }: VirtualComponentModalProps) {
@@ -79,13 +84,19 @@ export default function VirtualComponentModal({
 
   const loading = variationsLoading || componentsLoading;
 
-  const availableVariations = useMemo(
-    () =>
-      (variationsData || []).filter(
-        (v) => String(v.id) !== String(share_type_variation),
-      ),
-    [variationsData, share_type_variation],
-  );
+  // A size is packed from smaller ones. A component it already has stays
+  // listed whatever its size, so it can be taken out.
+  const availableVariations = useMemo(() => {
+    const components = new Set(
+      existingComponents?.map((component) => component.physical_variation),
+    );
+    return (variationsData || []).filter(
+      (v) =>
+        String(v.id) !== String(share_type_variation) &&
+        (isSmallerShareSize(v.size, share_type_variation_size) ||
+          components.has(String(v.id))),
+    );
+  }, [variationsData, existingComponents, share_type_variation, share_type_variation_size]);
 
   // Seed selectedVariations ONCE per open, when the components data first
   // arrives. The ref guard stops a background refetch (existingComponents getting
@@ -191,7 +202,7 @@ export default function VirtualComponentModal({
       title={
         <div>
           {t("commissioning.virtual_components_for")}{" "}
-          {share_type_variation_name}
+          {getShareTypeVariationSizeLabelPure(share_type_variation_size ?? "", t)}
         </div>
       }
       open={visible}

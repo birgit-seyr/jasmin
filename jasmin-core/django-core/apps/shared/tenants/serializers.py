@@ -114,6 +114,7 @@ class HostCapabilitiesSerializer(serializers.Serializer):
     delivery_stations = serializers.BooleanField(read_only=True)
     about = serializers.BooleanField(read_only=True)
     module_choice = serializers.BooleanField(read_only=True)
+    share_types = serializers.BooleanField(read_only=True)
 
 
 class _HostCapabilitiesMixin:

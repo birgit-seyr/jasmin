@@ -44,6 +44,7 @@ export { useShareTypes } from './useShareTypes';
 export {
   useShareTypeVariationSizeOptions,
   getShareTypeVariationSizeLabelPure,
+  isSmallerShareSize,
 } from './useShareTypeVariationSizeOptions';
 export { useVariationLabel } from './useVariationLabel';
 export { useSubscriptionTerm } from './useSubscriptionTerm';

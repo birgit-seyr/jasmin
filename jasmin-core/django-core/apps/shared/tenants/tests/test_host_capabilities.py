@@ -36,6 +36,7 @@ CAPABILITIES = (
     "delivery_stations",
     "about",
     "module_choice",
+    "share_types",
 )
 EVERYTHING_OFFERED = dict.fromkeys(CAPABILITIES, True)
 NOTHING_OFFERED = dict.fromkeys(CAPABILITIES, False)
