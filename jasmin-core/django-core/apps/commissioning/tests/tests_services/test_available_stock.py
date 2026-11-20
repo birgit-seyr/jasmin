@@ -8,7 +8,8 @@ before the first. Over the storages it sums what the packing draws on: a
 storage's count, else its calculated stock, nothing below 0. Every row gets it for
 every delivery day running in its week whose day before packing is today or
 past, from the planning list and from a saved row alike; before that day it
-would rest on plans alone.
+would rest on plans alone. Once an article's harvest of the packing day itself
+is entered, that day's harvest movements are added to its storages.
 
 The stock itself comes from the stock service, which answers per day here and
 is asked for the rows' articles only.
@@ -24,6 +25,7 @@ from unittest.mock import patch
 
 import pytest
 import time_machine
+from django.utils import timezone
 
 from apps.commissioning.models import Share
 from apps.commissioning.services.available_stock import (
@@ -33,11 +35,15 @@ from apps.commissioning.services.available_stock import (
 from apps.commissioning.services.share_content_service import ShareContentService
 from apps.commissioning.tests.factories import (
     DeliveryStationDayFactory,
+    HarvestFactory,
+    MovementShareArticleFactory,
     ShareArticleFactory,
     ShareContentFactory,
     ShareFactory,
     SharesDeliveryDayFactory,
     ShareTypeVariationFactory,
+    StorageFactory,
+    TheoreticalHarvestFactory,
 )
 
 WEEK = 46
@@ -362,6 +368,90 @@ class TestTheStockOfARow:
         assert stock_service.call_args.kwargs["entity_filter"] == {
             "share_article_id": sorted([carrots.id, beets.id])
         }
+
+
+def _harvest_movement(article, day_of_november, amount, storage, entered):
+    """A harvest movement at noon of that day of November 2026: an entered
+    harvest's correction, or a planned harvest."""
+    documentation = {
+        "year": 2026,
+        "delivery_week": WEEK,
+        "day_number": datetime.date(2026, 11, day_of_november).weekday(),
+        "share_article": article,
+        "storage": storage,
+    }
+    source = (
+        {"harvest": HarvestFactory(**documentation)}
+        if entered
+        else {"theoretical_harvest": TheoreticalHarvestFactory(**documentation)}
+    )
+    return MovementShareArticleFactory(
+        date=timezone.make_aware(datetime.datetime(2026, 11, day_of_november, 12, 0)),
+        movement_type="HARVEST",
+        share_article=article,
+        amount=Decimal(amount),
+        storage=storage,
+        is_theoretical=not entered,
+        **source,
+    )
+
+
+@pytest.mark.django_db
+class TestTheHarvestOfThePackingDay:
+    def test_an_entered_harvest_of_the_packing_day_counts(self, tenant):
+        article = ShareArticleFactory()
+        friday = SharesDeliveryDayFactory(day_number=FRIDAY, default_packing_day=FRIDAY)
+        field = StorageFactory(is_short_term_harvest_storage=True)
+        # Planned 5 kg on Friday the 13th, entered as 8: the correction is 3.
+        _harvest_movement(article, 13, "5", field, entered=False)
+        _harvest_movement(article, 13, "3", field, entered=True)
+        thursday = {
+            **_in_stock(article, "2", storage=field.id),
+            **_in_stock(article, "1", storage="st-cellar"),
+        }
+
+        available = _available(friday, article, {(2026, WEEK, THURSDAY): thursday})
+
+        assert available == 11.0
+
+    def test_it_adds_to_a_count_of_the_day_before(self, tenant):
+        article = ShareArticleFactory()
+        friday = SharesDeliveryDayFactory(day_number=FRIDAY, default_packing_day=FRIDAY)
+        field = StorageFactory(is_short_term_harvest_storage=True)
+        _harvest_movement(article, 13, "4", field, entered=True)
+        thursday = _in_stock(
+            article, "9", storage=field.id, current_stock_amount=Decimal("3")
+        )
+
+        available = _available(friday, article, {(2026, WEEK, THURSDAY): thursday})
+
+        assert available == 7.0
+
+    def test_a_planned_harvest_of_the_packing_day_waits_for_its_entry(self, tenant):
+        carrots, beets = ShareArticleFactory(), ShareArticleFactory()
+        friday = SharesDeliveryDayFactory(day_number=FRIDAY, default_packing_day=FRIDAY)
+        field = StorageFactory(is_short_term_harvest_storage=True)
+        _harvest_movement(carrots, 13, "6", field, entered=True)
+        _harvest_movement(beets, 13, "5", field, entered=False)
+        row = _row(beets)
+
+        with _stock_on({(2026, WEEK, THURSDAY): _in_stock(beets, "2")}):
+            add_available_stock([_row(carrots), row])
+
+        assert row[available_stock_key(friday.id)] == 2.0
+
+    def test_a_harvest_of_another_day_is_left_to_the_reading(self, tenant):
+        # Thursday's harvest is in Thursday's stock already.
+        article = ShareArticleFactory()
+        friday = SharesDeliveryDayFactory(day_number=FRIDAY, default_packing_day=FRIDAY)
+        field = StorageFactory(is_short_term_harvest_storage=True)
+        _harvest_movement(article, 12, "6", field, entered=True)
+
+        available = _available(
+            friday, article, {(2026, WEEK, THURSDAY): _in_stock(article, "2")}
+        )
+
+        assert available == 2.0
 
 
 @pytest.mark.django_db

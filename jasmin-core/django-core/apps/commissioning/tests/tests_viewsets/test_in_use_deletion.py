@@ -33,6 +33,7 @@ from apps.commissioning.models import (
     ShareType,
     ShareTypeVariation,
     Storage,
+    VirtualVariationComponent,
 )
 from apps.commissioning.models.members import UserInvitation
 from apps.commissioning.tests.factories import (
@@ -219,6 +220,22 @@ def test_the_flag_reads_false_for_what_the_delete_refuses_unless_only_hidden(
 
     assert resp.status_code == status.HTTP_200_OK, resp.data
     assert resp.data["can_be_deleted"] is (route in HIDDEN_ONLY)
+
+
+def test_a_virtual_size_goes_with_its_own_components(api_client):
+    # Being part of a virtual size keeps a size (IN_USE above); a virtual
+    # size's own components are its definition and go with it.
+    component = VirtualVariationComponentFactory()
+    virtual = component.virtual_variation
+
+    resp = api_client.delete(reverse("share_type_variation-detail", args=[virtual.pk]))
+
+    assert resp.status_code == status.HTTP_204_NO_CONTENT, resp.data
+    assert not ShareTypeVariation.objects.filter(pk=virtual.pk).exists()
+    assert not VirtualVariationComponent.objects.filter(pk=component.pk).exists()
+    assert ShareTypeVariation.objects.filter(
+        pk=component.physical_variation_id
+    ).exists()
 
 
 def test_a_delivery_day_with_shares_names_them(api_client):

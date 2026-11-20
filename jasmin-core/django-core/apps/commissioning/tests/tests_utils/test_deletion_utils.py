@@ -18,6 +18,7 @@ from apps.commissioning.tests.factories import (
     ShareArticleFactory,
     ShareContentFactory,
     StorageFactory,
+    VirtualVariationComponentFactory,
 )
 from apps.commissioning.utils.deletion_utils import (
     _normalize_model_names,
@@ -138,6 +139,40 @@ class TestHiddenRelations:
         assert can_delete is False
         assert info["related_model"] == "ShareArticle"
         assert can_delete_instance(crate)[0] is True
+
+
+@pytest.mark.django_db
+class TestExcludingOneKey:
+    """``"Model.field"`` leaves out one of a model's keys to the object, its
+    name all of them."""
+
+    def test_the_named_key_is_left_out_and_the_other_still_counts(self, tenant):
+        component = VirtualVariationComponentFactory()
+        own_components = ["VirtualVariationComponent.virtual_variation"]
+
+        assert can_delete_instance(
+            component.virtual_variation,
+            exclude_models=own_components,
+            include_hidden=True,
+        ) == (True, {})
+        assert (
+            can_delete_instance(
+                component.physical_variation,
+                exclude_models=own_components,
+                include_hidden=True,
+            )[0]
+            is False
+        )
+
+    def test_the_model_name_leaves_out_every_key(self, tenant):
+        component = VirtualVariationComponentFactory()
+
+        for variation in (component.virtual_variation, component.physical_variation):
+            assert can_delete_instance(
+                variation,
+                exclude_models=["VirtualVariationComponent"],
+                include_hidden=True,
+            ) == (True, {})
 
 
 @pytest.mark.django_db

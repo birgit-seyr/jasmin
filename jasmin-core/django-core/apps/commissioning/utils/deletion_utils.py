@@ -26,7 +26,8 @@ def can_delete_instance(
 
     Args:
         instance: The model instance to check
-        exclude_models: List of model names (strings) or model classes to exclude from the check
+        exclude_models: Model names (strings) or model classes to exclude from
+            the check, or ``"Model.field"`` for one key of a model with several
         include_hidden: Count the hidden relations too
 
     Returns:
@@ -134,13 +135,21 @@ def _reverse_relations(
     its many-to-many is. An excluded model name also excludes the through table
     Django creates for a many-to-many that model declares; an explicit through
     model (``VirtualVariationComponent``) goes by its own name.
+
+    A model's name leaves out all its keys to ``model``; ``"Model.field"``
+    leaves out that one key. ``VirtualVariationComponent`` has two to a share
+    size: ``virtual_variation``, a virtual size's own components, which go with
+    it, and ``physical_variation``, a size being part of one.
     """
     relations = []
     for relation in model._meta.get_fields(include_hidden=True):
         if not (isinstance(relation, ForeignObjectRel) and not relation.many_to_many):
             continue
         related_model = relation.related_model
-        names = {related_model.__name__}
+        names = {
+            related_model.__name__,
+            f"{related_model.__name__}.{relation.field.name}",
+        }
         # An auto-created through table names the model that declares it.
         declaring_model = related_model._meta.auto_created
         hidden = relation.hidden

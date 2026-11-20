@@ -69,7 +69,7 @@
   "sort_order": "Damit kann bestimmt werden, in welcher Reihenfolge die Variationen bei der Planung angezeigt werden. S, M, L oder L, M, S etc.",
   "washing_checkbox": "Muss angegeben werden, damit die Waschliste korrekt ausgefüllt werden kann. Erscheint nicht am Angebot.",
   "cleaning_checkbox": "Muss angegeben werden, damit die Liste an zu putzendem Gemüse korrekt ausgefüllt werden kann. Erscheint nicht am Angebot.",
-  "available_amount_harvest": "Der Bestand am Ende des Tages vor dem Packen – „aktuell“ heißt also: ein Tag vorher. Er erscheint erst ab diesem Tag. Die Zahl stimmt nur, wenn Ernte und Bestand korrekt eingetragen sind; bis dahin zählt die geplante Ernte mit. Grün: reicht für das Vergebene. Rot: es fehlt die angezeigte Differenz.",
+  "available_amount_harvest": "Der Bestand am Ende des Tages vor dem Packen – „aktuell“ heißt also: ein Tag vorher. Er erscheint erst ab diesem Tag. Ist die Ernte des Packtags schon eingetragen, zählt sie mit. Die Zahl stimmt nur, wenn Ernte und Bestand korrekt eingetragen sind; bis dahin zählt die geplante Ernte mit. Grün: reicht für das Vergebene. Rot: es fehlt die angezeigte Differenz.",
   "comes_from_long_term_storage": "Kommt aus dem Lager (Langzeitlagerung)",
   "default_commissioning_unit": "Standard-Einheit für die Kommissionierung",
   "delivery_note_creation": "Erzeugt einen Lieferschein aus dieser Bestellung. Wenn bereits ein Lieferschein erstellt wurde, kann die Bestellung nicht mehr geändert werden.",

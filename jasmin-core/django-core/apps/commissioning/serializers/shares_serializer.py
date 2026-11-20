@@ -114,6 +114,8 @@ class ShareTypeVariationSerializer(
     DeletableMixin, NameFieldMixin, serializers.ModelSerializer
 ):
     NAME_FIELDS = ["share_type_name"]
+    # A virtual size's own components go with it; being part of one still counts.
+    deletable_exclude = ("VirtualVariationComponent.virtual_variation",)
 
     active_price_per_delivery = serializers.DecimalField(
         max_digits=8, decimal_places=2, read_only=True, allow_null=True

@@ -67,7 +67,7 @@
   "sort_order": "This determines the order in which variations are displayed during planning. S, M, L or L, M, S etc.",
   "washing_checkbox": "Must be specified so the washing list can be filled in correctly. Does not appear on the offer.",
   "cleaning_checkbox": "Must be specified so the list of vegetables to be cleaned can be filled in correctly. Does not appear on the offer.",
-  "available_amount_harvest": "The stock at the end of the day before packing, so \"current\" means one day before. It appears only from that day on. The figure is only right when harvest and stock are entered correctly; until then the planned harvest counts. Green: enough for what is allocated. Red: short by the difference shown.",
+  "available_amount_harvest": "The stock at the end of the day before packing, so \"current\" means one day before. It appears only from that day on. Once the packing day's harvest is entered, it counts too. The figure is only right when harvest and stock are entered correctly; until then the planned harvest counts. Green: enough for what is allocated. Red: short by the difference shown.",
   "comes_from_long_term_storage": "Comes from storage (long-term storage)",
   "default_commissioning_unit": "Default unit for commissioning",
   "delivery_note_creation": "Creates a delivery note from this order",

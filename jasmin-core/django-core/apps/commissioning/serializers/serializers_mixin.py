@@ -141,8 +141,8 @@ class DeletableMixin:
     """
 
     # Models whose rows pointing at the object don't put it in use: rows the
-    # object owns, which go with it (a pending member's invitation). By model
-    # name, so a model with two keys to the object is left out for both.
+    # object owns, which go with it (a pending member's invitation). A model's
+    # name leaves out all its keys to the object, "Model.field" one of them.
     deletable_exclude: tuple[str, ...] = ()
 
     def __init_subclass__(cls, **kwargs):

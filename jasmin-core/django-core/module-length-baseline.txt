@@ -10,7 +10,7 @@ apps/commissioning/models/resellers.py: 1300
 apps/commissioning/models/shares.py: 1159
 apps/commissioning/serializers/members_serializer.py: 1125
 apps/commissioning/serializers/resellers_serializer.py: 1198
-apps/commissioning/serializers/shares_serializer.py: 1070
+apps/commissioning/serializers/shares_serializer.py: 1072
 apps/commissioning/services/default_share_content_service.py: 1068
 apps/commissioning/services/offer_service.py: 1088
 apps/commissioning/views/reseller_views.py: 1442
