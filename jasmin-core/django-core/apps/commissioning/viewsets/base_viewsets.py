@@ -18,18 +18,26 @@ from core.pagination import OptionalLimitOffsetPagination
 from core.serializers import ErrorResponseSerializer
 
 from ..schemas import get_is_past_parameter
-from ..serializers.serializers_mixin import DeletableMixin
+from ..utils.deletion_utils import can_delete_instance
 from ..utils.query_params import validate_query_params
 
 # Enforce the serializer's ``can_be_deleted`` flag on ``destroy``.
 #
-# A ``DeletableMixin`` serializer reports ``can_be_deleted`` and the frontend
-# hides the delete button when it is False, but DRF's stock ``destroy`` never
-# looks at it — a direct ``DELETE`` bypasses the rule (and CASCADEs away any
-# dependent rows). A viewset that mixes this in refuses such a delete with its
+# A ``DeletableMixin`` serializer (or one with its own ``get_can_be_deleted``)
+# reports ``can_be_deleted`` and the frontend hides the delete button when it
+# is False, but DRF's stock ``destroy`` never looks at it — a direct ``DELETE``
+# bypasses the rule (and CASCADEs away any dependent rows). A viewset that
+# mixes this in refuses such a delete with its
 # ``not_deletable_error`` (a 409 ``ConflictError`` subclass carrying a per-model
 # code). The check calls the very same ``get_can_be_deleted`` the UI flag comes
-# from, so the server rule and the hidden button cannot drift.
+# from, so the server never deletes what the button hides. It then also counts
+# the hidden relations (``related_name="+"``) the flag leaves out to keep lists
+# cheap, minus the serializer's ``deletable_exclude``: a delete the button
+# offers can still be refused, but never cascades over them.
+#
+# A viewset with a narrower refusal of its own (a protected default row, one
+# that names what still uses it) overrides ``refuse_if_not_deletable``, raises
+# that first and then calls ``super()``; both run under the row lock.
 #
 # List it BEFORE ``RolePermissionsMixin`` / ``ModelViewSet`` in the bases.
 # Deliberately a comment, not a docstring: drf-spectacular describes a viewset
@@ -59,19 +67,29 @@ class CanBeDeletedDestroyMixin(mixins.DestroyModelMixin, _DestroyBase):
             locked = (
                 type(instance)._base_manager.select_for_update().get(pk=instance.pk)
             )
-            serializer = self.get_serializer(locked)
-            if not isinstance(serializer, DeletableMixin):
-                raise ImproperlyConfigured(
-                    f"{type(self).__name__} enforces can_be_deleted, but its "
-                    "serializer is not a DeletableMixin."
-                )
-            if not serializer.get_can_be_deleted(locked):
-                raise self.not_deletable_error(
-                    f"{type(locked).__name__} '{locked}' is still in use and "
-                    "cannot be deleted.",
-                    details={"id": str(locked.pk)},
-                )
+            self.refuse_if_not_deletable(locked)
             super().perform_destroy(locked)
+
+    def refuse_if_not_deletable(self, instance: Any) -> None:
+        serializer = self.get_serializer(instance)
+        can_be_deleted = getattr(serializer, "get_can_be_deleted", None)
+        if not callable(can_be_deleted):
+            raise ImproperlyConfigured(
+                f"{type(self).__name__} enforces can_be_deleted, but its "
+                "serializer does not report it."
+            )
+        unreferenced, _ = can_delete_instance(
+            instance,
+            exclude_models=list(getattr(serializer, "deletable_exclude", ())),
+            include_hidden=True,
+        )
+        # The message names the model only: every JasminError message is
+        # logged, and a row's ``str()`` can be a person's name.
+        if not (can_be_deleted(instance) and unreferenced):
+            raise self.not_deletable_error(
+                f"{type(instance).__name__} is still in use and cannot be deleted.",
+                details={"id": str(instance.pk)},
+            )
 
 
 def serializer_model(serializer_class: Any) -> type[Any]:

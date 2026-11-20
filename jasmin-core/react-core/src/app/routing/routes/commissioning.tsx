@@ -93,6 +93,9 @@ const PaymentsResellers = lazy(
   () => import("@features/commissioning/pages/PaymentsResellers"),
 );
 const Orders = lazy(() => import("@features/commissioning/pages/Orders"));
+const LabelsResellers = lazy(
+  () => import("@features/commissioning/pages/LabelsResellers"),
+);
 const OverviewResellers = lazy(
   () => import("@features/commissioning/pages/OverviewResellers"),
 );
@@ -325,6 +328,14 @@ export const commissioningRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isOffice">
         <Orders />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/commissioning/labels-resellers",
+    element: (
+      <RequireRole flag="isOffice">
+        <LabelsResellers />
       </RequireRole>
     ),
   },

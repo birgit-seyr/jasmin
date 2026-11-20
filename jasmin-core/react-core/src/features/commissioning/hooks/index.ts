@@ -9,6 +9,7 @@ export { useDocumentationSummaryPage } from './useDocumentationSummaryPage';
 export { useStorageDocumentationPage } from './useStorageDocumentationPage';
 export { useHarvestingListData } from './useHarvestingListData';
 export { useHistoricalShareTypeVariationAverages } from './useHistoricalShareTypeVariationAverages';
+export { useLabelFarm } from './useLabelFarm';
 export { useOfferGroups } from './useOfferGroups';
 export { useMarketProductGroups } from './useMarketProductGroups';
 export { useScaleTaxCodes } from './useScaleTaxCodes';
@@ -72,7 +73,7 @@ export {
 export {
   dayVariationKey,
   dayPlannedAmountKey,
-  dayHarvestedKey,
+  dayAvailableStockKey,
   dayAmountKey,
   variationAmountKey,
   parseDayVariationKey,

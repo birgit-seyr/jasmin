@@ -19,6 +19,38 @@ class ShareTypeInUse(ConflictError):
     code = "share_type.in_use"
 
 
+class ShareTypeVariationInUse(ConflictError):
+    """A share type variation with subscriptions, shares, prices or other rows
+    still pointing at it cannot be deleted — the delete would cascade or fail
+    on them (``can_be_deleted`` reports the same)."""
+
+    code = "share_type_variation.in_use"
+
+
+class OfferGroupInUse(ConflictError):
+    """An offer group that resellers, offers or other rows still point at
+    cannot be deleted — the delete would unassign or cascade them
+    (``can_be_deleted`` reports the same)."""
+
+    code = "offer_group.in_use"
+
+
+class ResellerInUse(ConflictError):
+    """A reseller or supplier row whose last role is dropped is deleted only
+    while nothing points at it: purchases, articles, certificates or documents
+    would lose it or go with it (``can_be_deleted`` reports the same)."""
+
+    code = "reseller.in_use"
+
+
+class MemberInUse(ConflictError):
+    """A pending member with subscriptions, consents, a billing profile or other
+    rows still pointing at it cannot be deleted (``can_be_deleted`` reports the
+    same)."""
+
+    code = "member.in_use"
+
+
 class PlotInUse(ConflictError):
     """A plot still used by forecasts cannot be deleted: the delete would take
     them and their theoretical harvests with it."""
@@ -88,6 +120,14 @@ class DeliveryStationInUse(ConflictError):
         )
 
 
+class DeliveryStationReferenced(ConflictError):
+    """A DeliveryStation without deliveries still cannot be deleted while its
+    pickup days or other rows point at it (``can_be_deleted`` reports the
+    same); a station that is no longer served is set inactive instead."""
+
+    code = "delivery_station.referenced"
+
+
 class DeliveryStationDayInUse(ConflictError):
     """A DeliveryStationDay cannot be deleted while it still has deliveries —
     deleting would CASCADE-wipe those ShareDeliveries with no recompute."""
@@ -103,6 +143,14 @@ class DeliveryStationDayInUse(ConflictError):
                 "delivery_count": delivery_count,
             },
         )
+
+
+class DeliveryStationDayReferenced(ConflictError):
+    """A DeliveryStationDay without deliveries still cannot be deleted while
+    capacity reservations, imported demand, a subscription's default pickup day
+    or other rows point at it (``can_be_deleted`` reports the same)."""
+
+    code = "delivery_station_day.referenced"
 
 
 class SharesDeliveryDayInUse(ConflictError):
@@ -121,3 +169,11 @@ class SharesDeliveryDayInUse(ConflictError):
                 "share_count": share_count,
             },
         )
+
+
+class SharesDeliveryDayReferenced(ConflictError):
+    """A SharesDeliveryDay without shares still cannot be deleted while
+    subscriptions collect on its pickup days or other rows point at it
+    (``can_be_deleted`` reports the same)."""
+
+    code = "shares_delivery_day.referenced"

@@ -242,6 +242,8 @@ import type {
   InvoiceSentToAccounting,
   InvoiceSentToReseller,
   InvoiceUploadPdfResponse,
+  LabelTemplate,
+  LabelTemplateRequest,
   MarketArticle,
   MarketArticleRequest,
   MarketPrice,
@@ -319,6 +321,7 @@ import type {
   PatchedHarvestSharePlanningUpdateRequest,
   PatchedInvoiceResellerContentRequest,
   PatchedInvoiceResellerRequest,
+  PatchedLabelTemplateRequest,
   PatchedMarketArticleRequest,
   PatchedMarketPriceRequest,
   PatchedMarketProductGroupRequest,
@@ -13802,6 +13805,372 @@ const {mutation: mutationOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * The farm's label layout: read by whoever prints the labels, kept by an
+admin in the configuration. The first active template is the farm's.
+ */
+export const commissioningLabelTemplatesList = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<LabelTemplate[]>(
+      {url: `/api/commissioning/label_templates/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningLabelTemplatesListQueryKey = () => {
+    return [
+    `/api/commissioning/label_templates/`
+    ] as const;
+    }
+
+    
+export const getCommissioningLabelTemplatesListQueryOptions = <TData = Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError = ErrorResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningLabelTemplatesListQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>> = ({ signal }) => commissioningLabelTemplatesList(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningLabelTemplatesListQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>>
+export type CommissioningLabelTemplatesListQueryError = ErrorResponse
+
+
+export function useCommissioningLabelTemplatesList<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError = ErrorResponse>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningLabelTemplatesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningLabelTemplatesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningLabelTemplatesList<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningLabelTemplatesList>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningLabelTemplatesList>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningLabelTemplatesList<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningLabelTemplatesList<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError = ErrorResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesList>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningLabelTemplatesListQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The farm's label layout: read by whoever prints the labels, kept by an
+admin in the configuration. The first active template is the farm's.
+ */
+export const commissioningLabelTemplatesCreate = (
+    labelTemplateRequest: LabelTemplateRequest,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<LabelTemplate>(
+      {url: `/api/commissioning/label_templates/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: labelTemplateRequest, signal
+    },
+      );
+    }
+  
+
+
+export const getCommissioningLabelTemplatesCreateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesCreate>>, TError,{data: LabelTemplateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesCreate>>, TError,{data: LabelTemplateRequest}, TContext> => {
+
+const mutationKey = ['commissioningLabelTemplatesCreate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningLabelTemplatesCreate>>, {data: LabelTemplateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commissioningLabelTemplatesCreate(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningLabelTemplatesCreateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningLabelTemplatesCreate>>>
+    export type CommissioningLabelTemplatesCreateMutationBody = LabelTemplateRequest
+    export type CommissioningLabelTemplatesCreateMutationError = ErrorResponse
+
+    export const useCommissioningLabelTemplatesCreate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesCreate>>, TError,{data: LabelTemplateRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningLabelTemplatesCreate>>,
+        TError,
+        {data: LabelTemplateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningLabelTemplatesCreateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The farm's label layout: read by whoever prints the labels, kept by an
+admin in the configuration. The first active template is the farm's.
+ */
+export const commissioningLabelTemplatesRetrieve = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return axiosService<LabelTemplate>(
+      {url: `/api/commissioning/label_templates/${id}/`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getCommissioningLabelTemplatesRetrieveQueryKey = (id?: string,) => {
+    return [
+    `/api/commissioning/label_templates/${id}/`
+    ] as const;
+    }
+
+    
+export const getCommissioningLabelTemplatesRetrieveQueryOptions = <TData = Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError = ErrorResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCommissioningLabelTemplatesRetrieveQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>> = ({ signal }) => commissioningLabelTemplatesRetrieve(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CommissioningLabelTemplatesRetrieveQueryResult = NonNullable<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>>
+export type CommissioningLabelTemplatesRetrieveQueryError = ErrorResponse
+
+
+export function useCommissioningLabelTemplatesRetrieve<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningLabelTemplatesRetrieve<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>,
+          TError,
+          Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCommissioningLabelTemplatesRetrieve<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useCommissioningLabelTemplatesRetrieve<TData = Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError = ErrorResponse>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesRetrieve>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCommissioningLabelTemplatesRetrieveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * The farm's label layout: read by whoever prints the labels, kept by an
+admin in the configuration. The first active template is the farm's.
+ */
+export const commissioningLabelTemplatesUpdate = (
+    id: string,
+    labelTemplateRequest: LabelTemplateRequest,
+ ) => {
+      
+      
+      return axiosService<LabelTemplate>(
+      {url: `/api/commissioning/label_templates/${id}/`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: labelTemplateRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningLabelTemplatesUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesUpdate>>, TError,{id: string;data: LabelTemplateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesUpdate>>, TError,{id: string;data: LabelTemplateRequest}, TContext> => {
+
+const mutationKey = ['commissioningLabelTemplatesUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningLabelTemplatesUpdate>>, {id: string;data: LabelTemplateRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningLabelTemplatesUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningLabelTemplatesUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningLabelTemplatesUpdate>>>
+    export type CommissioningLabelTemplatesUpdateMutationBody = LabelTemplateRequest
+    export type CommissioningLabelTemplatesUpdateMutationError = ErrorResponse
+
+    export const useCommissioningLabelTemplatesUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesUpdate>>, TError,{id: string;data: LabelTemplateRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningLabelTemplatesUpdate>>,
+        TError,
+        {id: string;data: LabelTemplateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningLabelTemplatesUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * The farm's label layout: read by whoever prints the labels, kept by an
+admin in the configuration. The first active template is the farm's.
+ */
+export const commissioningLabelTemplatesPartialUpdate = (
+    id: string,
+    patchedLabelTemplateRequest: PatchedLabelTemplateRequest,
+ ) => {
+      
+      
+      return axiosService<LabelTemplate>(
+      {url: `/api/commissioning/label_templates/${id}/`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: patchedLabelTemplateRequest
+    },
+      );
+    }
+  
+
+
+export const getCommissioningLabelTemplatesPartialUpdateMutationOptions = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesPartialUpdate>>, TError,{id: string;data: PatchedLabelTemplateRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesPartialUpdate>>, TError,{id: string;data: PatchedLabelTemplateRequest}, TContext> => {
+
+const mutationKey = ['commissioningLabelTemplatesPartialUpdate'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningLabelTemplatesPartialUpdate>>, {id: string;data: PatchedLabelTemplateRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  commissioningLabelTemplatesPartialUpdate(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommissioningLabelTemplatesPartialUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningLabelTemplatesPartialUpdate>>>
+    export type CommissioningLabelTemplatesPartialUpdateMutationBody = PatchedLabelTemplateRequest
+    export type CommissioningLabelTemplatesPartialUpdateMutationError = ErrorResponse
+
+    export const useCommissioningLabelTemplatesPartialUpdate = <TError = ErrorResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningLabelTemplatesPartialUpdate>>, TError,{id: string;data: PatchedLabelTemplateRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof commissioningLabelTemplatesPartialUpdate>>,
+        TError,
+        {id: string;data: PatchedLabelTemplateRequest},
+        TContext
+      > => {
+
+      const mutationOptions = getCommissioningLabelTemplatesPartialUpdateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const commissioningMarketArticlesList = (
     params?: CommissioningMarketArticlesListParams,
  signal?: AbortSignal
@@ -20394,61 +20763,6 @@ const {mutation: mutationOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const commissioningPaymentCyclesDestroy = (
-    id: string,
- ) => {
-      
-      
-      return axiosService<void>(
-      {url: `/api/commissioning/payment_cycles/${id}/`, method: 'DELETE'
-    },
-      );
-    }
-  
-
-
-export const getCommissioningPaymentCyclesDestroyMutationOptions = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesDestroy>>, TError,{id: string}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesDestroy>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['commissioningPaymentCyclesDestroy'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commissioningPaymentCyclesDestroy>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  commissioningPaymentCyclesDestroy(id,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CommissioningPaymentCyclesDestroyMutationResult = NonNullable<Awaited<ReturnType<typeof commissioningPaymentCyclesDestroy>>>
-    
-    export type CommissioningPaymentCyclesDestroyMutationError = ErrorResponse
-
-    export const useCommissioningPaymentCyclesDestroy = <TError = ErrorResponse,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commissioningPaymentCyclesDestroy>>, TError,{id: string}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof commissioningPaymentCyclesDestroy>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-
-      const mutationOptions = getCommissioningPaymentCyclesDestroyMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
     export const commissioningPlotsList = (
     params?: CommissioningPlotsListParams,
  signal?: AbortSignal
@@ -21866,7 +22180,7 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     /**
- * Delete a reseller in the context of ONE of its two roles. `delete_context=sellers` drops the seller role, `delete_context=resellers` the reseller role; the row itself is deleted only when the role being dropped was its last one. The parameter is required — there is no defined delete without it.
+ * Delete a reseller in the context of ONE of its two roles. `delete_context=sellers` drops the seller role, `delete_context=resellers` the reseller role; the row itself is deleted only when the role being dropped was its last one, and is refused (409) while anything still points at it, as `can_be_deleted` reports. The parameter is required — there is no defined delete without it.
  */
 export const commissioningResellersDestroy = (
     id: string,

@@ -876,6 +876,9 @@ class HarvestSharePlanningRowSerializer(serializers.Serializer):
       * ``day_<day_id>_variation_<variation_id>_tour_<n>`` (per-tour)
       * ``backup_day_<day_id>_variation_<variation_id>`` (backup amount cells)
       * ``day_<day_id>_planned_amount`` (per-day planned totals)
+      * ``day_<day_id>_available_stock`` (the article's stock before the day's
+        shares are packed, on every row for every delivery day of its week
+        from the day before packing on)
 
     ``variations`` / ``basic_variations`` / ``tour_variations`` /
     ``backup_variations`` appear as nested empty objects only on synthesized

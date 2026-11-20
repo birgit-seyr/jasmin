@@ -5,7 +5,11 @@ import type {
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
 import ToolTipIcon from "@shared/ui/ToolTipIcon";
-import { amountCellText, formatAmountForUnit } from "@shared/utils";
+import {
+  amountCellText,
+  decimalsForUnit,
+  formatAmountForUnit,
+} from "@shared/utils";
 import { getShareTypeVariationSizeLabelPure } from "@hooks/index";
 import { useNumberFormat } from "@hooks/useNumberFormat";
 import type { ShareDeliveryDayOption } from "../useShareDeliveryDays";
@@ -13,8 +17,8 @@ import type { ShareTypeVariationOption } from "../useShareTypeVariations";
 import { computePlannedAmountForDay } from "../usePlanningSummaryData";
 import { planningRowUnit } from "../../utils/planningRow";
 import {
+  dayAvailableStockKey,
   dayCellTier,
-  dayHarvestedKey,
   dayPlannedAmountKey,
   dayVariationKey,
   variationColumnKey,
@@ -182,6 +186,26 @@ export function useDeliveryDayColumns({
       };
     };
 
+    // The day's planned total, computed live from the variation cells ×
+    // subscriber counts. The `record` is the saved record on idle rows and
+    // the form's live record on the row being edited (see EditableCell's
+    // disabled-cell re-render). Without a counts summary the saved total
+    // stands in.
+    const plannedAmountOf = (
+      record: TableRecord,
+      deliveryDay: DeliveryDay,
+      savedTotal: unknown = record[dayPlannedAmountKey(deliveryDay.id!)],
+    ) =>
+      shareTypeVariationAmountsSummary
+        ? computePlannedAmountForDay(
+            record as Record<string, unknown>,
+            deliveryDay,
+            shareTypeVariations,
+            shareTypeVariationAmountsSummary,
+            planningMode,
+          )
+        : Number(savedTotal) || 0;
+
     const createPlannedAmountColumn = (
       deliveryDay: DeliveryDay,
     ): EditableColumnConfig<TableRecord> => ({
@@ -197,31 +221,21 @@ export function useDeliveryDayColumns({
       width: "4.5em",
       hidden: !showDetailedColumns,
       disabled: true,
-      // Computed live from variation cells × subscriber counts. The
-      // `record` argument is the saved record on idle rows and the
-      // form's live record on the row currently being edited (see
-      // EditableCell's disabled-cell re-render). When no counts summary
-      // is provided we fall back to the saved value to stay
-      // backwards-compatible.
-      render: (value: unknown, record: TableRecord) => {
-        const planned = shareTypeVariationAmountsSummary
-          ? computePlannedAmountForDay(
-              record as Record<string, unknown>,
-              deliveryDay,
-              shareTypeVariations,
-              shareTypeVariationAmountsSummary,
-              planningMode,
-            )
-          : Number(value) || 0;
-        return (
-          <div className="read-only-amounts-planning">
-            {amountCellText(planned, planningRowUnit(record), format)}
-          </div>
-        );
-      },
+      render: (value: unknown, record: TableRecord) => (
+        <div className="read-only-amounts-planning">
+          {amountCellText(
+            plannedAmountOf(record, deliveryDay, value),
+            planningRowUnit(record),
+            format,
+          )}
+        </div>
+      ),
     });
 
-    const createHarvestedAmountColumn = (
+    // The article's stock before the day's shares are packed, against the
+    // day's planned total: green while it covers it, red with the shortfall
+    // where it doesn't, plain where nothing is planned.
+    const createAvailableStockColumn = (
       deliveryDay: DeliveryDay,
     ): EditableColumnConfig<TableRecord> => ({
       title: (
@@ -230,16 +244,42 @@ export function useDeliveryDayColumns({
           <ToolTipIcon title={t("tooltip.available_amount_harvest")} />
         </div>
       ),
-      dataIndex: dayHarvestedKey(deliveryDay.id!),
-      key: dayHarvestedKey(deliveryDay.id!),
+      dataIndex: dayAvailableStockKey(deliveryDay.id!),
+      key: dayAvailableStockKey(deliveryDay.id!),
       inputType: "text",
       align: "center",
-      width: "5em",
+      width: "6.5em",
       hidden: !showDetailedColumns,
       disabled: true,
-      render: (value: unknown) => (
-        <div className="read-only-amounts-harvest">{value as string}</div>
-      ),
+      render: (value: unknown, record: TableRecord) => {
+        if (value == null || value === "") return null;
+        const available = Number(value);
+        const unit = planningRowUnit(record);
+        const planned = plannedAmountOf(record, deliveryDay);
+        if (!(planned > 0)) {
+          return (
+            <div className="read-only-amounts-planning">
+              {amountCellText(available, unit, format)}
+            </div>
+          );
+        }
+        // Short only by more than the unit's display precision can show.
+        const shortfall = planned - available;
+        const short = shortfall >= 0.5 * 10 ** -decimalsForUnit(unit);
+        return (
+          <div
+            className={`read-only-amounts-planning ${
+              short ? "available-stock-short" : "available-stock-enough"
+            }`}
+          >
+            {formatAmountForUnit(available, unit, format)}
+            {short &&
+              ` ${t("commissioning.available_stock_shortfall", {
+                diff: formatAmountForUnit(shortfall, unit, format),
+              })}`}
+          </div>
+        );
+      },
     });
 
     const withGroupStart = (
@@ -314,7 +354,7 @@ export function useDeliveryDayColumns({
               return varIndex === 0 ? col : withVariationStart(col);
             }),
             createPlannedAmountColumn(deliveryDay),
-            createHarvestedAmountColumn(deliveryDay),
+            createAvailableStockColumn(deliveryDay),
           ]),
         }),
       );

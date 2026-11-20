@@ -7964,6 +7964,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -8275,6 +8281,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -11139,6 +11151,230 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
+  /api/commissioning/label_templates/:
+    get:
+      operationId: commissioning_label_templates_list
+      description: |-
+        The farm's label layout: read by whoever prints the labels, kept by an
+        admin in the configuration. The first active template is the farm's.
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelTemplate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    post:
+      operationId: commissioning_label_templates_create
+      description: |-
+        The farm's label layout: read by whoever prints the labels, kept by an
+        admin in the configuration. The first active template is the farm's.
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelTemplateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LabelTemplateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LabelTemplateRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelTemplate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+  /api/commissioning/label_templates/{id}/:
+    get:
+      operationId: commissioning_label_templates_retrieve
+      description: |-
+        The farm's label layout: read by whoever prints the labels, kept by an
+        admin in the configuration. The first active template is the farm's.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der label template identifiziert.
+        required: true
+      tags:
+      - commissioning
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelTemplate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    put:
+      operationId: commissioning_label_templates_update
+      description: |-
+        The farm's label layout: read by whoever prints the labels, kept by an
+        admin in the configuration. The first active template is the farm's.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der label template identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelTemplateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LabelTemplateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LabelTemplateRequest'
+        required: true
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelTemplate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+    patch:
+      operationId: commissioning_label_templates_partial_update
+      description: |-
+        The farm's label layout: read by whoever prints the labels, kept by an
+        admin in the configuration. The first active template is the farm's.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Ein eindeutiger Wert, der label template identifiziert.
+        required: true
+      tags:
+      - commissioning
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLabelTemplateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLabelTemplateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLabelTemplateRequest'
+      security:
+      - tenantBoundJwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelTemplate'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Error response.
   /api/commissioning/market_articles/:
     get:
       operationId: commissioning_market_articles_list
@@ -12756,6 +12992,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -13787,6 +14029,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -15826,40 +16074,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Error response.
-    delete:
-      operationId: commissioning_payment_cycles_destroy
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: string
-        description: Ein eindeutiger Wert, der payment cycle identifiziert.
-        required: true
-      tags:
-      - commissioning
-      security:
-      - tenantBoundJwtAuth: []
-      responses:
-        '204':
-          description: No response body
-        '401':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '403':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
-        '404':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: Error response.
   /api/commissioning/plots/:
     get:
       operationId: commissioning_plots_list
@@ -16855,8 +17069,9 @@ paths:
       operationId: commissioning_resellers_destroy
       description: Delete a reseller in the context of ONE of its two roles. `delete_context=sellers`
         drops the seller role, `delete_context=resellers` the reseller role; the row
-        itself is deleted only when the role being dropped was its last one. The parameter
-        is required — there is no defined delete without it.
+        itself is deleted only when the role being dropped was its last one, and is
+        refused (409) while anything still points at it, as `can_be_deleted` reports.
+        The parameter is required — there is no defined delete without it.
       parameters:
       - in: query
         name: delete_context
@@ -16880,6 +17095,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -20471,6 +20692,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -21672,6 +21899,12 @@ paths:
       responses:
         '204':
           description: No response body
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
         '401':
           content:
             application/json:
@@ -32454,13 +32687,19 @@ components:
           type: string
         address:
           type: string
+        zip_code:
+          type: string
+        city:
+          type: string
         order:
           $ref: '#/components/schemas/CommissioningListResellersOrder'
       required:
       - address
+      - city
       - id
       - name
       - order
+      - zip_code
     CommissioningListResellersOrder:
       type: object
       properties:
@@ -32490,6 +32729,10 @@ components:
           nullable: true
         share_article_name:
           type: string
+        organic_status:
+          allOf:
+          - $ref: '#/components/schemas/OrganicStatusEnum'
+          nullable: true
         amount:
           type: number
           format: double
@@ -32510,6 +32753,7 @@ components:
       - amount_per_pu
       - id
       - note
+      - organic_status
       - share_article_id
       - share_article_name
       - size
@@ -36928,9 +37172,6 @@ components:
         plot:
           type: string
           nullable: true
-        can_be_deleted:
-          type: boolean
-          readOnly: true
         share_article_name:
           type: string
           readOnly: true
@@ -36938,7 +37179,6 @@ components:
           type: string
           readOnly: true
       required:
-      - can_be_deleted
       - created_at
       - created_by
       - day_number
@@ -37394,6 +37634,9 @@ components:
           * ``day_<day_id>_variation_<variation_id>_tour_<n>`` (per-tour)
           * ``backup_day_<day_id>_variation_<variation_id>`` (backup amount cells)
           * ``day_<day_id>_planned_amount`` (per-day planned totals)
+          * ``day_<day_id>_available_stock`` (the article's stock before the day's
+            shares are packed, on every row for every delivery day of its week
+            from the day before packing on)
 
         ``variations`` / ``basic_variations`` / ``tour_variations`` /
         ``backup_variations`` appear as nested empty objects only on synthesized
@@ -38364,6 +38607,246 @@ components:
           format: uri
       required:
       - file
+    LabelElement:
+      type: object
+      description: |-
+        One piece of information on the label: a box in mm from the label's top
+        left corner. ``font_size_pt``, ``bold`` and ``align`` style a text;
+        ``text`` is what a ``static_text`` prints and what a ``qr_code`` encodes;
+        ``organic_prefix`` puts the organic word before an organic article.
+      properties:
+        id:
+          type: string
+          maxLength: 40
+        field:
+          type: string
+          description: 'One of: reseller_name, reseller_address, reseller_city, article,
+            sort, size, amount_per_pu, delivery_date, order_number, farm_name, control_number,
+            static_text, farm_logo, organic_logo, qr_code.'
+        x_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 0
+        y_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 0
+        width_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 1
+        height_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 1
+        font_size_pt:
+          type: number
+          format: double
+          maximum: 72
+          minimum: 4
+          default: 10.0
+        bold:
+          type: boolean
+          default: false
+        align:
+          type: string
+          default: left
+          description: 'One of: left, center, right.'
+        text:
+          type: string
+          default: ''
+          maxLength: 500
+        organic_prefix:
+          type: boolean
+          default: true
+      required:
+      - field
+      - height_mm
+      - id
+      - width_mm
+      - x_mm
+      - y_mm
+    LabelElementRequest:
+      type: object
+      description: |-
+        One piece of information on the label: a box in mm from the label's top
+        left corner. ``font_size_pt``, ``bold`` and ``align`` style a text;
+        ``text`` is what a ``static_text`` prints and what a ``qr_code`` encodes;
+        ``organic_prefix`` puts the organic word before an organic article.
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 40
+        field:
+          type: string
+          minLength: 1
+          description: 'One of: reseller_name, reseller_address, reseller_city, article,
+            sort, size, amount_per_pu, delivery_date, order_number, farm_name, control_number,
+            static_text, farm_logo, organic_logo, qr_code.'
+        x_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 0
+        y_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 0
+        width_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 1
+        height_mm:
+          type: number
+          format: double
+          maximum: 300
+          minimum: 1
+        font_size_pt:
+          type: number
+          format: double
+          maximum: 72
+          minimum: 4
+          default: 10.0
+        bold:
+          type: boolean
+          default: false
+        align:
+          type: string
+          minLength: 1
+          default: left
+          description: 'One of: left, center, right.'
+        text:
+          type: string
+          default: ''
+          maxLength: 500
+        organic_prefix:
+          type: boolean
+          default: true
+      required:
+      - field
+      - height_mm
+      - id
+      - width_mm
+      - x_mm
+      - y_mm
+    LabelTemplate:
+      type: object
+      description: |-
+        The label's layout. Sizes are in mm; the ``sheet_*`` fields lay the
+        labels out on an A4 page when ``print_mode`` is ``sheet``.
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        width_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
+        height_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelElement'
+          maxItems: 40
+        print_mode:
+          $ref: '#/components/schemas/PrintModeEnum'
+        sheet_columns:
+          type: integer
+          maximum: 10
+          minimum: 1
+        sheet_rows:
+          type: integer
+          maximum: 30
+          minimum: 1
+        sheet_margin_top_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_margin_left_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_gap_x_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_gap_y_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+      required:
+      - elements
+      - height_mm
+      - id
+      - name
+      - width_mm
+    LabelTemplateRequest:
+      type: object
+      description: |-
+        The label's layout. Sizes are in mm; the ``sheet_*`` fields lay the
+        labels out on an A4 page when ``print_mode`` is ``sheet``.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        width_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
+        height_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelElementRequest'
+          maxItems: 40
+        print_mode:
+          $ref: '#/components/schemas/PrintModeEnum'
+        sheet_columns:
+          type: integer
+          maximum: 10
+          minimum: 1
+        sheet_rows:
+          type: integer
+          maximum: 30
+          minimum: 1
+        sheet_margin_top_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_margin_left_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_gap_x_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_gap_y_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+      required:
+      - elements
+      - height_mm
+      - name
+      - width_mm
     LockedSettingsResponse:
       type: object
       properties:
@@ -42635,6 +43118,55 @@ components:
           type: string
           nullable: true
           maxLength: 500
+    PatchedLabelTemplateRequest:
+      type: object
+      description: |-
+        The label's layout. Sizes are in mm; the ``sheet_*`` fields lay the
+        labels out on an A4 page when ``print_mode`` is ``sheet``.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        width_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
+        height_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelElementRequest'
+          maxItems: 40
+        print_mode:
+          $ref: '#/components/schemas/PrintModeEnum'
+        sheet_columns:
+          type: integer
+          maximum: 10
+          minimum: 1
+        sheet_rows:
+          type: integer
+          maximum: 30
+          minimum: 1
+        sheet_margin_top_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_margin_left_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_gap_x_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
+        sheet_gap_y_mm:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
     PatchedMarketArticleRequest:
       type: object
       description: |-
@@ -45188,6 +45720,14 @@ components:
       required:
       - description
       - target
+    PrintModeEnum:
+      enum:
+      - label_printer
+      - sheet
+      type: string
+      description: |-
+        * `label_printer` - Label printer
+        * `sheet` - A4 sheet
     ProcessingActivities:
       type: object
       description: |-

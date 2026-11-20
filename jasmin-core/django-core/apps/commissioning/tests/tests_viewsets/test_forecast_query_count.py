@@ -185,11 +185,8 @@ def test_validating_the_flags_is_one_lookup_per_kind(tenant):
     assert large == small, f"{small} queries for 1 flag each, {large} for 6"
 
 
-def test_a_loaded_forecast_renders_with_only_the_deletability_probes(tenant):
-    # Names come from the select_related, the flags and the links' share of
-    # the deletability check from the prefetch; what is left is one existence
-    # probe per other relation that would block a delete. Without links, so
-    # that the check reaches every relation.
+def test_a_loaded_forecast_renders_without_queries(tenant):
+    # Names come from the select_related, the flags from the prefetch.
     forecast = ForecastFactory(year=YEAR, delivery_week=WEEK)
     loaded = (
         Forecast.objects.select_related("share_article", "plot")
@@ -200,12 +197,4 @@ def test_a_loaded_forecast_renders_with_only_the_deletability_probes(tenant):
     with CaptureQueriesContext(connection) as ctx:
         assert ForecastSerializer(loaded).data["id"] == forecast.pk
 
-    tables = {
-        query["sql"].split(" FROM ")[1].split()[0].strip('"')
-        for query in ctx.captured_queries
-        if " FROM " in query["sql"]
-    }
-    assert tables == {
-        "commissioning_theoreticalharvest",
-        "commissioning_sharecontent",
-    }
+    assert ctx.captured_queries == []

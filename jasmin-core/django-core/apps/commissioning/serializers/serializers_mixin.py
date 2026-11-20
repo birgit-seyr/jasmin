@@ -89,18 +89,17 @@ def mask_capacity_for_anonymous(
 class DeletableListSerializer(serializers.ListSerializer):
     """ListSerializer that pre-computes ``can_be_deleted`` in bulk.
 
-    The naive per-row implementation in :class:`DeletableMixin` walks
-    ``model._meta.related_objects`` and calls ``.exists()`` per relation
-    — i.e. R queries per row, an O(N*R) N+1 on list endpoints.
+    The naive per-row implementation in :class:`DeletableMixin` checks every
+    reverse relation with ``.exists()`` — i.e. R queries per row, an O(N*R)
+    N+1 on list endpoints.
 
-    This list serializer collapses that to **R queries total** (one per
-    reverse relation, with ``filter(fk__in=all_pks)``). Each child
+    This list serializer collapses that to **R queries total** (one
+    ``EXISTS`` semi-join per visible reverse relation). Each child
     serializer's ``get_can_be_deleted`` then reads the precomputed set
     instead of hitting the DB.
 
-    Falls back to the per-instance path when any relation isn't a plain
-    reverse FK / O2O (generic relations, m2m through-models with extra
-    state, etc.) so behaviour stays identical to ``can_delete_instance``.
+    Falls back to the per-instance path when ``bulk_deletable_pks`` can't
+    batch a relation, so behaviour stays identical to ``can_delete_instance``.
     """
 
     # Set on `self` once `to_representation` runs; child serializers read it.
@@ -116,12 +115,15 @@ class DeletableListSerializer(serializers.ListSerializer):
     def _compute_bulk_deletable(self, instances: list) -> None:
         model = type(instances[0])
         pks = [obj.pk for obj in instances]
-        # Plain reverse FK / O2O reduce to one ``filter(fk__in=pks)`` per
-        # relation; m2m and exotic managers make the helper return
-        # ``failed=True`` and we fall back to the per-instance path. Presence
-        # of ANY related row => not deletable (PROTECT or not), matching
-        # ``can_delete_instance``.
-        deletable, failed = bulk_deletable_pks(model, pks)
+        # One ``EXISTS`` per visible reverse relation; an exotic manager
+        # makes the helper return ``failed=True`` and we fall back to the
+        # per-instance path. Presence of ANY related row => not deletable
+        # (PROTECT or not), matching ``can_delete_instance``.
+        deletable, failed = bulk_deletable_pks(
+            model,
+            pks,
+            exclude_models=list(getattr(self.child, "deletable_exclude", ())),
+        )
         if failed:
             self._bulk_failed = True
             return
@@ -137,6 +139,11 @@ class DeletableMixin:
     queries (one per reverse relation) instead of N*R — see
     ``apps/payments/tests/test_query_count_locks.py`` for the lock.
     """
+
+    # Models whose rows pointing at the object don't put it in use: rows the
+    # object owns, which go with it (a pending member's invitation). By model
+    # name, so a model with two keys to the object is left out for both.
+    deletable_exclude: tuple[str, ...] = ()
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -167,7 +174,9 @@ class DeletableMixin:
         ):
             return obj.pk in parent._bulk_deletable_pks
         # Detail / create / update path — single instance, single check.
-        can_delete, _ = can_delete_instance(obj)
+        can_delete, _ = can_delete_instance(
+            obj, exclude_models=list(self.deletable_exclude)
+        )
         return can_delete
 
 

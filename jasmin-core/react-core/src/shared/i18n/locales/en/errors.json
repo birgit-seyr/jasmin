@@ -105,6 +105,8 @@
       "effective_at_required": "An effective date is required."
     },
     "confirmed_immutable": "A confirmed member can't be deleted — end the membership via cancellation instead.",
+    "rejected_kept": "A rejected application is kept for the statistics and can't be deleted.",
+    "in_use": "This member is still in use (by subscriptions, consents, cooperative shares or a billing profile, say) and can't be deleted.",
     "exit_before_transfer": "The exit date is before a coop share transfer of this member ({{transfer_date}}). A member can't leave before their own transfer: if the exit really is earlier, the transfer was recorded wrongly.",
     "number_unknown": "No member has member number {{member_number}}."
   },
@@ -170,6 +172,7 @@
     "over_capacity": "This share type is sold out for the selected period.",
     "capacity_below_occupancy": "Capacity can't be lowered below what's already subscribed for a current or upcoming week.",
     "gross_price_in_use": "This price can't be deleted because the share type variation already has subscriptions.",
+    "in_use": "This share type variation is still in use (by subscriptions, with prices or as part of a composite size, say) and can't be deleted.",
     "size_unknown": "Share type \"{{share_type}}\" has no variation of size \"{{size}}\" active on {{date}}.",
     "size_ambiguous": "Share type \"{{share_type}}\" has {{matches}} variations of size \"{{size}}\" active on {{date}}."
   },
@@ -222,6 +225,7 @@
     "over_capacity": "This delivery station is full for week {{week}}/{{year}} ({{occupied}}/{{capacity}}). Please pick another station.",
     "capacity_below_occupancy": "Capacity can't be set to {{capacity}} — {{peak}} share(s) are already booked for week {{week}}/{{year}}. Please choose at least {{peak}}.",
     "in_use": "This delivery station cannot be deleted while deliveries still reference its pickup days. Move or end those deliveries first.",
+    "referenced": "This delivery station still has pickup days or is used elsewhere, so it can't be deleted. Set it inactive if it's no longer served.",
     "not_found": "Delivery station does not exist.",
     "more_than_one_fee": "Only one fee applies: per box, per month or per year.",
     "name_required": "A delivery station needs an abbreviation or a company name."
@@ -287,7 +291,8 @@
     "already_linked": "This reseller is already linked to a different user.",
     "customer_role_required": "Reseller link is only available for the 'customer' role.",
     "email_missing": "This reseller has no billing email address configured.",
-    "invoice_email_disabled": "This reseller receives invoices on paper only — invoice email is turned off."
+    "invoice_email_disabled": "This reseller receives invoices on paper only — invoice email is turned off.",
+    "in_use": "This entry is still in use (by purchases, articles, organic certificates, a delivery station or documents, say) and can't be deleted."
   },
   "storage": {
     "not_found": "Storage not found.",
@@ -314,8 +319,14 @@
   "offer_group": {
     "not_found": "Offer group not found.",
     "cannot_delete_default": "The default offer group cannot be deleted.",
+    "in_use": "This offer group is still in use (by resellers or offers, say) and can't be deleted.",
     "name_unknown": "No offer group is named \"{{offer_group_name}}\".",
     "name_ambiguous": "More than one offer group is named \"{{offer_group_name}}\" — give them distinct names."
+  },
+  "label_template": {
+    "element_invalid": "A field on the label is invalid or incomplete. A free text and a QR code need content; check the fields marked red.",
+    "element_outside": "A field reaches beyond the label's edge. Move it or make it smaller.",
+    "sheet_too_large": "The labels don't fit on an A4 page with these margins and gaps ({{width_mm}} × {{height_mm}} mm needed)."
   },
   "export": {
     "invalid_dates": "Invalid date range for export — please check the start and end dates."
@@ -392,13 +403,15 @@
     "shortening_strands_children": "This delivery day can't end on that date: future station-days or shares would outlive it and be stranded. Create a successor instead (add a new delivery day), or pick a later end date.",
     "start_move_strands_children": "This delivery day can't start on that date: existing station-days or shares fall before it and would no longer be covered. Pick an earlier start date, or move them first.",
     "succession_coverage_gap": "Couldn't complete the delivery-day succession: a station has no station-day covering the affected week on the new day. Set up that station-day first, then retry.",
-    "in_use": "This delivery day cannot be deleted because shares already reference it. Once used, it can no longer be removed."
+    "in_use": "This delivery day cannot be deleted because shares already reference it. Once used, it can no longer be removed.",
+    "referenced": "This delivery day can't be deleted because subscriptions collect on its pickup days or it is used elsewhere."
   },
   "delivery_station_day": {
     "shortening_strands_children": "This station-day can't end on that date: future deliveries or capacity reservations would outlive it and be stranded. Create a successor station-day (which migrates them), or pick a later end date.",
     "start_move_strands_children": "This station-day can't start on that date: existing deliveries or capacity reservations fall before it and would no longer be covered. Pick an earlier start date, or move them first.",
     "starts_before_delivery_day": "A station-day cannot start before its delivery day. Move the delivery day's start first, or pick a start on or after it.",
     "in_use": "This pickup day cannot be deleted while deliveries still reference it. Move or end those deliveries first.",
+    "referenced": "This pickup day is still in use (as a subscription's pickup day, with capacity reservations or imported demand, say) and can't be deleted.",
     "unknown": "No delivery station \"{{delivery_station}}\" is served on delivery day {{delivery_day}} on {{date}}.",
     "ambiguous": "{{matches}} delivery stations named \"{{delivery_station}}\" are served on delivery day {{delivery_day}} on {{date}} — give them distinct short names.",
     "tour_number_below_one": "Tours start at 1. Assign the station day to a tour in the tour planning.",

@@ -11,7 +11,7 @@
  * Key grammar (day/variation ids are UUIDs → never contain `_`):
  *   [<prefix>]day_<dayId>_variation_<variationId>[ _tour_<n> | _station_<sid> ]
  *   [<prefix>]day_<dayId>_planned_amount        (per-day trailer leaf)
- *   [<prefix>]day_<dayId>_harvested             (per-day trailer leaf)
+ *   [<prefix>]day_<dayId>_available_stock       (per-day trailer leaf)
  *   amount_day_<dayId>[ _tour_<n> | _station_<sid> ]   (AmountShareTypeVariations, transposed)
  *   [<prefix>]variation_<variationId>           (day-less, day fixed by query)
  */
@@ -55,9 +55,14 @@ export function dayPlannedAmountKey(
   return `${prefix}day_${dayId}_planned_amount`;
 }
 
-/** Per-day "available harvested amount" trailer leaf: `[<prefix>]day_<dayId>_harvested`. */
-export function dayHarvestedKey(dayId: string | number, prefix = ""): string {
-  return `${prefix}day_${dayId}_harvested`;
+/** Per-day "available by current stock" trailer leaf, the article's stock
+ *  before the day's shares are packed:
+ *  `[<prefix>]day_<dayId>_available_stock`. */
+export function dayAvailableStockKey(
+  dayId: string | number,
+  prefix = "",
+): string {
+  return `${prefix}day_${dayId}_available_stock`;
 }
 
 export interface DayAmountKeyParts {
@@ -107,8 +112,8 @@ export interface ParsedDayVariationKey {
   tier: ColumnKeyTier;
 }
 
-// Anchored so a stray `..._planned_amount` / `..._harvested` trailer does NOT
-// masquerade as a variation cell. day/variation/station ids are UUIDs and tour
+// Anchored so a stray `..._planned_amount` / `..._available_stock` trailer does
+// NOT masquerade as a variation cell. day/variation/station ids are UUIDs and tour
 // is an integer — none contain `_`, so greedy `[^_]+` captures each segment
 // exactly up to the next delimiter.
 const DAY_VARIATION_RE =
@@ -116,8 +121,8 @@ const DAY_VARIATION_RE =
 
 /**
  * Parse a day×variation key into its parts, or return `null` if `key` is not
- * one (including the `_planned_amount` / `_harvested` trailer leaves, which are
- * day-scoped but carry no variation).
+ * one (including the `_planned_amount` / `_available_stock` trailer leaves,
+ * which are day-scoped but carry no variation).
  */
 export function parseDayVariationKey(key: string): ParsedDayVariationKey | null {
   const match = DAY_VARIATION_RE.exec(key);

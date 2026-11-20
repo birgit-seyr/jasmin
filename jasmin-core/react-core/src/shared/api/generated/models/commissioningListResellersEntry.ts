@@ -11,5 +11,7 @@ export interface CommissioningListResellersEntry {
   id: string;
   name: string;
   address: string;
+  zip_code: string;
+  city: string;
   order: CommissioningListResellersOrder;
 }

@@ -154,6 +154,7 @@ const line = (
   id: `oc-${article}-${unit}-${size}`,
   share_article_id: `sa-${article}`,
   share_article_name: article,
+  organic_status: null,
   amount,
   amount_per_pu: amountPerPu,
   size,
@@ -171,6 +172,8 @@ const orderOf = (
   id: `res-${reseller}`,
   name: reseller,
   address: "",
+  zip_code: "",
+  city: "",
   order: { id: `order-${reseller}`, number: null, note, contents: lines },
 });
 

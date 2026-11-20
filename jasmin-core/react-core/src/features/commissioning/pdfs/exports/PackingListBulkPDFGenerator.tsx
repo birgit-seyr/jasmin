@@ -1,14 +1,14 @@
 import type { TFunction } from "i18next";
-import type { PackingListBulkItem } from "./PackingListBulkPDF";
+import type { PackingListBulkPage } from "./PackingListBulkPDF";
 import ListPDFGenerator from "./ListPDFGenerator";
 
 interface PackingListBulkPDFGeneratorProps {
-  data: PackingListBulkItem[] | null;
+  /** One station per entry; null (or empty) keeps the button disabled. */
+  pages: PackingListBulkPage[] | null;
   year: number;
   week: number | null;
   dayName: string;
   shareType?: string;
-  deliveryStationName?: string;
   showSize?: boolean;
   filename: string;
   buttonText: string;
@@ -16,12 +16,11 @@ interface PackingListBulkPDFGeneratorProps {
 }
 
 export default function PackingListBulkPDFGenerator({
-  data,
+  pages,
   year,
   week,
   dayName,
   shareType,
-  deliveryStationName,
   showSize,
   filename,
   buttonText,
@@ -29,17 +28,16 @@ export default function PackingListBulkPDFGenerator({
 }: PackingListBulkPDFGeneratorProps) {
   return (
     <ListPDFGenerator
-      data={data}
+      data={pages}
       filename={filename}
       buttonText={buttonText}
       documentLoader={() => import("./PackingListBulkPDF")}
       documentProps={{
-        data: data ?? [],
+        pages: pages ?? [],
         year,
         week,
         dayName,
         shareType,
-        deliveryStationName,
         showSize,
         t,
       }}

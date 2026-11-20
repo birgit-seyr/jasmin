@@ -1298,32 +1298,3 @@ class InvoiceReseller(
         self.has_been_paid = False
         self.paid_at = None
         self.save(update_fields=["has_been_paid", "paid_at"])
-
-
-class LabelTemplate(JasminModel):
-    """Reserved for a future label-printing feature — intentionally unwired.
-
-    Defined here and in ``0001_initial`` only: not exported from
-    ``models/__init__`` and with no serializer, viewset, service or read path.
-    Kept on purpose until the feature is built or deliberately dropped.
-    """
-
-    is_active = models.BooleanField(default=True, db_index=True)
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)
-
-    # Physical dimensions in mm (for printing)
-    width_mm = models.IntegerField(
-        validators=[MinValueValidator(10), MaxValueValidator(300)],
-        help_text="Label width in millimeters",
-    )
-    height_mm = models.IntegerField(
-        validators=[MinValueValidator(5), MaxValueValidator(200)],
-        help_text="Label height in millimeters",
-    )
-    elements = models.JSONField(
-        default=list, help_text="List of label elements with positioning and styling"
-    )
-
-    def __str__(self) -> str:
-        return self.name

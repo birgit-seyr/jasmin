@@ -40,6 +40,7 @@ from ..errors import (
     DocumentNotFinalized,
     DocumentPdfMissing,
     OfferGroupCannotDeleteDefault,
+    OfferGroupInUse,
     ResellerEmailMissing,
     ResellerInvoiceEmailDisabled,
 )
@@ -92,7 +93,6 @@ from ..serializers import (
     OrderContentItemSerializer,
     OrderContentListResponseSerializer,
     OrderContentSerializer,
-    OrganicCertificateSerializer,
     ResellerSerializer,
 )
 from ..services import (
@@ -113,6 +113,7 @@ from ..services.tier_price import set_customer_line_price
 from ..utils import get_contact_annotations
 from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import PARAM_CATALOGUE, validate_query_params
+from .base_viewsets import CanBeDeletedDestroyMixin
 
 logger = logging.getLogger(__name__)
 
@@ -520,8 +521,10 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
             "Delete a reseller in the context of ONE of its two roles. "
             "`delete_context=sellers` drops the seller role, "
             "`delete_context=resellers` the reseller role; the row itself is "
-            "deleted only when the role being dropped was its last one. The "
-            "parameter is required — there is no defined delete without it."
+            "deleted only when the role being dropped was its last one, and is "
+            "refused (409) while anything still points at it, as "
+            "`can_be_deleted` reports. The parameter is required — there is no "
+            "defined delete without it."
         ),
         parameters=[
             catalogue_param(
@@ -532,6 +535,7 @@ class ResellerViewSet(PIIReadLoggingMixin, RolePermissionsMixin, viewsets.ModelV
                 ),
             ),
         ],
+        responses={204: None, 409: ErrorResponseSerializer},
     )
     def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         # Resellers may never be deleted by a customer — office-only operation.
@@ -740,10 +744,13 @@ class OrderContentViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         )
 
 
-class OfferGroupViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class OfferGroupViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     read_permission = IsStaff
     write_permission = IsOffice
     serializer_class = OfferGroupSerializer
+    not_deletable_error = OfferGroupInUse
 
     def get_queryset(self) -> QuerySet[OfferGroup]:
         return OfferGroup.objects.annotate(
@@ -756,14 +763,15 @@ class OfferGroupViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             reseller_count=Count("reseller", distinct=True),
         ).order_by("number")
 
-    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+    def refuse_if_not_deletable(self, instance: OfferGroup) -> None:
         # The seeded default offer group is protected (see OfferGroup.is_default)
-        # — it must always persist as the new-reseller default.
-        if self.get_object().is_default:
+        # — it must always persist as the new-reseller default. Its flag reads
+        # False too, so this has to answer first to keep its own code.
+        if instance.is_default:
             raise OfferGroupCannotDeleteDefault(
                 "The default offer group cannot be deleted."
             )
-        return super().destroy(request, *args, **kwargs)
+        super().refuse_if_not_deletable(instance)
 
 
 class CrateOrderContentViewSet(RolePermissionsMixin, viewsets.ViewSet):
@@ -1472,6 +1480,8 @@ def _build_commissioning_resellers_entry(order: Order) -> dict[str, Any]:
         # The company, or the person a reseller without one is registered as.
         "name": contact.name or "",
         "address": contact.address,
+        "zip_code": contact.zip_code,
+        "city": contact.city,
         "order": {
             "id": str(order.id),
             "number": order.display_number,
@@ -1498,6 +1508,7 @@ def _build_content_entry(content: OrderContent) -> dict[str, Any]:
         "id": str(content.id),
         "share_article_id": str(share_article.id) if share_article else None,
         "share_article_name": share_article.name if share_article else "",
+        "organic_status": share_article.organic_status if share_article else None,
         "amount": float(content.amount) if content.amount else 0,
         "amount_per_pu": float(content.resolve_amount_per_pu()),
         "size": content.size,
@@ -1505,28 +1516,3 @@ def _build_content_entry(content: OrderContent) -> dict[str, Any]:
         "sort": content.sort,
         "note": content.note or "",
     }
-
-
-class OrganicCertificateViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-    """CRUD for a reseller's time-bound organic certificates (office-managed).
-
-    Drives the ListSellers certificate modal; filter the list by ``?reseller=``.
-    """
-
-    read_permission = IsStaff
-    write_permission = IsOffice
-    serializer_class = OrganicCertificateSerializer
-
-    @extend_schema(parameters=[get_reseller_parameter()])
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().list(request, *args, **kwargs)
-
-    def get_queryset(self) -> QuerySet[OrganicCertificate]:
-        queryset = OrganicCertificate.objects.select_related("reseller").order_by(
-            "-valid_from"
-        )
-        params = validate_query_params(self.request, optional=["reseller"])
-        reseller = params["reseller"]
-        if reseller is not None:
-            queryset = queryset.filter(reseller_id=reseller)
-        return queryset

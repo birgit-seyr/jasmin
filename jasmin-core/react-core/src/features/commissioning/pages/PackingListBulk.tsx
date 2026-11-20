@@ -9,6 +9,7 @@ import {
 } from "@features/commissioning/hooks";
 import type { ShareDeliveryDayOption } from "@features/commissioning/hooks/useShareDeliveryDays";
 import { PackingListBulkPDFGenerator } from "@features/commissioning/pdfs";
+import type { PackingListBulkPage } from "@features/commissioning/pdfs/exports/PackingListBulkPDF";
 import { DeliveryStationSelector } from "@features/commissioning/selectors";
 import {
   useDateFormat,
@@ -42,7 +43,12 @@ import type {
   EditableColumnConfig,
   TableRecord,
 } from "@shared/tables/BasicEditableTable/types";
-import { ExplainerText, MobileStack, PastWarningMessage } from "@shared/ui";
+import {
+  ExplainerText,
+  MobileStack,
+  PastWarningMessage,
+  ToolTipIcon,
+} from "@shared/ui";
 import {
   activeAtDateForWeek,
   dateForWeekDayNumber,
@@ -222,6 +228,8 @@ export default function PackingListBulk() {
       ]),
     [selectedYear, selectedWeek, selectedDeliveryDay, t],
   );
+  const dayName =
+    selectedDeliveryDay !== null ? getDayName(selectedDeliveryDay, t) : "";
 
   // ----- Columns ---------------------------------------------------------
   const { shareArticleColumn } = useShareArticleColumn({
@@ -311,24 +319,26 @@ export default function PackingListBulk() {
   const apiFunctions = useMemo<ApiFunctions>(() => wrapApiFunctions({}), []);
 
   // ----- Data ------------------------------------------------------------
-  const listParams: BulkParams = useMemo(
+  // Without a station the endpoint answers every station's rows at once,
+  // grouped by station name — the day's lists, one PDF page each.
+  const dayParams: BulkParams = useMemo(
     () =>
       ({
         year: selectedYear,
         delivery_week: selectedWeek ?? undefined,
         day_number: selectedDeliveryDay ?? undefined,
         is_past: isPast,
-        delivery_station: selectedDeliveryStation ?? undefined,
         // Only the sizes packed loose, a past week's as they were.
         is_packed_bulk: true,
       }) as BulkParams,
-    [
-      selectedYear,
-      selectedWeek,
-      selectedDeliveryDay,
-      isPast,
-      selectedDeliveryStation,
-    ],
+    [selectedYear, selectedWeek, selectedDeliveryDay, isPast],
+  );
+  const listParams: BulkParams = useMemo(
+    () => ({
+      ...dayParams,
+      delivery_station: selectedDeliveryStation ?? undefined,
+    }),
+    [dayParams, selectedDeliveryStation],
   );
 
   const queryEnabled =
@@ -344,25 +354,64 @@ export default function PackingListBulk() {
     [rawData],
   );
 
-  const processedData = useMemo(
-    () =>
-      data.map((item) => ({
+  const toPrintRows = useCallback(
+    (rows: PackingListBulkRow[]) =>
+      rows.map((item) => ({
         ...item,
         total_amount_text: totalAmountText(item.total_amount, item.unit, format),
-        unit_label: item.unit ? getUnitLabel(item.unit as string) : "",
-        size_label: item.size ? getVegetableSizeLabel(item.size as string) : "",
+        unit_label: item.unit ? getUnitLabel(item.unit) : "",
+        size_label: item.size ? getVegetableSizeLabel(item.size) : "",
       })),
-    [data, format, getUnitLabel, getVegetableSizeLabel],
+    [format, getUnitLabel, getVegetableSizeLabel],
   );
 
-  const stationName = useMemo(
-    () => (data[0]?.delivery_station_name as string | undefined) ?? undefined,
-    [data],
+  const stationPages = useMemo<PackingListBulkPage[] | null>(
+    () =>
+      data.length > 0
+        ? [
+            {
+              deliveryStationName: data[0].delivery_station_name,
+              data: toPrintRows(data),
+            },
+          ]
+        : null,
+    [data, toPrintRows],
   );
+
+  // Asked once the day's stations are known, like the station's own list,
+  // and only where its download is offered: a phone shows no downloads.
+  const { data: dayRows } = useCommissioningPackingListBulkList(
+    dayParams as unknown as CommissioningPackingListBulkListParams,
+    { query: { enabled: queryEnabled && !isMobile } },
+  );
+  // A station without loose amounts has no rows, so no page.
+  const dayPages = useMemo<PackingListBulkPage[] | null>(() => {
+    const pagesByStation = new Map<string, PackingListBulkPage>();
+    for (const row of toPrintRows(dayRows ?? [])) {
+      const page = pagesByStation.get(row.delivery_station) ?? {
+        deliveryStationName: row.delivery_station_name,
+        data: [],
+      };
+      page.data.push(row);
+      pagesByStation.set(row.delivery_station, page);
+    }
+    return pagesByStation.size > 0 ? [...pagesByStation.values()] : null;
+  }, [dayRows, toPrintRows]);
 
   const filename = useMemo(
     () => generateFilename(t("commissioning.packing_list_bulk")),
     [generateFilename, t],
+  );
+  const dayFilename = useMemo(
+    () =>
+      generatePdfFilename([
+        t("commissioning.packing_list_bulk"),
+        selectedYear,
+        formatWeekLabel(selectedWeek, t),
+        formatDayLabel(selectedDeliveryDay, t),
+        t("commissioning.all_day"),
+      ]),
+    [selectedYear, selectedWeek, selectedDeliveryDay, t],
   );
 
   const invalidateData = useCallback(() => {
@@ -422,20 +471,31 @@ export default function PackingListBulk() {
       {!isMobile && (
         <div className="section-divider flex-row gap-1em">
           <PackingListBulkPDFGenerator
-            data={processedData}
+            pages={stationPages}
             year={selectedYear}
             week={selectedWeek}
-            dayName={
-              selectedDeliveryDay !== null
-                ? getDayName(selectedDeliveryDay, t)
-                : ""
-            }
-            deliveryStationName={stationName}
+            dayName={dayName}
             showSize={showSize}
             filename={filename}
             buttonText={t("download.packing_list_bulk")}
             t={t}
           />
+          <span>
+            <PackingListBulkPDFGenerator
+              pages={dayPages}
+              year={selectedYear}
+              week={selectedWeek}
+              dayName={dayName}
+              showSize={showSize}
+              filename={dayFilename}
+              buttonText={t("download.packing_lists_bulk_day")}
+              t={t}
+            />
+            <ToolTipIcon
+              title={t("tooltip.packing_lists_bulk_day")}
+              className="tooltip-icon-beside-button"
+            />
+          </span>
         </div>
       )}
 

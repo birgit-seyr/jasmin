@@ -34,6 +34,8 @@ from ..errors import (
     DeliveryDayValidFromInPast,
     DeliveryDayValidFromMoveIntoPast,
     DeliveryExceptionPeriodLocked,
+    DeliveryStationDayInUse,
+    DeliveryStationDayReferenced,
     DeliveryStationDayShorteningStrandsChildren,
     DeliveryStationDayStartMoveStrandsChildren,
     DeliveryStationDayStartsBeforeDeliveryDay,
@@ -83,6 +85,7 @@ from ..utils import get_contact_annotations
 from ..utils.iso_week_utils import previous_monday, weeks_in_range
 from ..utils.lookup import get_or_404
 from ..utils.query_params import validate_query_params
+from .base_viewsets import CanBeDeletedDestroyMixin
 
 logger = logging.getLogger(__name__)
 
@@ -301,7 +304,8 @@ class DeliveryStationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
         return Response(response_serializer.data)
 
     @extend_schema(
-        description="Delete a delivery station, cleaning up orphaned contacts/resellers."
+        description="Delete a delivery station, cleaning up orphaned contacts/resellers.",
+        responses={204: None, 409: ErrorResponseSerializer},
     )
     def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         instance = self.get_object()
@@ -387,7 +391,9 @@ def _bound_station_day(serializer: Any) -> DeliveryStationDay:
     return serializer.instance
 
 
-class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class DeliveryStationDayViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     # Members read this to pick their delivery station + day combo in
     # the subscription flow on their MemberDetail page. Write stays
     # office-only (the schedule itself is configured by staff).
@@ -398,6 +404,7 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # retrieve/write stay member/office-gated. No PII beyond public pickup info.
     public_read_actions = frozenset({"list"})
     serializer_class = DeliveryStationDaySerializer
+    not_deletable_error = DeliveryStationDayReferenced
 
     @transaction.atomic
     def perform_create(self, serializer: DeliveryStationDaySerializer) -> None:
@@ -569,13 +576,11 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 )
         serializer.save()
 
-    def perform_destroy(self, instance: DeliveryStationDay) -> None:
+    def refuse_if_not_deletable(self, instance: DeliveryStationDay) -> None:
         # ShareDelivery.delivery_station_day CASCADEs — deleting a used pickup
         # day would silently wipe the deliveries that back billing/history with
-        # no recompute. Refuse while any delivery references it (mirrors the
+        # no recompute. Refused first, naming the deliveries (mirrors the
         # close/shorten guard in perform_update, which blocks the milder op).
-        from ..errors import DeliveryStationDayInUse
-
         delivery_count = ShareDelivery.objects.filter(
             delivery_station_day=instance
         ).count()
@@ -583,7 +588,7 @@ class DeliveryStationDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             raise DeliveryStationDayInUse(
                 station_day=str(instance), delivery_count=delivery_count
             )
-        instance.delete()
+        super().refuse_if_not_deletable(instance)
 
     @extend_schema(
         parameters=[

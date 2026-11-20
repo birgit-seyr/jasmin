@@ -433,6 +433,19 @@ describe("PlanningShareContentBase", () => {
     });
   });
 
+  it("leaves a day's available stock out of an edited row the server sent it without", () => {
+    renderPage();
+    const form = { setFieldsValue: vi.fn() };
+
+    const edited = grid().customEdit!(
+      { ...PLANNING_ROWS[0], key: "row-carrot" },
+      form as unknown as Parameters<NonNullable<EditableTableProps["customEdit"]>>[1],
+    ) as TableRecord;
+
+    // Before the day before packing it would show as an empty, short stock.
+    expect(Object.keys(edited).filter((key) => key.endsWith("_available_stock"))).toEqual([]);
+  });
+
   it("refuses to save a purchased article without a seller", () => {
     renderPage();
 

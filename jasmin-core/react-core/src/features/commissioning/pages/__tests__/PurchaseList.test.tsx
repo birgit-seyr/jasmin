@@ -409,6 +409,20 @@ describe("PurchaseList (smoke)", () => {
   });
 });
 
+describe("PurchaseList columns", () => {
+  it("shows the calculated PUs with the PU suffix, like the extra PUs beside them", async () => {
+    renderPage();
+    await screen.findByText("commissioning.purchase_list");
+
+    const column = grid().columns.find(
+      (candidate) => candidate.key === "theoretical_purchase_in_pu",
+    );
+    const cell = column?.render as (value: unknown, record: TableRecord) => unknown;
+    // 4 kg of apples at 2 kg per PU.
+    expect(cell(undefined, rowOf("art-a"))).toBe("2 commissioning.pu");
+  });
+});
+
 describe("PurchaseList opening week", () => {
   // The module loaded in week 41 of 2026, so this shows that the page reads
   // the date when it opens.

@@ -36,6 +36,7 @@ function orderLine(overrides: Partial<CommissioningListResellersOrderContent> = 
     id: "oc-carrots",
     share_article_id: "sa-carrots",
     share_article_name: "Karotten",
+    organic_status: null,
     amount: 12.5,
     amount_per_pu: 2.5,
     size: "M",

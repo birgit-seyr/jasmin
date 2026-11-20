@@ -39,3 +39,4 @@ export { default as MarketPriceListPDFGenerator } from "./exports/MarketPriceLis
 export { default as MarketOrderListPDFGenerator } from "./exports/MarketOrderListPDFGenerator";
 export { default as MarketMemberListPDFGenerator } from "./exports/MarketMemberListPDFGenerator";
 export { default as PurchaseListPDFGenerator } from "./exports/PurchaseListPDFGenerator";
+export { default as LabelsPDFGenerator } from "./exports/LabelsPDFGenerator";

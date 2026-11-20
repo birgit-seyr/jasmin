@@ -5,12 +5,15 @@
  * CSA Management Platform API
  * OpenAPI spec version: 1.0.0
  */
+import type { CommissioningListResellersOrderContentOrganicStatus } from './commissioningListResellersOrderContentOrganicStatus';
 
 export interface CommissioningListResellersOrderContent {
   id: string;
   /** @nullable */
   share_article_id: string | null;
   share_article_name: string;
+  /** @nullable */
+  organic_status: CommissioningListResellersOrderContentOrganicStatus;
   amount: number;
   amount_per_pu: number;
   size: string;

@@ -6,7 +6,6 @@ import {
   computePlannedAmountForDay,
   dayCellKeys,
   dayCellTier,
-  dayHarvestedKey,
   dayPlannedAmountKey,
   dayVariationKey,
   parseDayVariationKey,
@@ -529,11 +528,10 @@ export default function PlanningShareContentBase({
           });
         });
 
-        // Planned amount and harvested fields
+        // The planned amount field. The available stock is left as the server
+        // sent it: missing before the day before packing, so none is shown.
         const plannedKey = dayPlannedAmountKey(dayId);
-        const harvestedKey = dayHarvestedKey(dayId);
         processedRecord[plannedKey] = processedRecord[plannedKey] || 0;
-        processedRecord[harvestedKey] = processedRecord[harvestedKey] || 0;
       });
 
       // Now process all fields for the form

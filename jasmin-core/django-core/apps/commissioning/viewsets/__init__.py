@@ -45,6 +45,7 @@ from .imports_viewsets import (
     ExternalShareDemandViewSet,
     ShareImportBatchViewSet,
 )
+from .labels_viewsets import LabelTemplateViewSet
 from .logs_viewsets import (
     TheoreticalCleanAmountViewSet,
     TheoreticalHarvestViewSet,
@@ -57,13 +58,14 @@ from .markets_viewsets import (
     MarketProductGroupViewSet,
     ScaleTaxCodeViewSet,
 )
+from .member_loans_viewsets import MemberLoanViewSet
 from .members_viewsets import (
     CoopShareViewSet,
-    MemberLoanViewSet,
     MemberViewSet,
     SubscriptionViewSet,
 )
 from .offers_viewsets import OfferViewSet
+from .organic_certificates_viewsets import OrganicCertificateViewSet
 from .resellers_viewsets import (
     CommissioningListResellersViewSet,
     CrateOrderContentViewSet,
@@ -73,7 +75,6 @@ from .resellers_viewsets import (
     InvoiceResellerViewSet,
     OfferGroupViewSet,
     OrderContentViewSet,
-    OrganicCertificateViewSet,
     ResellerViewSet,
 )
 from .share_content_viewsets import (

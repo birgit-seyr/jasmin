@@ -131,7 +131,8 @@ const deliveryStationPages = [
   "/commissioning/delivery-tours",
 ];
 
-function linkedRoutes(): Set<string> {
+/** Every link the sidebar renders, by route, with its text, in sidebar order. */
+function renderedLinks(): Map<string, string> {
   const { container } = render(
     <MemoryRouter initialEntries={["/commissioning/forecast"]}>
       <NavigationProvider>
@@ -139,13 +140,17 @@ function linkedRoutes(): Set<string> {
       </NavigationProvider>
     </MemoryRouter>,
   );
-  const routes = new Set(
-    Array.from(container.querySelectorAll("a[href]"), (link) =>
-      link.getAttribute("href") ?? "",
-    ),
-  );
+  const links = new Map<string, string>();
+  for (const link of Array.from(container.querySelectorAll("a[href]"))) {
+    const route = link.getAttribute("href") ?? "";
+    if (!links.has(route)) links.set(route, link.textContent ?? "");
+  }
   container.remove();
-  return routes;
+  return links;
+}
+
+function linkedRoutes(): Set<string> {
+  return new Set(renderedLinks().keys());
 }
 
 beforeEach(() => {
@@ -288,6 +293,15 @@ describe("CommissioningSidebar", () => {
     settings.packing_mode = "BULK";
 
     expect(linkedRoutes().has(bulkPackingList)).toBe(true);
+  });
+
+  it("names the bulk packing list as the loose one, in bulk packing too", () => {
+    settings.packing_mode = "BULK";
+    expect(renderedLinks().get(bulkPackingList)).toBe("commissioning.packing_list_bulk");
+
+    settings.packing_mode = "MIXED";
+    physical.variations = [packedInBulk];
+    expect(renderedLinks().get(bulkPackingList)).toBe("commissioning.packing_list_bulk");
   });
 
   it("drops the tour lists where every share is packed loose", () => {

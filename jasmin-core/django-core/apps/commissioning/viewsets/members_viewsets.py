@@ -53,6 +53,8 @@ from ..errors import (
     CoopShareConfirmedImmutable,
     CoopShareNotFromTransfer,
     MemberConfirmedImmutable,
+    MemberInUse,
+    MemberRejectedKept,
     SubscriptionAlreadyConfirmed,
     SubscriptionAlreadyRejected,
     SubscriptionConfirmedImmutable,
@@ -67,7 +69,7 @@ from ..models import (
 )
 from ..models.choices import InvitationStatus
 from ..models.managers import active_on_date_q
-from ..models.members import MemberLoan, UserInvitation
+from ..models.members import UserInvitation
 from ..schemas import (
     EXPORT_DATE_RANGE_PARAMETERS,
     catalogue_param,
@@ -89,7 +91,6 @@ from ..serializers import (
     CoopShareTransferSerializer,
     MemberCreateRequestSerializer,
     MemberEmailLogSerializer,
-    MemberLoanSerializer,
     MemberOnboardingSerializer,
     MemberSelfReadSerializer,
     MemberSerializer,
@@ -110,6 +111,7 @@ from ..utils.optional_filters import apply_optional_filters
 from ..utils.query_params import validate_query_params
 from ..utils.validation_utils import parse_body_date, parse_bulk_ids
 from .badge_viewsets import pending_admin_confirmation_q
+from .base_viewsets import CanBeDeletedDestroyMixin
 
 logger = logging.getLogger(__name__)
 
@@ -328,6 +330,7 @@ def _parse_required_effective_at(request: Request):
 class MemberViewSet(
     RefetchForResponseMixin,
     PIIReadLoggingMixin,
+    CanBeDeletedDestroyMixin,
     RolePermissionsMixin,
     viewsets.ModelViewSet,
 ):
@@ -340,6 +343,7 @@ class MemberViewSet(
     read_permission = IsOfficeOrMember
     write_permission = IsOffice
     serializer_class = MemberSerializer
+    not_deletable_error = MemberInUse
     # Opt-in pagination: callers that don't pass `?limit=` keep getting the
     # full list (unchanged response shape). Pages that need pagination pass
     # `?limit=200` (or similar) and get `{count, next, previous, results}`.
@@ -508,15 +512,24 @@ class MemberViewSet(
             headers=headers,
         )
 
+    @extend_schema(responses={204: None, 409: ErrorResponseSerializer})
     def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         enforce_privileged(request, "Only office staff may delete members.")
-        instance: Member = self.get_object()
+        return super().destroy(request, *args, **kwargs)
+
+    def refuse_if_not_deletable(self, instance: Member) -> None:
+        # Only a pending applicant may go; the reviewed ones answer with their
+        # own codes before the general in-use check.
         if instance.admin_confirmed:
             raise MemberConfirmedImmutable(
                 "Confirmed members cannot be deleted. Use the `cancel` action "
                 "instead (it stamps cancelled_at and preserves the record)."
             )
-        return super().destroy(request, *args, **kwargs)
+        if instance.admin_rejected_at:
+            raise MemberRejectedKept(
+                "Rejected applicants are kept and cannot be deleted."
+            )
+        super().refuse_if_not_deletable(instance)
 
     @extend_schema(
         description=(
@@ -1779,58 +1792,3 @@ class CoopShareViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
                 }
             ).data
         )
-
-
-# Stock DRF CRUD: ``retrieve`` / ``create`` / ``update`` / ``partial_update``
-# all return a single ``MemberLoanSerializer`` (the viewset ``serializer_class``);
-# ``destroy`` returns 204 No Content. Declared explicitly so spectacular doesn't
-# infer them. (``list`` carries its own ``@extend_schema`` for its query params.)
-@extend_schema_view(
-    retrieve=extend_schema(responses={200: MemberLoanSerializer}),
-    create=extend_schema(responses={201: MemberLoanSerializer}),
-    update=extend_schema(responses={200: MemberLoanSerializer}),
-    partial_update=extend_schema(responses={200: MemberLoanSerializer}),
-    destroy=extend_schema(responses={204: None}),
-)
-class MemberLoanViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
-    """Office-managed register of member loans (interest-bearing loans
-    the co-op accepts from its members).
-
-    Filters mirror the existing ``CoopShareViewSet`` so the office UI
-    can use the same year-+-member filter widgets on both pages —
-    ``year`` filters by ``start_date__year``, ``member`` by the FK.
-    Both are optional at runtime; the schema marks them as such so
-    drf-spectacular doesn't reject calls that omit either.
-    """
-
-    read_permission = IsStaff
-    write_permission = IsOffice
-    serializer_class = MemberLoanSerializer
-
-    @extend_schema(
-        parameters=[
-            get_member_parameter(required=False),
-            get_year_parameter(required=False),
-        ],
-        responses={200: MemberLoanSerializer(many=True)},
-    )
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().list(request, *args, **kwargs)
-
-    def perform_create(self, serializer: MemberLoanSerializer) -> None:
-        # Stamp authorship server-side (the field is read-only to clients).
-        serializer.save(created_by=self.request.user)
-
-    def get_queryset(self) -> QuerySet[MemberLoan]:
-        queryset = MemberLoan.objects.all().select_related("member")
-
-        # List-only, as on the sibling coop-share list: the detail route
-        # addresses one loan by id and reads neither filter.
-        if self.action == "list":
-            params = validate_query_params(self.request, optional=["member", "year"])
-            if params["member"]:
-                queryset = queryset.filter(member=params["member"])
-            if params["year"]:
-                queryset = queryset.filter(start_date__year=params["year"])
-
-        return queryset.order_by("-start_date")

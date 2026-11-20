@@ -26,6 +26,8 @@ from ..errors import (
     DeliveryDayValidFromMoveIntoPast,
     InvalidQueryParam,
     OrdersDeliveryDayInUse,
+    SharesDeliveryDayInUse,
+    SharesDeliveryDayReferenced,
     SharesDeliveryDayShorteningStrandsChildren,
     SharesDeliveryDayStartMoveStrandsChildren,
 )
@@ -49,6 +51,7 @@ from ..serializers import (
 )
 from ..services import SharesDeliveryDayService
 from ..services.onboarding_policy import onboarding_mode_enabled
+from ..utils.deletion_utils import can_delete_instance
 from ..utils.iso_week_utils import previous_monday
 from ..utils.query_params import validate_query_params
 from .base_viewsets import CanBeDeletedDestroyMixin
@@ -56,7 +59,9 @@ from .base_viewsets import CanBeDeletedDestroyMixin
 logger = logging.getLogger(__name__)
 
 
-class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class SharesDeliveryDayViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     # Members read this to populate the subscription-flow choices on
     # their own MemberDetail page (delivery day, payment cycle, share
     # type). Write stays office-only — the catalogue itself is managed
@@ -64,6 +69,7 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     read_permission = IsStaffOrMember
     write_permission = IsOffice
     serializer_class = SharesDeliveryDaySerializer
+    not_deletable_error = SharesDeliveryDayReferenced
 
     @extend_schema(
         parameters=[
@@ -332,18 +338,26 @@ class SharesDeliveryDayViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
             serializer.save()
             SharesDeliveryDayService.follow_changed_work_days(instance, old_work_days)
 
-    def perform_destroy(self, instance):
+    def refuse_if_not_deletable(self, instance: SharesDeliveryDay) -> None:
         # Share.delivery_day CASCADEs — deleting a used delivery day would wipe
         # whole historical weeks of Shares + their deliveries + ShareContents
-        # in one call, with no recompute. Refuse while any Share references it.
-        from ..errors import SharesDeliveryDayInUse
-
+        # in one call, with no recompute. Refused first, naming the shares.
         share_count = instance.share_set.count()
         if share_count:
             raise SharesDeliveryDayInUse(
                 delivery_day=str(instance), share_count=share_count
             )
-        instance.delete()
+        super().refuse_if_not_deletable(instance)
+        # Its station days go with it, and with them whatever hangs on them:
+        # deliveries and reservations would cascade, imported demand refuse.
+        if not all(
+            can_delete_instance(station_day, include_hidden=True)[0]
+            for station_day in instance.deliverystationday_set.all()
+        ):
+            raise SharesDeliveryDayReferenced(
+                "SharesDeliveryDay is still in use and cannot be deleted.",
+                details={"id": str(instance.pk)},
+            )
 
 
 class OrdersDeliveryDayViewSet(
@@ -397,6 +411,9 @@ class PaymentCycleViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # pick a payment cycle. LIST only — retrieve/write stay member/office-gated.
     public_read_actions = frozenset({"list"})
     serializer_class = PaymentCycleSerializer
+    # No DELETE: subscriptions and billing profiles keep their cycle, and a
+    # cycle no longer offered is set inactive.
+    http_method_names = ["get", "post", "put", "patch", "head", "options"]
 
     @extend_schema(
         parameters=[get_is_active_parameter()],

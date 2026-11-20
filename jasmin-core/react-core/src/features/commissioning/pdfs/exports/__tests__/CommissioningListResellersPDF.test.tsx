@@ -39,6 +39,7 @@ const content = (
   id: "content-1",
   share_article_id: "article-1",
   share_article_name: "Carrots",
+  organic_status: null,
   amount: 10,
   amount_per_pu: 2,
   size: "M",

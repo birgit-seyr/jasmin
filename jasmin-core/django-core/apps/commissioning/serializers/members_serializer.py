@@ -95,6 +95,9 @@ class MemberSerializer(
     serializers.ModelSerializer,
 ):
     USER_NAME_FIELDS = ["admin_confirmed_by_name", "created_by_name"]
+    # What goes with a pending applicant or outlives them, not a use: an
+    # invitation (maybe to a wrong address), an erasure request's audit row.
+    deletable_exclude = ("UserInvitation", "DeletionRequest")
     linked_user_info = serializers.SerializerMethodField()
     active_subscriptions_count = serializers.IntegerField(read_only=True)
     # Sum of ``CoopShare.amount_of_coop_shares`` across this member's

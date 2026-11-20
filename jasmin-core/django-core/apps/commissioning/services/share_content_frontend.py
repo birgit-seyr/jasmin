@@ -28,6 +28,7 @@ from ..utils.iso_week_utils import (
     previous_monday,
     weeks_in_range,
 )
+from .available_stock import add_available_stock
 from .delivery_tours import tour_numbers_by_week
 from .share_content_stock import ShareContentStock
 from .stock_service import StockService
@@ -481,6 +482,7 @@ class ShareContentFrontendData(ShareContentStock):
                 )
             )
 
+        add_available_stock(rows)
         return rows
 
     def purchase_cost_by_week(
@@ -709,8 +711,11 @@ class ShareContentFrontendData(ShareContentStock):
     def get_group_data(
         self, share_contents: QuerySet[ShareContent] | list[ShareContent]
     ) -> dict[str, Any] | None:
-        """Return frontend data for a single group, or None."""
+        """Return frontend data for a single group, or None. A saved row is
+        laid over the planning's one with its day values, the available stock
+        included."""
         frontend_data = self.get_share_content_as_frontend_data(share_contents)
+        add_available_stock(frontend_data)
         return frontend_data[0] if frontend_data else None
 
     @staticmethod

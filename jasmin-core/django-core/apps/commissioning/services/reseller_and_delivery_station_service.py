@@ -4,12 +4,18 @@ from typing import Any
 
 from django.db import transaction
 
-from ..errors import RequiredFieldMissing
+from ..errors import (
+    DeliveryStationInUse,
+    DeliveryStationReferenced,
+    RequiredFieldMissing,
+    ResellerInUse,
+)
 from ..models import (
     ContactEntity,
     DeliveryStation,
     OfferGroup,
     Reseller,
+    ShareDelivery,
 )
 from ..utils.deletion_utils import can_delete_instance
 
@@ -98,7 +104,7 @@ class ResellerAndDeliveryStationService:
             try:
                 delivery_station = DeliveryStation.objects.get(linked_reseller=instance)
                 can_delete, _ = can_delete_instance(
-                    delivery_station, exclude_models=["Reseller"]
+                    delivery_station, exclude_models=["Reseller"], include_hidden=True
                 )
                 if can_delete:
                     delivery_station.delete()
@@ -186,7 +192,9 @@ class ResellerAndDeliveryStationService:
             try:
                 reseller = Reseller.objects.get(contact=instance.contact)
                 can_delete, _ = can_delete_instance(
-                    reseller, exclude_models=["DeliveryStation"]
+                    reseller,
+                    exclude_models=["DeliveryStation", "DeletionRequest"],
+                    include_hidden=True,
                 )
                 if can_delete:
                     reseller.delete()
@@ -213,6 +221,9 @@ class ResellerAndDeliveryStationService:
         the value against the query-param catalogue, so an unknown one here is
         a programmer error rather than client input.
         """
+        # Locked before the roles are read, so the branch and the in-use
+        # check below see the same row.
+        instance = Reseller.objects.select_for_update().get(pk=instance.pk)
         if delete_context == "sellers":
             if instance.is_reseller:
                 instance.is_seller = False
@@ -235,17 +246,30 @@ class ResellerAndDeliveryStationService:
 
     @transaction.atomic
     def delete_delivery_station(self, instance: DeliveryStation) -> None:
+        # Locked before the checks, so a pickup day or a delivery added
+        # concurrently is either seen or waits for the delete.
+        instance = DeliveryStation.objects.select_for_update().get(pk=instance.pk)
+
         # A station's pickup days CASCADE to ShareDelivery (the billing basis).
         # Refuse to delete while any delivery still hangs off the station —
         # otherwise the delete silently wipes billing/history with no recompute.
-        from ..errors import DeliveryStationInUse
-        from ..models import ShareDelivery
-
         delivery_count = ShareDelivery.objects.filter(
             delivery_station_day__delivery_station=instance
         ).count()
         if delivery_count:
             raise DeliveryStationInUse(station=instance, delivery_count=delivery_count)
+
+        # The rule ``DeliveryStationSerializer.can_be_deleted`` reports, the
+        # hidden relations included as on every delete: anything but its own
+        # reseller (unlinked below) still pointing at it.
+        can_delete, _ = can_delete_instance(
+            instance, exclude_models=["Reseller"], include_hidden=True
+        )
+        if not can_delete:
+            raise DeliveryStationReferenced(
+                "DeliveryStation is still in use and cannot be deleted.",
+                details={"id": str(instance.pk)},
+            )
 
         contact = instance.contact
 
@@ -259,23 +283,33 @@ class ResellerAndDeliveryStationService:
             contact.delete()
 
     def _unlink_and_delete_reseller(self, instance: Reseller) -> None:
-        """Unlink from delivery station, delete reseller, and clean up orphaned contact."""
-        try:
-            delivery_station = DeliveryStation.objects.get(contact=instance.contact)
+        """Delete the (locked) reseller row and its contact, unless a delivery
+        station shares that contact: the station keeps it and drops the roles
+        it mirrored.
+
+        Refused while anything points at the row — the rule
+        ``ResellerSerializer.can_be_deleted`` reports, the hidden relations
+        included as on every delete — so a supplier with purchases or
+        certificates on record is not deleted from under them, and a reseller
+        its station links to stays (the station's own reseller checkboxes
+        unlink it). An erasure request's audit row outlives the reseller.
+        """
+        can_delete, _ = can_delete_instance(
+            instance, exclude_models=["DeletionRequest"], include_hidden=True
+        )
+        if not can_delete:
+            raise ResellerInUse(
+                "Reseller is still in use and cannot be deleted.",
+                details={"id": str(instance.pk)},
+            )
+        contact = instance.contact
+        delivery_station = DeliveryStation.objects.filter(contact=contact).first()
+        if delivery_station is not None:
             delivery_station.is_also_reseller = False
             delivery_station.is_also_seller = False
-            delivery_station.linked_reseller = None
-            delivery_station.save(
-                update_fields=[
-                    "is_also_reseller",
-                    "is_also_seller",
-                    "linked_reseller",
-                ]
-            )
-            instance.delete()
-        except DeliveryStation.DoesNotExist:
-            contact = instance.contact
-            instance.delete()
+            delivery_station.save(update_fields=["is_also_reseller", "is_also_seller"])
+        instance.delete()
+        if delivery_station is None:
             contact.delete()
 
     def _create_contact_from_data(self, contact_data: dict[str, Any]) -> ContactEntity:

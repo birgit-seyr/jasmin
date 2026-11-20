@@ -66,13 +66,10 @@ class SharesDeliveryDayListSerializer(serializers.ListSerializer):
 
     def _compute_bulk(self, instances: list) -> None:
         pks = [obj.pk for obj in instances]
-        # A SharesDeliveryDay's own delivery-station-day children cascade away
-        # with it, so that relation doesn't block deletion. The per-instance
-        # fallback further down excludes the same relation.
         deletable, failed = bulk_deletable_pks(
             SharesDeliveryDay,
             pks,
-            exclude_models=["DeliveryStationDay"],
+            exclude_models=list(getattr(self.child, "deletable_exclude", ())),
         )
         self._bulk_failed = failed
         if not failed:
@@ -89,6 +86,9 @@ class SharesDeliveryDayListSerializer(serializers.ListSerializer):
 
 
 class SharesDeliveryDaySerializer(serializers.ModelSerializer):
+    # The day's own station days go with it: neither the flag nor the delete's
+    # own check counts them (the delete checks what points at them instead).
+    deletable_exclude = ("DeliveryStationDay",)
     can_be_deleted = serializers.SerializerMethodField()
     delivery_stations = serializers.SerializerMethodField()
     used_tours = _UsedToursField(
@@ -132,7 +132,9 @@ class SharesDeliveryDaySerializer(serializers.ModelSerializer):
                 and obj.pk not in parent._subscription_in_use_day_ids
             )
 
-        can_delete, _ = can_delete_instance(obj, exclude_models=["DeliveryStationDay"])
+        can_delete, _ = can_delete_instance(
+            obj, exclude_models=list(self.deletable_exclude)
+        )
         if not can_delete:
             return False
 

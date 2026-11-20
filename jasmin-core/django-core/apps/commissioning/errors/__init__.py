@@ -15,15 +15,22 @@ from core.errors import InvalidQueryParam
 from .deletion import (
     CrateInUse,
     DeliveryStationDayInUse,
+    DeliveryStationDayReferenced,
     DeliveryStationInUse,
+    DeliveryStationReferenced,
     MarketArticleInUse,
     MarketProductGroupInUse,
+    MemberInUse,
+    OfferGroupInUse,
     OrdersDeliveryDayInUse,
     PlotInUse,
+    ResellerInUse,
     ScaleTaxCodeInUse,
     ShareArticleInUse,
     SharesDeliveryDayInUse,
+    SharesDeliveryDayReferenced,
     ShareTypeInUse,
+    ShareTypeVariationInUse,
     StorageInUse,
 )
 from .delivery import (
@@ -68,6 +75,11 @@ from .generic import (
     InvalidUploadedDocument,
     PastDayAdditionalAmount,
     PastWeekError,
+)
+from .labels import (
+    LabelElementInvalid,
+    LabelElementOutside,
+    LabelSheetTooLarge,
 )
 from .markets import ScaleTaxCodeMissing, ScaleUnitUnsupported
 from .members import (
@@ -208,6 +220,7 @@ from .subscriptions import (
     CoopShareTransferReversalGiverInactive,
     CoopShareTransferSameMember,
     MemberConfirmedImmutable,
+    MemberRejectedKept,
     NoSundayRemainsInTerm,
     OpenEndedSubscriptionNotAllowed,
     OptinDeadlinePassed,
@@ -414,6 +427,7 @@ __all__ = [
     "SubscriptionEndsAfterMemberExit",
     "SubscriptionConfirmedImmutable",
     "MemberConfirmedImmutable",
+    "MemberRejectedKept",
     "CoopShareConfirmedImmutable",
     "CoopShareConfirmedFieldsLocked",
     "CoopShareNotPending",
@@ -486,6 +500,16 @@ __all__ = [
     "ScaleUnitUnsupported",
     "OrdersDeliveryDayInUse",
     "DeliveryStationInUse",
+    "DeliveryStationReferenced",
     "DeliveryStationDayInUse",
+    "DeliveryStationDayReferenced",
     "SharesDeliveryDayInUse",
+    "SharesDeliveryDayReferenced",
+    "ShareTypeVariationInUse",
+    "OfferGroupInUse",
+    "ResellerInUse",
+    "MemberInUse",
+    "LabelElementInvalid",
+    "LabelElementOutside",
+    "LabelSheetTooLarge",
 ]

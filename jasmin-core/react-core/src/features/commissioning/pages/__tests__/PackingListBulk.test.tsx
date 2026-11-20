@@ -248,6 +248,7 @@ const DAY = "common.delivery_day";
 const STATION = "placeholder.delivery_station_selector";
 const WEEK = "common.week";
 const DOWNLOAD_LIST = /download\.packing_list_bulk$/;
+const DOWNLOAD_DAY = /download\.packing_lists_bulk_day$/;
 
 /** The label a selector shows for its current value. */
 function selectedIn(name: string): string {
@@ -320,7 +321,13 @@ function pending<T>() {
   return { promise, answer, fail };
 }
 
-const lastListRequest = () => api.bulkList.mock.lastCall?.[0];
+/** The last request for one station's list; the day's lists come without a
+ *  station. */
+const lastListRequest = () =>
+  api.bulkList.mock.calls
+    .map(([params]) => params as ListParams)
+    .filter((params) => params.delivery_station !== undefined)
+    .pop();
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -355,12 +362,20 @@ beforeEach(() => {
       farm.shares.filter((row) => row.delivery_week === params.delivery_week),
     );
   api.shareArticles.mockReset().mockResolvedValue([]);
+  // Without a station, every station's rows of the day, by station name.
   api.bulkList
     .mockReset()
-    .mockImplementation(async (params: ListParams) => [
-      ...(farm.bulkRows[dayAndStation(params.day_number, params.delivery_station)] ??
-        []),
-    ]);
+    .mockImplementation(async (params: ListParams) =>
+      params.delivery_station === undefined
+        ? Object.entries(farm.bulkRows)
+            .filter(([key]) => key.startsWith(`${params.day_number}/`))
+            .flatMap(([, rows]) => rows)
+            .sort((a, b) => a.delivery_station_name.localeCompare(b.delivery_station_name))
+        : [
+            ...(farm.bulkRows[dayAndStation(params.day_number, params.delivery_station)] ??
+              []),
+          ],
+    );
 });
 
 afterEach(() => {
@@ -661,25 +676,73 @@ describe("PackingListBulk downloads", () => {
       year: 2026,
       week: 41,
       dayName: "COMMON.WEEKDAY_TUESDAY",
-      deliveryStationName: "Farm shop",
       showSize: false,
     });
-    expect(props.data).toEqual([
-      expect.objectContaining({
-        share_article_name: "Carrots",
-        total_amount: 12,
-        total_amount_text: "12,00",
-        unit_label: "commissioning.units.kg",
-        note: "Wash before packing",
-      }),
-      expect.objectContaining({
-        share_article_name: "Lettuce",
-        total_amount: 40,
-        total_amount_text: "40,0",
-        unit_label: "commissioning.units.pcs",
-        size_label: "commissioning.large",
-      }),
+    expect(props.pages).toEqual([
+      {
+        deliveryStationName: "Farm shop",
+        data: [
+          expect.objectContaining({
+            share_article_name: "Carrots",
+            total_amount: 12,
+            total_amount_text: "12,00",
+            unit_label: "commissioning.units.kg",
+            note: "Wash before packing",
+          }),
+          expect.objectContaining({
+            share_article_name: "Lettuce",
+            total_amount: 40,
+            total_amount_text: "40,0",
+            unit_label: "commissioning.units.pcs",
+            size_label: "commissioning.large",
+          }),
+        ],
+      },
     ]);
+  });
+
+  it("prints every station's list of the day in one PDF, a page per station", async () => {
+    renderPage();
+    await screen.findByText("Carrots");
+
+    await userEvent.click(screen.getByRole("button", { name: DOWNLOAD_DAY }));
+
+    await waitFor(() =>
+      expect(printed.files).toEqual([
+        `commissioning.packing_list_bulk_${weekAndDay}_commissioning.all_day.pdf`,
+      ]),
+    );
+    const [{ template, props }] = printed.documents;
+    expect(template).toBe("PackingListBulkPDF");
+    expect(props).toMatchObject({ week: 41, dayName: "COMMON.WEEKDAY_TUESDAY" });
+    expect(props.pages).toEqual([
+      {
+        deliveryStationName: "Farm shop",
+        data: [
+          expect.objectContaining({ share_article_name: "Carrots", total_amount_text: "12,00" }),
+          expect.objectContaining({ share_article_name: "Lettuce" }),
+        ],
+      },
+      {
+        deliveryStationName: "Market",
+        data: [expect.objectContaining({ share_article_name: "Potatoes" })],
+      },
+    ]);
+  });
+
+  it("leaves a station without loose amounts out of the day's PDF", async () => {
+    delete farm.bulkRows[dayAndStation(TUESDAY, MARKET.id)];
+    renderPage();
+    await screen.findByText("Carrots");
+
+    await userEvent.click(screen.getByRole("button", { name: DOWNLOAD_DAY }));
+
+    await waitFor(() => expect(printed.documents).toHaveLength(1));
+    expect(
+      (printed.documents[0].props.pages as { deliveryStationName: string }[]).map(
+        (page) => page.deliveryStationName,
+      ),
+    ).toEqual(["Farm shop"]);
   });
 
   it("shows and prints a weight with decimals in the tenant's number format", async () => {
@@ -693,12 +756,12 @@ describe("PackingListBulk downloads", () => {
     await userEvent.click(screen.getByRole("button", { name: DOWNLOAD_LIST }));
 
     await waitFor(() => expect(printed.documents).toHaveLength(1));
-    expect(printed.documents[0].props.data).toEqual([
-      expect.objectContaining({ total_amount_text: "4,50" }),
-    ]);
+    expect(
+      (printed.documents[0].props.pages as { data: unknown[] }[])[0].data,
+    ).toEqual([expect.objectContaining({ total_amount_text: "4,50" })]);
   });
 
-  it("says there is nothing to pack and keeps the download disabled", async () => {
+  it("says there is nothing to pack and keeps both downloads disabled", async () => {
     farm.bulkRows = {};
     renderPage();
 
@@ -707,14 +770,16 @@ describe("PackingListBulk downloads", () => {
     expect(screen.getByText("table.no_data")).toBeInTheDocument();
     expect(bodyRows()).toHaveLength(0);
     expect(screen.getByRole("button", { name: DOWNLOAD_LIST })).toBeDisabled();
+    expect(screen.getByRole("button", { name: DOWNLOAD_DAY })).toBeDisabled();
   });
 
-  it("offers the packing list as its only download", async () => {
+  it("offers the station's list and the day's lists as its downloads", async () => {
     renderPage();
     await screen.findByText("Carrots");
 
     expect(screen.getAllByRole("button", { name: /download\./ })).toEqual([
       screen.getByRole("button", { name: DOWNLOAD_LIST }),
+      screen.getByRole("button", { name: DOWNLOAD_DAY }),
     ]);
   });
 });

@@ -62,7 +62,7 @@ export const carrotRow: TableRecord = {
   "day_day-tue_variation_var-s_station_st-hof": 0.5,
   "day_day-tue_variation_var-s_station_st-markt": 0,
   "day_day-tue_planned_amount": 12,
-  "day_day-tue_harvested": 0,
+  "day_day-tue_available_stock": 0,
 };
 
 /** Subscribers per (day, variation[, tour|station]) cell. */

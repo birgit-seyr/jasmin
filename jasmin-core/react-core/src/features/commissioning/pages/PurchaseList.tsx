@@ -503,6 +503,8 @@ export default function PurchaseList() {
       disabled: true,
       hideInModal: true,
       hidden: isMobile,
+      render: (_: unknown, record: Record<string, unknown>) =>
+        record.computed_theoretical_purchase_in_pu_text as ReactNode,
     },
     {
       title: (

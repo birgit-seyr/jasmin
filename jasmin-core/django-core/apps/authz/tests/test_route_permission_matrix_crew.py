@@ -213,6 +213,12 @@ CREW_MATRIX: list[tuple[str, str, str, str]] = [
     ("/api/commissioning/organic_certificates/", "post", "staff", "deny"),
     ("/api/commissioning/organic_certificates/", "post", "gardener", "deny"),
     ("/api/commissioning/organic_certificates/", "post", "office", "4xx"),
+    # Written by an admin only: the office prints from it but doesn't edit it.
+    ("/api/commissioning/label_templates/", "get", "staff", "ok"),
+    ("/api/commissioning/label_templates/", "get", "gardener", "ok"),
+    ("/api/commissioning/label_templates/", "post", "staff", "deny"),
+    ("/api/commissioning/label_templates/", "post", "gardener", "deny"),
+    ("/api/commissioning/label_templates/", "post", "office", "deny"),
     # ------- Resellers (StaffOrCustomer read, OfficeOrCustomer write) -------
     ("/api/commissioning/resellers/", "get", "staff", "ok"),
     ("/api/commissioning/resellers/", "get", "gardener", "ok"),

@@ -92,6 +92,12 @@
   --color-border-soft: #e0e0e0;
   /* A table row that sums up the rows above it. */
   --color-subtotal-bg: #daefc8;
+  /* The label in the label editor: a light green that stands out from the
+     page, with dark ink as printed. */
+  --color-label-paper: #eaf5e1;
+  --color-label-ink: #1f1f1f;
+  --color-label-muted: #5f6b5a;
+  --color-label-invalid-bg: #fde2df;
 
   /* The app shell's brand line: the header and content borders and the
      navigation menu's hover and selected states. */
@@ -206,6 +212,11 @@
   --color-info-text: #65a9f3;
   --color-border-soft: #424242;
   --color-subtotal-bg: #203d18;
+  /* The label stays light in dark mode, a little dimmed. */
+  --color-label-paper: #d7e8cb;
+  --color-label-ink: #1f1f1f;
+  --color-label-muted: #4f5a4b;
+  --color-label-invalid-bg: #f4c9c4;
 
   /* Brand line (dark): the light-mode green is too dark to read on the dark
      base, so it follows the dark primary. */

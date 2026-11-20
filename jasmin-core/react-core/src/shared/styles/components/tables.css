@@ -378,6 +378,17 @@
   font-size: 0.85em !important;
 }
 
+/* A planning day's available stock: enough for its planned total, or short
+   of it by the difference it shows. */
+.available-stock-enough {
+  color: var(--color-success-text);
+}
+
+.available-stock-short {
+  color: var(--color-error-text);
+  font-weight: 600;
+}
+
 /* A harvest share planning amount cell. Highlighted while it is empty but a
    forecast assigns its variation. */
 .planning-variation-cell {

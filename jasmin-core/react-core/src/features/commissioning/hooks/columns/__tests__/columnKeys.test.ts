@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 import {
   dayAmountKey,
   dayCellKeys,
+  dayAvailableStockKey,
   dayCellTier,
-  dayHarvestedKey,
   dayPlannedAmountKey,
   dayVariationKey,
   dayVariationTier,
@@ -65,9 +65,9 @@ describe("dayVariationKey", () => {
 });
 
 describe("trailer + transposed + day-less keys", () => {
-  it("dayPlannedAmountKey / dayHarvestedKey", () => {
+  it("dayPlannedAmountKey / dayAvailableStockKey", () => {
     expect(dayPlannedAmountKey(DAY)).toBe(`day_${DAY}_planned_amount`);
-    expect(dayHarvestedKey(DAY)).toBe(`day_${DAY}_harvested`);
+    expect(dayAvailableStockKey(DAY)).toBe(`day_${DAY}_available_stock`);
   });
 
   it("dayAmountKey (AmountShareTypeVariations, no variation segment)", () => {
@@ -138,7 +138,7 @@ describe("parseDayVariationKey", () => {
 
   it("rejects non-variation keys (trailers, day-less, unrelated)", () => {
     expect(parseDayVariationKey(dayPlannedAmountKey(DAY))).toBeNull();
-    expect(parseDayVariationKey(dayHarvestedKey(DAY))).toBeNull();
+    expect(parseDayVariationKey(dayAvailableStockKey(DAY))).toBeNull();
     expect(parseDayVariationKey(variationColumnKey(VARIATION))).toBeNull();
     expect(parseDayVariationKey("share_article")).toBeNull();
     expect(parseDayVariationKey("day_only_no_variation")).toBeNull();

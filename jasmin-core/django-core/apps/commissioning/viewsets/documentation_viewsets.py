@@ -340,9 +340,9 @@ class PlotViewSet(
 
 def _with_links(forecast: Forecast) -> Forecast:
     """*forecast* with its variation and offer-group links loaded, for the
-    response: the serializer renders them and checks them for deletability,
-    which would otherwise query each relation twice. A prefetch the update
-    kept (its links unchanged) is reused."""
+    response: the serializer renders them as flags, which would otherwise
+    query each relation. A prefetch the update kept (its links unchanged) is
+    reused."""
     prefetch_related_objects(
         [forecast], "forecastsharetypevariation_set", "forecastoffergroup_set"
     )

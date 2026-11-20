@@ -1,8 +1,8 @@
 /**
  * useDeliveryDayColumns: the planning grid's (delivery day × variation)
  * columns in the day-major and the "days together" layout, per planning mode
- * (basic, tours, stations), their amount cells and forecast highlight, and the
- * per-day planned and harvested totals.
+ * (basic, tours, stations), their amount cells and forecast highlight, the
+ * per-day planned total and the stock available against it.
  */
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -75,14 +75,14 @@ describe("useDeliveryDayColumns day by day", () => {
     expect(columns.every((c) => c.className === "column-group-start")).toBe(true);
   });
 
-  it("gives each day a column per variation, then its planned and harvested totals", () => {
+  it("gives each day a column per variation, then its planned total and available stock", () => {
     const [tue] = build();
 
     expect(columnIds(tue.children ?? [])).toEqual([
       "day_day-tue_variation_var-s",
       "day_day-tue_variation_var-l",
       "day_day-tue_planned_amount",
-      "day_day-tue_harvested",
+      "day_day-tue_available_stock",
     ]);
   });
 
@@ -113,7 +113,7 @@ describe("useDeliveryDayColumns day by day", () => {
     expect(build({ shareDeliveryDays: [] })).toEqual([]);
     expect(
       columnIds(build({ shareTypeVariations: [] })[0].children ?? []),
-    ).toEqual(["day_day-tue_planned_amount", "day_day-tue_harvested"]);
+    ).toEqual(["day_day-tue_planned_amount", "day_day-tue_available_stock"]);
   });
 });
 
@@ -357,23 +357,23 @@ describe("useDeliveryDayColumns amount cells", () => {
 describe("useDeliveryDayColumns day totals", () => {
   const planned = (overrides: Partial<Params> = {}) =>
     findColumn(build(overrides), "day_day-tue_planned_amount");
-  const harvested = (overrides: Partial<Params> = {}) =>
-    findColumn(build(overrides), "day_day-tue_harvested");
+  const available = (overrides: Partial<Params> = {}) =>
+    findColumn(build(overrides), "day_day-tue_available_stock");
 
   it("locks both totals and titles them", () => {
     expect(isDisabled(planned(), carrotRow)).toBe(true);
-    expect(isDisabled(harvested(), carrotRow)).toBe(true);
+    expect(isDisabled(available(), carrotRow)).toBe(true);
     expect(titleText(planned().title)).toBe("commissioning.total_planned_amount");
-    expect(titleText(harvested().title)).toBe(
+    expect(titleText(available().title)).toBe(
       "commissioning.available_amount_harvest",
     );
   });
 
   it("hides both totals unless the detailed columns are on", () => {
     expect(planned().hidden).toBe(false);
-    expect(harvested().hidden).toBe(false);
+    expect(available().hidden).toBe(false);
     expect(planned({ showDetailedColumns: false }).hidden).toBe(true);
-    expect(harvested({ showDetailedColumns: false }).hidden).toBe(true);
+    expect(available({ showDetailedColumns: false }).hidden).toBe(true);
   });
 
   it("totals the day live from the per-share amounts times the subscribers", () => {
@@ -451,12 +451,71 @@ describe("useDeliveryDayColumns day totals", () => {
     ).toBe("3,00");
   });
 
-  it("shows the harvested amount as the row carries it", () => {
-    const column = harvested();
+  it("shows the stock in green where it covers the day's planned total", () => {
+    // 13 × 0.50 + 2 × 0.75 = 8 kg planned.
+    const column = available({ shareTypeVariationAmountsSummary: subscriberCounts });
 
-    const cell = renderCell(column, "4,5 kg", carrotRow);
-    expect(cell.textContent).toBe("4,5 kg");
-    expect(cell.firstElementChild).toHaveClass("read-only-amounts-harvest");
+    const cell = renderCell(column, 10, carrotRow);
+    expect(cell.textContent).toBe("10,00");
+    expect(cell.firstElementChild).toHaveClass("available-stock-enough");
+    expect(renderCell(column, 8, carrotRow).firstElementChild).toHaveClass(
+      "available-stock-enough",
+    );
+  });
+
+  it("shows the stock in red with the shortfall where it falls short", () => {
+    const shortfall = vi.spyOn(translation, "t");
+    const column = available({ shareTypeVariationAmountsSummary: subscriberCounts });
+
+    const cell = renderCell(column, 5, carrotRow);
+    expect(cell.firstElementChild).toHaveClass("available-stock-short");
+    expect(cell.textContent).toBe("5,00 commissioning.available_stock_shortfall");
+    expect(shortfall).toHaveBeenCalledWith("commissioning.available_stock_shortfall", {
+      diff: "3,00",
+    });
+    // Short of the planned total, an empty stock still shows its 0.
+    expect(cellText(column, 0, carrotRow)).toBe(
+      "0,00 commissioning.available_stock_shortfall",
+    );
+    shortfall.mockRestore();
+  });
+
+  it("counts a shortfall smaller than the unit shows as enough", () => {
+    const column = available({ shareTypeVariationAmountsSummary: subscriberCounts });
+
+    expect(
+      renderCell(column, 7.996, carrotRow).firstElementChild,
+    ).toHaveClass("available-stock-enough");
+    // 13 × 2 = 26 pieces planned, shown at one decimal.
+    const pieces = { key: "r", unit: "PCS", [cellKey("var-s")]: 2 };
+    expect(renderCell(column, 25.97, pieces).firstElementChild).toHaveClass(
+      "available-stock-enough",
+    );
+    expect(renderCell(column, 25.9, pieces).firstElementChild).toHaveClass(
+      "available-stock-short",
+    );
+  });
+
+  it("shows the stock without a colour where nothing is planned for the day", () => {
+    const column = available({ shareTypeVariationAmountsSummary: subscriberCounts });
+    const nothingPlanned = { key: "r", unit: "KG" };
+
+    const cell = renderCell(column, 4, nothingPlanned);
+    expect(cell.textContent).toBe("4,00");
+    expect(cell.firstElementChild).not.toHaveClass("available-stock-enough");
+    expect(cell.firstElementChild).not.toHaveClass("available-stock-short");
+    expect(cellText(column, 0, nothingPlanned)).toBe("");
+  });
+
+  it("compares with the saved planned total without subscriber counts", () => {
+    // The carrot row saves 12 kg planned for Tuesday.
+    expect(
+      renderCell(available(), 10, carrotRow).firstElementChild,
+    ).toHaveClass("available-stock-short");
+  });
+
+  it("shows nothing for a row without a stock reading", () => {
+    expect(cellText(available(), undefined, carrotRow)).toBe("");
   });
 
   it("gives every day its own totals", () => {

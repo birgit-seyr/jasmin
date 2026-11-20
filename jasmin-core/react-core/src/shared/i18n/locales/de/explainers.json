@@ -1,5 +1,5 @@
 {
-  "share_days": "Im Fall von Feiertagen können hier die Liefertage, Packtage etc. geändert werden. Die Änderungen betreffen dann nur die ausgewählte Woche. Wenn der Liefertag z.B. Dienstag ist, der Erntetag Freitag, einfach so eintragen. Dass Freitag in der Vorwoche ist, erkennt das Programm automatisch.",
+  "share_days": "Im Fall von Feiertagen können hier die Arbeitstage eines Liefertags geändert werden, etwa der Ernte- oder Packtag. Die Änderungen betreffen dann nur die ausgewählte Woche. Wenn der Liefertag z.B. Dienstag ist, der Erntetag Freitag, einfach so eintragen. Dass Freitag in der Vorwoche ist, erkennt das Programm automatisch.",
   "planning_harvest_shares": "",
   "forecast": "",
   "currentstock": "Negative errechnete Mengen werden hier noch angezeigt, auch wenn das natürlich in der Praxis keinen Sinn macht, zur Kontrolle kann es aber eine hilfreiche Info sein.",
@@ -64,6 +64,8 @@
   "configuration_consents": "Hier werden die Zustimmungstexte konfiguriert, die Mitglieder bei der Registrierung akzeptieren müssen.",
   "configuration_time_management": "Hier werden Liefertage, Bestelltage und andere zeitliche Abläufe konfiguriert.",
   "packing_list_bulk": "Bulk-Ansicht der Kommissionierliste für mehrere Anteilstypen / Liefertage.",
+  "labels_resellers": "Jede Bestellzeile bekommt ein Etikett je VPE, eine angebrochene VPE ein weiteres mit der restlichen Menge. Die Anzahl lässt sich je Zeile ändern. Ohne Auswahl werden alle Zeilen des Liefertags gedruckt. Das Layout der Etiketten und ob sie auf einem Etikettendrucker oder auf A4-Bögen gedruckt werden, stellt ein Admin unter Konfiguration → Etikettenvorlage ein.",
+  "labels_editor": "Die Felder werden beim Druck mit den Daten jeder Bestellzeile gefüllt; hier stehen Beispieldaten. „Bio“ vor dem Artikel, das Bio-Logo und die Öko-Kontrollnummer erscheinen nur bei Bio-Artikeln (die Kontrollnummer auch bei Umstellungsware) und nur, wenn für den Hof eine Kontrollnummer hinterlegt ist. Ein Testdruck zeigt, ob das Etikett auf dem Drucker oder Bogen richtig sitzt.",
   "abos_emails": "Hier lassen sich E-Mails an Abonnent:innen versenden — z. B. gefiltert nach Anteilsvariante, Lieferstation oder Zeitraum.",
   "list_bed_types": "Beet-Typen mit ihren Maßen. Sie beschreiben, wie breit und lang ein Beet ist.",
   "list_break_families": "Pflanzenfamilien und ihre Fruchtfolge-Pause in Jahren – wie lange dieselbe Familie nicht auf dieselbe Fläche darf.",

@@ -1,6 +1,5 @@
 import { Alert, Button, Card, Spin } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,6 +15,7 @@ import { PastWarningMessage } from "@shared/ui";
 import { ReadOnlyReportTable } from "@shared/tables";
 import { ResellerOrderMobileCards } from "@features/commissioning/components/mobileCards";
 import { CommissioningListResellersPDFGenerator } from "@features/commissioning/pdfs";
+import { openingDeliveryDay } from "@features/commissioning/utils/openingDeliveryDay";
 import { orderLineArticleLabel } from "@features/commissioning/utils/orderLineLabel";
 import { DaySelector, WeekSelector } from "@shared/selectors";
 import { ExplainerText, MobileStack } from "@shared/ui";
@@ -32,21 +32,7 @@ import {
   formatWeekLabel,
   generatePdfFilename,
   getDayName,
-  nextIsoWeek,
 } from "@shared/utils";
-
-/**
- * The delivery day the page opens on: today from Monday to Thursday, and next
- * week's Monday from Friday on, when this week's deliveries are packed.
- */
-function openingDeliveryDay(): { year: number; week: number; day: number } {
-  const today = dayjs();
-  const year = today.isoWeekYear();
-  const week = today.isoWeek();
-  const weekday = today.isoWeekday();
-  if (weekday < 5) return { year, week, day: weekday - 1 };
-  return { ...nextIsoWeek(year, week), day: 0 };
-}
 
 // Derived straight from the generated client — the ``commissioning_lists_resellers``
 // endpoint is fully serializer-typed, so there's no parallel interface to keep

@@ -262,6 +262,16 @@ export default function ConfigurationSidebar({
                 ),
               },
               {
+                key: "configuration-labels",
+                requireRole: "isAdmin",
+                icon: <SettingOutlined />,
+                label: (
+                  <Link to="/configuration/labels">
+                    {t("commissioning.labels.template_title")}
+                  </Link>
+                ),
+              },
+              {
                 key: "configuration-email-templates-resellers",
                 requireRole: "isAdmin",
                 icon: <SettingOutlined />,

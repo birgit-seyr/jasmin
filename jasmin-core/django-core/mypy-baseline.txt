@@ -2,7 +2,7 @@
 # Managed by scripts/mypy_baseline.py; do not hand-edit.
 # Regenerate after fixing findings:
 #     poetry run python scripts/mypy_baseline.py freeze
-# 296 finding(s).
+# 293 finding(s).
 
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
 apps/accounts/services/auth_service.py: Argument 1 to "RefreshToken" has incompatible type "str"; expected "Token | None"  [arg-type]
@@ -177,9 +177,6 @@ apps/commissioning/services/theoretical_objects.py: Argument 1 to "get" of "dict
 apps/commissioning/services/theoretical_objects.py: Set comprehension has incompatible type Set[str | None]; expected Set[str]  [misc]
 apps/commissioning/services/variation_capacity_service.py: Need type annotation for "paused_weeks"  [var-annotated]
 apps/commissioning/utils/composite_id_utils.py: "type[Model]" has no attribute "objects"  [attr-defined]
-apps/commissioning/utils/deletion_utils.py: Argument 2 to "getattr" has incompatible type "str | None"; expected "str"  [arg-type]
-apps/commissioning/utils/deletion_utils.py: Item "Field[Any, Any]" of "Field[Any, Any] | ForeignObjectRel" has no attribute "field"  [union-attr]
-apps/commissioning/utils/deletion_utils.py: Item "None" of "type[Model] | None" has no attribute "_base_manager"  [union-attr]
 apps/commissioning/utils/delivery_utils.py: Dict entry 0 has incompatible type "str": "SharesDeliveryDay | None"; expected "str": "int"  [dict-item]
 apps/commissioning/utils/lookup.py: "type[M]" has no attribute "DoesNotExist"  [attr-defined]
 apps/commissioning/utils/lookup.py: "type[M]" has no attribute "objects"  [attr-defined]
@@ -238,9 +235,9 @@ apps/commissioning/viewsets/documentation_viewsets.py: Argument 2 to "add_additi
 apps/commissioning/viewsets/documentation_viewsets.py: Argument 2 to "update_additional_theoretical_amount" of "DocumentationSummaryService" has incompatible type "str"; expected "int"  [arg-type]
 apps/commissioning/viewsets/documentation_viewsets.py: Argument 3 to "update_additional_theoretical_amount" of "DocumentationSummaryService" has incompatible type "str"; expected "Literal['harvest', 'purchase', 'washamount', 'cleanamount']"  [arg-type]
 apps/commissioning/viewsets/documentation_viewsets.py: Incompatible return value type (got "StreamingHttpResponse", expected "HttpResponse")  [return-value]
+apps/commissioning/viewsets/member_loans_viewsets.py: Argument 1 of "perform_create" is incompatible with supertype "rest_framework.mixins.CreateModelMixin"; supertype defines the argument type as "BaseSerializer[Any]"  [override]
 apps/commissioning/viewsets/members_viewsets.py: "RefetchForResponseMixin" has no attribute "get_queryset"  [attr-defined]
 apps/commissioning/viewsets/members_viewsets.py: Argument "effective_at" to "cancel_subscription" of "SubscriptionService" has incompatible type "date | None"; expected "date"  [arg-type]
-apps/commissioning/viewsets/members_viewsets.py: Argument 1 of "perform_create" is incompatible with supertype "rest_framework.mixins.CreateModelMixin"; supertype defines the argument type as "BaseSerializer[Any]"  [override]
 apps/commissioning/viewsets/members_viewsets.py: Attribute "active_subscriptions_count" already defined on "apps.commissioning.models.members.Member"  [no-redef]
 apps/commissioning/viewsets/resellers_viewsets.py: Argument "order_content_id" to "update_order_content" of "OrderContentService" has incompatible type "Any | None"; expected "str"  [arg-type]
 apps/commissioning/viewsets/resellers_viewsets.py: Argument 1 to "delete_order_content" of "OrderContentService" has incompatible type "Any | None"; expected "str"  [arg-type]

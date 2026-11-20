@@ -44,7 +44,7 @@ class PlotSerializer(DeletableMixin, serializers.ModelSerializer):
         fields = "__all__"
 
 
-class ForecastSerializer(NameFieldMixin, DeletableMixin, serializers.ModelSerializer):
+class ForecastSerializer(NameFieldMixin, serializers.ModelSerializer):
     NAME_FIELDS = ["share_article_name", "plot_name"]
 
     class Meta:

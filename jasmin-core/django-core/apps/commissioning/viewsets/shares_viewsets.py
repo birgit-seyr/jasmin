@@ -55,6 +55,7 @@ from ..errors import (
     ShareArticleNotFound,
     ShareTypeInUse,
     ShareTypeVariationGrossPriceInUse,
+    ShareTypeVariationInUse,
     ShareTypeVariationNotFound,
     VirtualComponentNotPhysical,
 )
@@ -311,7 +312,9 @@ class ShareTypeViewSet(
         return Response(serializer.data)
 
 
-class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
+class ShareTypeVariationViewSet(
+    CanBeDeletedDestroyMixin, RolePermissionsMixin, viewsets.ModelViewSet
+):
     read_permission = IsStaffOrMember
     write_permission = IsOffice
     # Public registration wizard lists variations (with prices + advisory
@@ -319,6 +322,7 @@ class ShareTypeVariationViewSet(RolePermissionsMixin, viewsets.ModelViewSet):
     # retrieve/write stay member/office-gated. Catalog fields only.
     public_read_actions = frozenset({"list"})
     serializer_class = ShareTypeVariationSerializer
+    not_deletable_error = ShareTypeVariationInUse
 
     @extend_schema(
         parameters=[

@@ -68,6 +68,7 @@ from .finalize_serializer import (
     BulkFinalizeShareContentResponseSerializer,
     BulkUnfinalizeResponseSerializer,
 )
+from .labels_serializer import LabelElementSerializer, LabelTemplateSerializer
 from .logs_serializer import (
     InventoryEntrySerializer,
     InventoryMetadataSerializer,

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any
 
@@ -80,6 +81,16 @@ class MovementSourceData:
 # ──────────────────────────────────────────────────────
 
 
+def allocatable_amount(stock_data: Mapping[str, Any]) -> Any | None:
+    """What one storage holds for the packing to draw on, from a stock
+    reading's row: its count where one was entered that day, else its
+    calculated stock; ``None`` when that is nothing or below."""
+    current_amount = stock_data.get("current_stock_amount")
+    if current_amount is None:
+        current_amount = stock_data.get("theoretical_current_stock", 0)
+    return current_amount if current_amount and current_amount > 0 else None
+
+
 def calculate_current_stock_for_allocation(
     share_article: ShareArticle,
     unit: str,
@@ -113,10 +124,8 @@ def calculate_current_stock_for_allocation(
     available_stocks: list[dict[str, Any]] = []
     for (share_article_id, s_unit, s_size, storage_id), stock_data in stock_map.items():
         if share_article_id == share_article.id and s_unit == unit and s_size == size:
-            current_amount = stock_data.get("current_stock_amount")
-            if current_amount is None:
-                current_amount = stock_data.get("theoretical_current_stock", 0)
-            if current_amount and current_amount > 0:
+            current_amount = allocatable_amount(stock_data)
+            if current_amount is not None:
                 available_stocks.append(
                     {
                         "storage_id": storage_id,

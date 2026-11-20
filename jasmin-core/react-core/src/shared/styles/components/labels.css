@@ -1,0 +1,137 @@
+/* ============================================================
+ * Labels: the resellers' label page and the label editor.
+ * ============================================================ */
+
+.labels-page__hint {
+  margin: 1em 0;
+}
+
+.labels-page__actions,
+.labels-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1em;
+}
+
+.labels-editor__actions {
+  margin-bottom: 1.5em;
+}
+
+.labels-page__start {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+/* The label may take the page's width; the cards around it keep to a
+   readable one. */
+.labels-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+.labels-editor > .ant-card {
+  max-width: 720px;
+}
+
+/* The space the label is measured against: real size where it fits. */
+.label-canvas-frame {
+  width: 100%;
+  min-width: 0;
+}
+
+.label-canvas-frame__scale {
+  margin: 0 0 0.5em;
+  color: var(--color-text-muted);
+}
+
+.labels-editor__hint {
+  color: var(--color-text-muted);
+}
+
+/* The label to scale: its size and the fields' places are set inline in px. */
+.label-canvas {
+  position: relative;
+  background: var(--color-label-paper);
+  color: var(--color-label-ink);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-shadow: 0 1px 4px var(--color-border-soft);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.label-canvas__element {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 2px;
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: inherit;
+  font-family: Roboto, sans-serif;
+  line-height: 1.2;
+  /* Wraps as the printed text does; what doesn't fit the box is cut off. */
+  overflow-wrap: anywhere;
+  cursor: move;
+}
+
+.label-canvas__element > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.label-canvas__element:focus-visible,
+.label-canvas__element--selected {
+  border: 1px solid var(--color-primary);
+  outline: 2px solid var(--color-primary-light);
+}
+
+/* Reaching beyond the label, or a text or QR code without content: the save
+   would be refused. */
+.label-canvas__element--invalid {
+  border-color: var(--color-error);
+  background: var(--color-label-invalid-bg);
+}
+
+.label-canvas__placeholder {
+  width: 100%;
+  color: var(--color-label-muted);
+  font-size: 11px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.label-canvas__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  cursor: nwse-resize;
+}
+
+.label-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  max-width: 640px;
+}
+
+.label-palette__hint {
+  width: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.label-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 1em;
+}

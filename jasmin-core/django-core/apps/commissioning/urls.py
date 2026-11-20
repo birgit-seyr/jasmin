@@ -80,6 +80,7 @@ from .viewsets import (
     HarvestViewSet,
     InvoiceResellerContentViewSet,
     InvoiceResellerViewSet,
+    LabelTemplateViewSet,
     MarketArticleViewSet,
     MarketPriceViewSet,
     MarketProductGroupViewSet,
@@ -269,6 +270,7 @@ router.register(
     OrganicCertificateViewSet,
     basename="organic_certificates",
 )
+router.register(r"label_templates", LabelTemplateViewSet, basename="label_template")
 router.register(
     r"delivery_stations", DeliveryStationViewSet, basename="delivery_station"
 )

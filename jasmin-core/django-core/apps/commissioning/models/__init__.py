@@ -48,6 +48,7 @@ from .imports import (
     ExternalShareDemand,
     ShareImportBatch,
 )
+from .labels import LabelTemplate
 from .logs import OfferSending, ReminderSending
 from .markets import (
     Market,

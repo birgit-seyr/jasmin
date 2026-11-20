@@ -241,6 +241,16 @@ export default function CommissioningSidebar({
                 ),
               },
               {
+                key: "commissioning-labels-resellers",
+
+                requireRole: "isOffice",
+                label: (
+                  <Link to="/commissioning/labels-resellers">
+                    {t("commissioning.labels.page_title")}
+                  </Link>
+                ),
+              },
+              {
                 key: "commissioning-delivery-notes",
 
                 requireRole: "isOffice",
@@ -336,9 +346,7 @@ export default function CommissioningSidebar({
                 requireRole: "isStaff",
                 label: (
                   <Link to="/commissioning/packing-list-bulk">
-                    {packingMode === "MIXED"
-                      ? t("commissioning.packing_list_bulk")
-                      : t("commissioning.packing_list")}
+                    {t("commissioning.packing_list_bulk")}
                   </Link>
                 ),
               },

@@ -15,6 +15,7 @@ from ..models import (
     OrderContent,
     OrganicCertificate,
     Reseller,
+    ShareArticle,
 )
 from ..utils.iso_week_utils import date_from_order
 from .crates_serializer import CrateItemSummarySerializer
@@ -1145,6 +1146,9 @@ class CommissioningListResellersOrderContent(serializers.Serializer):
     # Null when the article can't be resolved (see _build_content_entry).
     share_article_id = serializers.CharField(allow_null=True)
     share_article_name = serializers.CharField()
+    organic_status = serializers.ChoiceField(
+        choices=ShareArticle.OrganicStatus.choices, allow_null=True
+    )
     amount = serializers.FloatField()
     amount_per_pu = serializers.FloatField()
     # Sourced from OrderContent.size / .unit (CharField + choices, size
@@ -1166,6 +1170,8 @@ class CommissioningListResellersEntry(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
     address = serializers.CharField(allow_blank=True)
+    zip_code = serializers.CharField(allow_blank=True)
+    city = serializers.CharField(allow_blank=True)
     order = CommissioningListResellersOrder()
 
 

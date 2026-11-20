@@ -33,6 +33,9 @@ const ConfigurationApp = lazy(
 const ConfigurationResellerDocuments = lazy(
   () => import("@features/configuration/pages/ConfigurationResellerDocuments"),
 );
+const ConfigurationLabels = lazy(
+  () => import("@features/configuration/pages/ConfigurationLabels"),
+);
 const ConfigurationEmail = lazy(
   () => import("@features/configuration/pages/ConfigurationEmail"),
 );
@@ -111,6 +114,14 @@ export const configurationRoutes: AppRoute[] = [
     element: (
       <RequireRole flag="isAdmin">
         <ConfigurationResellerDocuments />
+      </RequireRole>
+    ),
+  },
+  {
+    path: "/configuration/labels",
+    element: (
+      <RequireRole flag="isAdmin">
+        <ConfigurationLabels />
       </RequireRole>
     ),
   },

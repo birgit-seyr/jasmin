@@ -967,8 +967,7 @@ class TestShareArticleNetPriceViewSet:
 
     def test_active_price_not_deletable_when_article_in_use(self, api_client, tenant):
         # An ACTIVE price becomes non-deletable once the article is in use — here
-        # via a member-share ShareContent, a HIDDEN ``related_name="+"`` relation
-        # that ``can_delete_instance`` misses but ``parent_in_use`` catches.
+        # via a member-share ShareContent, a HIDDEN ``related_name="+"`` relation.
         price = ShareArticleNetPriceFactory()  # active 2026-01-05..2026-12-27
         assert self._can_delete(api_client, price.id) is True
         ShareContentFactory(share_article=price.share_article)

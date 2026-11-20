@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from django.db import IntegrityError, transaction
 
-from apps.commissioning.errors import RequiredFieldMissing
+from apps.commissioning.errors import RequiredFieldMissing, ResellerInUse
 from apps.commissioning.models import (
     ContactEntity,
     DeliveryStation,
@@ -20,6 +20,8 @@ from apps.commissioning.tests.factories import (
     DeliveryStationFactory,
     OfferGroupFactory,
     ResellerFactory,
+    ShareArticleFactory,
+    ShareContentFactory,
 )
 
 
@@ -213,6 +215,17 @@ class TestUpdateReseller:
         )
         assert DeliveryStation.objects.filter(contact=contact).exists()
 
+    def test_keeps_a_station_held_only_by_share_contents(self, tenant, svc):
+        contact = ContactEntityFactory(address="Street", zip_code="22223", city="City")
+        reseller = ResellerFactory(contact=contact, is_reseller=True)
+        station = DeliveryStationFactory(contact=contact, linked_reseller=reseller)
+        # ``ShareContent.delivery_station`` has no reverse accessor, and PROTECT.
+        ShareContentFactory(delivery_station=station)
+
+        svc.update_reseller(reseller, {"is_also_delivery_station": False})
+
+        assert DeliveryStation.objects.filter(pk=station.pk).exists()
+
 
 # ---------------------------------------------------------------------------
 # update_delivery_station
@@ -238,6 +251,24 @@ class TestUpdateDeliveryStation:
             {"is_also_reseller": True, "is_also_seller": False},
         )
         assert Reseller.objects.filter(contact=contact).exists()
+
+    def test_keeps_a_reseller_held_only_by_an_articles_supplier(self, tenant, svc):
+        contact = ContactEntityFactory(address="St", zip_code="44445", city="City")
+        reseller = ResellerFactory(contact=contact, is_reseller=False, is_seller=True)
+        station = DeliveryStationFactory(
+            contact=contact, linked_reseller=reseller, is_also_seller=True
+        )
+        # ``ShareArticle.seller_1`` has no reverse accessor, and PROTECT.
+        ShareArticleFactory(seller_1=reseller)
+
+        svc.update_delivery_station(
+            station, {"is_also_reseller": False, "is_also_seller": False}
+        )
+
+        assert Reseller.objects.filter(pk=reseller.pk).exists()
+        station.refresh_from_db()
+        assert station.linked_reseller_id == reseller.pk
+        assert station.is_also_seller
 
 
 # ---------------------------------------------------------------------------
@@ -275,6 +306,42 @@ class TestDeleteReseller:
 
         with pytest.raises(ValueError):
             svc.delete_reseller(reseller, delete_context="typo")
+
+        assert Reseller.objects.filter(pk=reseller.pk).exists()
+
+    def test_a_station_sharing_the_contact_keeps_it_and_drops_the_roles(
+        self, tenant, svc
+    ):
+        contact = ContactEntityFactory(address="St", zip_code="77777", city="City")
+        reseller = ResellerFactory(contact=contact, is_reseller=False, is_seller=True)
+        station = DeliveryStationFactory(
+            contact=contact, linked_reseller=None, is_also_seller=True
+        )
+
+        svc.delete_reseller(reseller, delete_context="sellers")
+
+        assert not Reseller.objects.filter(pk=reseller.pk).exists()
+        assert ContactEntity.objects.filter(pk=contact.pk).exists()
+        station.refresh_from_db()
+        assert not station.is_also_seller
+        assert not station.is_also_reseller
+
+    def test_a_reseller_its_station_links_to_is_refused(self, tenant, svc):
+        contact = ContactEntityFactory(address="St", zip_code="77778", city="City")
+        reseller = ResellerFactory(contact=contact, is_reseller=False, is_seller=True)
+        DeliveryStationFactory(contact=contact, linked_reseller=reseller)
+
+        with pytest.raises(ResellerInUse):
+            svc.delete_reseller(reseller, delete_context="sellers")
+
+        assert Reseller.objects.filter(pk=reseller.pk).exists()
+
+    def test_an_articles_supplier_is_refused(self, tenant, svc):
+        reseller = ResellerFactory(is_reseller=False, is_seller=True)
+        ShareArticleFactory(seller_1=reseller)
+
+        with pytest.raises(ResellerInUse):
+            svc.delete_reseller(reseller, delete_context="sellers")
 
         assert Reseller.objects.filter(pk=reseller.pk).exists()
 

@@ -105,6 +105,8 @@
       "effective_at_required": "Bitte ein Kündigungsdatum angeben."
     },
     "confirmed_immutable": "Ein bestätigtes Mitglied kann nicht gelöscht werden — stattdessen über die Kündigung beenden.",
+    "rejected_kept": "Ein abgelehnter Antrag bleibt für die Statistik erhalten und kann nicht gelöscht werden.",
+    "in_use": "Dieses Mitglied wird noch verwendet (etwa von Abos, Einwilligungen, Genossenschaftsanteilen oder einem Zahlungsprofil) und kann nicht gelöscht werden.",
     "exit_before_transfer": "Das Austrittsdatum liegt vor einer Übertragung von Genossenschaftsanteilen dieses Mitglieds ({{transfer_date}}). Ein Mitglied kann nicht vor seiner eigenen Übertragung austreten: Liegt der Austritt wirklich davor, ist die Übertragung falsch erfasst.",
     "number_unknown": "Kein Mitglied hat die Mitgliedsnummer {{member_number}}."
   },
@@ -170,6 +172,7 @@
     "over_capacity": "Diese Anteilsart ist für den gewählten Zeitraum ausverkauft.",
     "capacity_below_occupancy": "Die Kapazität kann nicht unter die bereits gebuchte Auslastung einer aktuellen oder kommenden Woche gesenkt werden.",
     "gross_price_in_use": "Dieser Preis kann nicht gelöscht werden, weil für diese Anteilsvariation bereits Abos bestehen.",
+    "in_use": "Diese Anteilsvariation wird noch verwendet (etwa von Abos, mit Preisen oder als Teil einer zusammengesetzten Größe) und kann nicht gelöscht werden.",
     "size_unknown": "Der Anteilstyp „{{share_type}}“ hat am {{date}} keine aktive Variante der Größe „{{size}}“.",
     "size_ambiguous": "Der Anteilstyp „{{share_type}}“ hat am {{date}} {{matches}} aktive Varianten der Größe „{{size}}“."
   },
@@ -222,6 +225,7 @@
     "over_capacity": "Diese Verteilstation ist für KW {{week}}/{{year}} voll ({{occupied}}/{{capacity}}). Bitte eine andere Station wählen.",
     "capacity_below_occupancy": "Kapazität kann nicht auf {{capacity}} gesetzt werden — in KW {{week}}/{{year}} sind bereits {{peak}} Anteile gebucht. Bitte mindestens {{peak}} wählen.",
     "in_use": "Diese Verteilstation kann nicht gelöscht werden, weil noch Lieferungen auf ihre Abholtage verweisen. Bitte zuerst die Lieferungen verschieben oder beenden.",
+    "referenced": "Diese Verteilstation hat noch Abholtage oder wird anderweitig verwendet und kann nicht gelöscht werden. Wird sie nicht mehr beliefert, kann sie auf inaktiv gesetzt werden.",
     "not_found": "Verteilstation nicht gefunden.",
     "more_than_one_fee": "Nur eine Gebühr ist möglich: pro Kiste, pro Monat oder pro Jahr.",
     "name_required": "Eine Verteilstation braucht ein Kürzel oder einen Firmennamen."
@@ -287,7 +291,8 @@
     "already_linked": "Dieser Wiederverkäufer ist bereits mit einem anderen User verknüpft.",
     "customer_role_required": "Eine Wiederverkäufer-Verknüpfung ist nur für die Rolle 'Kunde' möglich.",
     "email_missing": "Für diesen Wiederverkäufer ist keine Rechnungs-E-Mail-Adresse hinterlegt.",
-    "invoice_email_disabled": "Dieser Wiederverkäufer erhält Rechnungen nur auf Papier — der Rechnungsversand per E-Mail ist ausgeschaltet."
+    "invoice_email_disabled": "Dieser Wiederverkäufer erhält Rechnungen nur auf Papier — der Rechnungsversand per E-Mail ist ausgeschaltet.",
+    "in_use": "Dieser Eintrag wird noch verwendet (etwa von Zukäufen, Artikeln, Bio-Zertifikaten, einer Verteilstation oder Dokumenten) und kann nicht gelöscht werden."
   },
   "storage": {
     "not_found": "Lager nicht gefunden.",
@@ -314,8 +319,14 @@
   "offer_group": {
     "not_found": "Angebotsgruppe nicht gefunden.",
     "cannot_delete_default": "Die Standard-Angebotsgruppe kann nicht gelöscht werden.",
+    "in_use": "Diese Angebotsgruppe wird noch verwendet (etwa von Wiederverkäufern oder Angeboten) und kann nicht gelöscht werden.",
     "name_unknown": "Keine Angebotsgruppe heißt „{{offer_group_name}}“.",
     "name_ambiguous": "Mehrere Angebotsgruppen heißen „{{offer_group_name}}“ — bitte eindeutig benennen."
+  },
+  "label_template": {
+    "element_invalid": "Ein Feld des Etiketts ist ungültig oder unvollständig. Ein freier Text und ein QR-Code brauchen einen Inhalt; rot markierte Felder bitte prüfen.",
+    "element_outside": "Ein Feld ragt über den Rand des Etiketts hinaus. Bitte verschieben oder verkleinern.",
+    "sheet_too_large": "Die Etiketten passen mit diesen Rändern und Abständen nicht auf eine A4-Seite ({{width_mm}} × {{height_mm}} mm nötig)."
   },
   "export": {
     "invalid_dates": "Ungültiger Datumsbereich für den Export — bitte Anfangs- und Enddatum prüfen."
@@ -392,13 +403,15 @@
     "shortening_strands_children": "Dieser Liefertag kann nicht zu diesem Datum beendet werden: Zukünftige Stationstage oder Anteile würden danach noch bestehen und verwaisen. Lege stattdessen über eine Nachfolge (neuen Liefertag anlegen) einen Nachfolger an oder wähle ein späteres Enddatum.",
     "start_move_strands_children": "Der Beginn dieses Liefertags kann nicht auf dieses Datum verschoben werden: Bestehende Stationstage oder Anteile liegen davor und wären dann nicht mehr abgedeckt. Wähle ein früheres Startdatum oder verschiebe diese Objekte zuerst.",
     "succession_coverage_gap": "Die Liefertag-Nachfolge konnte nicht abgeschlossen werden: Für eine Station fehlt am neuen Tag ein Stationstag, der die betroffene Woche abdeckt. Richte diesen Stationstag zuerst ein und versuche es erneut.",
-    "in_use": "Dieser Liefertag kann nicht gelöscht werden, weil er bereits von Anteilen verwendet wird. Einmal verwendet, kann er nicht mehr entfernt werden."
+    "in_use": "Dieser Liefertag kann nicht gelöscht werden, weil er bereits von Anteilen verwendet wird. Einmal verwendet, kann er nicht mehr entfernt werden.",
+    "referenced": "Dieser Liefertag kann nicht gelöscht werden, weil Abos an seinen Abholtagen abholen oder er anderweitig verwendet wird."
   },
   "delivery_station_day": {
     "shortening_strands_children": "Dieser Stationstag kann nicht zu diesem Datum beendet werden: Zukünftige Lieferungen oder Kapazitätsreservierungen würden danach noch bestehen und verwaisen. Lege stattdessen einen Nachfolge-Stationstag an (der sie überträgt) oder wähle ein späteres Enddatum.",
     "start_move_strands_children": "Der Beginn dieses Stationstags kann nicht auf dieses Datum verschoben werden: Bestehende Lieferungen oder Kapazitätsreservierungen liegen davor und wären dann nicht mehr abgedeckt. Wähle ein früheres Startdatum oder verschiebe sie zuerst.",
     "starts_before_delivery_day": "Der Stationstag kann nicht vor seinem Liefertag beginnen. Verschiebe zuerst den Beginn des Liefertags oder wähle ein Startdatum ab dessen Beginn.",
     "in_use": "Dieser Abholtag kann nicht gelöscht werden, weil noch Lieferungen darauf verweisen. Bitte zuerst die Lieferungen verschieben oder beenden.",
+    "referenced": "Dieser Abholtag wird noch verwendet (etwa als Abholtag eines Abos, mit Kapazitätsreservierungen oder importiertem Bedarf) und kann nicht gelöscht werden.",
     "unknown": "Am {{date}} wird keine Verteilstation „{{delivery_station}}“ am Liefertag {{delivery_day}} beliefert.",
     "ambiguous": "Am {{date}} werden {{matches}} Verteilstationen namens „{{delivery_station}}“ am Liefertag {{delivery_day}} beliefert — bitte eindeutige Kurznamen vergeben.",
     "tour_number_below_one": "Touren beginnen bei 1. Bitte den Stationstag in der Tourenplanung einer Tour zuordnen.",

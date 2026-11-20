@@ -173,18 +173,6 @@ export default function ShareDays() {
             disabled: true,
           },
           {
-            title: t("configuration.changed_delivery_day_shares"),
-            dataIndex: "changed_day_number",
-            key: "changed_day_number",
-            inputType: "select",
-            required: false,
-            align: "center",
-            width: "9em",
-            options: weekdayChoices,
-            render: (value: unknown) => weekdayCell(value, weekdayChoices, true),
-            disabled: false,
-          },
-          {
             title: t("configuration.default_washing_day"),
             dataIndex: "washing_day",
             key: "washing_day",

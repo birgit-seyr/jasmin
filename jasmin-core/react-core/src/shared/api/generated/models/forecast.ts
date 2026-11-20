@@ -64,7 +64,6 @@ export interface Forecast {
   readonly storage: string | null;
   /** @nullable */
   plot?: string | null;
-  readonly can_be_deleted: boolean;
   readonly share_article_name: string;
   readonly plot_name: string;
 }

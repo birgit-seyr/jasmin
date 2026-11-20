@@ -1126,6 +1126,25 @@ class TestCommissioningListResellersViewSet:
         assert resp.status_code == status.HTTP_200_OK
         assert [entry["name"] for entry in resp.data] == [name]
 
+    def test_carries_what_a_label_prints(self, api_client, tenant):
+        reseller = ResellerFactory(contact__zip_code="77933", contact__city="Lahr")
+        order = OrderFactory(
+            reseller=reseller, year=2026, delivery_week=20, day_number=3
+        )
+        OrderContentFactory(
+            order=order, share_article=ShareArticleFactory(organic_status="organic")
+        )
+
+        resp = api_client.get(
+            self.URL, {"year": 2026, "delivery_week": 20, "day_number": 3}
+        )
+
+        [entry] = resp.data
+        assert (entry["zip_code"], entry["city"]) == ("77933", "Lahr")
+        assert [line["organic_status"] for line in entry["order"]["contents"]] == [
+            "organic"
+        ]
+
 
 # ---------------------------------------------------------------------------
 # CrateOrderContentViewSet — write-body validation

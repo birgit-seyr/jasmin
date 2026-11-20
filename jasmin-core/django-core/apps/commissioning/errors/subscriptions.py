@@ -114,6 +114,13 @@ class MemberConfirmedImmutable(ConflictError):
     code = "member.confirmed_immutable"
 
 
+class MemberRejectedKept(ConflictError):
+    """Delete attempted on a rejected applicant. The row stays for the
+    membership statistics, with the rejection on record."""
+
+    code = "member.rejected_kept"
+
+
 class CoopShareConfirmedImmutable(ConflictError):
     """Delete attempted on an admin-confirmed coop share. Confirmed
     Geschäftsanteile carry statutory GenG retention — cancel the share (or the

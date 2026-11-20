@@ -2,11 +2,27 @@
 
 from __future__ import annotations
 
+import datetime
+
 import pytest
 
-from apps.commissioning.tests.factories import ShareArticleFactory, StorageFactory
+from apps.commissioning.models import (
+    Crate,
+    DeliveryNoteContent,
+    InvoiceResellerContent,
+    ShareArticle,
+)
+from apps.commissioning.tests.factories import (
+    CrateFactory,
+    CrateNetPriceFactory,
+    ShareArticleFactory,
+    ShareContentFactory,
+    StorageFactory,
+)
 from apps.commissioning.utils.deletion_utils import (
     _normalize_model_names,
+    _reverse_relations,
+    bulk_deletable_pks,
     can_delete_instance,
 )
 
@@ -89,3 +105,99 @@ class TestCanDeleteInstance:
         # We just verify the exclude_models parameter is respected
         assert isinstance(can_delete, bool)
         assert isinstance(info, dict)
+
+
+# ---------------------------------------------------------------------------
+# Hidden relations (related_name="+")
+# ---------------------------------------------------------------------------
+@pytest.mark.django_db
+class TestHiddenRelations:
+    """A foreign key declared with ``related_name="+"`` counts in the check a
+    delete runs (``include_hidden``), not in the flag a list shows: the lines
+    behind it would cost every list a scan."""
+
+    def test_a_hidden_protect_relation_blocks_the_delete_only(self, tenant):
+        article = ShareArticleFactory()
+        ShareContentFactory(share_article=article)
+
+        can_delete, info = can_delete_instance(article, include_hidden=True)
+
+        assert can_delete is False
+        assert {"model": "ShareContent", "field": "share_article"} in (
+            info["protected_relations"]
+        )
+        assert can_delete_instance(article)[0] is True
+        assert bulk_deletable_pks(ShareArticle, [article.pk]) == ({article.pk}, False)
+
+    def test_a_hidden_set_null_relation_blocks_the_delete_only(self, tenant):
+        crate = CrateFactory()
+        ShareArticleFactory(default_crate_harvest=crate)
+
+        can_delete, info = can_delete_instance(crate, include_hidden=True)
+
+        assert can_delete is False
+        assert info["related_model"] == "ShareArticle"
+        assert can_delete_instance(crate)[0] is True
+
+
+@pytest.mark.django_db
+class TestTheBatchedCheck:
+    """The list's check asks per row whether anything points at it, and agrees
+    with the single one."""
+
+    def test_only_the_rows_something_points_at_are_kept(self, tenant):
+        used, unused = CrateFactory(), CrateFactory()
+        CrateNetPriceFactory(
+            crate=used,
+            valid_from=datetime.date(2026, 1, 5),
+            valid_until=datetime.date(2026, 6, 28),
+        )
+        CrateNetPriceFactory(crate=used, valid_from=datetime.date(2026, 6, 29))
+
+        assert bulk_deletable_pks(Crate, [used.pk, unused.pk]) == ({unused.pk}, False)
+        assert can_delete_instance(used)[0] is False
+        assert can_delete_instance(unused)[0] is True
+
+    def test_an_excluded_model_does_not_count(self, tenant):
+        crate = CrateFactory()
+        CrateNetPriceFactory(crate=crate)
+
+        assert bulk_deletable_pks(
+            Crate, [crate.pk], exclude_models=["CrateNetPrice"]
+        ) == (
+            {crate.pk},
+            False,
+        )
+
+
+class TestManyToManyRelations:
+    """A many-to-many is counted once, through its through table's foreign key,
+    hidden where the many-to-many is; excluding the model that declares it
+    excludes that table."""
+
+    @staticmethod
+    def _related_models(exclude: set[str], *, include_hidden: bool = True) -> list[str]:
+        return [
+            relation.related_model.__name__
+            for relation in _reverse_relations(
+                DeliveryNoteContent, exclude, include_hidden=include_hidden
+            )
+        ]
+
+    def test_the_through_table_stands_in_for_the_link(self):
+        through = InvoiceResellerContent.delivery_note_contents.through.__name__
+
+        related = self._related_models(set())
+
+        assert related.count(through) == 1
+        assert "InvoiceResellerContent" not in related
+
+    def test_the_through_table_of_a_hidden_many_to_many_is_hidden(self):
+        through = InvoiceResellerContent.delivery_note_contents.through.__name__
+
+        assert through not in self._related_models(set(), include_hidden=False)
+
+    def test_excluding_the_declaring_model_drops_its_through_table(self):
+        through = InvoiceResellerContent.delivery_note_contents.through.__name__
+
+        assert through not in self._related_models({"InvoiceResellerContent"})

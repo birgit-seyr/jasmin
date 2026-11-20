@@ -137,7 +137,7 @@ const planned = (
 
 /** What the Tuesday row shows in a week that keeps Tuesday's usual days. */
 const USUAL_TUESDAY = {
-  movedTo: "-", washing: shown(MONDAY), cleaning: shown(TUESDAY), harvesting: shown(MONDAY),
+  washing: shown(MONDAY), cleaning: shown(TUESDAY), harvesting: shown(MONDAY),
   packing: shown(TUESDAY),
 };
 
@@ -304,14 +304,14 @@ const deliveryDays = () => bodyRows().map((row) => cellIn(row, DELIVERY).textCon
 function planOf(day: number) {
   const text = (title: string) => cellIn(dayRow(day), title).textContent;
   return {
-    movedTo: text(MOVED_TO), washing: text(WASHING), cleaning: text(CLEANING),
+    washing: text(WASHING), cleaning: text(CLEANING),
     harvesting: text(HARVESTING), packing: text(PACKING),
   };
 }
 
 /** The columns in which a row highlights its weekday as differing from the usual one. */
 const highlightedIn = (day: number) =>
-  [MOVED_TO, WASHING, CLEANING, HARVESTING, PACKING].filter(
+  [WASHING, CLEANING, HARVESTING, PACKING].filter(
     (title) => cellIn(dayRow(day), title).querySelector(".changed-day") !== null,
   );
 
@@ -411,13 +411,15 @@ describe("ShareDays loading", () => {
       .getAllByRole("columnheader")
       .map((header) => header.textContent)
       .filter((title) => title !== "table.actions");
-    expect(titles).toEqual([DELIVERY, MOVED_TO, WASHING, CLEANING, HARVESTING, PACKING]);
+    // The day a delivery moved to isn't offered here.
+    expect(titles).toEqual([DELIVERY, WASHING, CLEANING, HARVESTING, PACKING]);
+    expect(screen.queryByText(MOVED_TO)).not.toBeInTheDocument();
     expect(deliveryDays()).toEqual([shown(TUESDAY), shown(FRIDAY)]);
     expect(planOf(TUESDAY)).toEqual(USUAL_TUESDAY);
     expect(highlightedIn(TUESDAY)).toEqual([]);
     // Friday's shares need no cleaning, and this week they are harvested a day early.
     expect(planOf(FRIDAY)).toEqual({
-      movedTo: "-", washing: shown(THURSDAY), cleaning: "-", harvesting: shown(WEDNESDAY),
+      washing: shown(THURSDAY), cleaning: "-", harvesting: shown(WEDNESDAY),
       packing: shown(FRIDAY),
     });
     expect(highlightedIn(FRIDAY)).toEqual([HARVESTING]);
@@ -480,7 +482,7 @@ describe("ShareDays on a farm that hides washing and cleaning", () => {
 });
 
 describe("ShareDays choosing the week", () => {
-  it("loads next week's plan from the week arrow, with the delivery moved for a holiday", async () => {
+  it("loads next week's plan from the week arrow, with the work days moved for a holiday", async () => {
     renderPage();
     await loaded();
 
@@ -493,10 +495,10 @@ describe("ShareDays choosing the week", () => {
     ]);
     expect(planOf(TUESDAY)).toEqual(USUAL_TUESDAY);
     expect(planOf(FRIDAY)).toEqual({
-      movedTo: shown(THURSDAY), washing: shown(WEDNESDAY), cleaning: "-",
+      washing: shown(WEDNESDAY), cleaning: "-",
       harvesting: shown(WEDNESDAY), packing: shown(THURSDAY),
     });
-    expect(highlightedIn(FRIDAY)).toEqual([MOVED_TO, WASHING, HARVESTING, PACKING]);
+    expect(highlightedIn(FRIDAY)).toEqual([WASHING, HARVESTING, PACKING]);
   });
 
   it("loads last week's plan from the back arrow", async () => {
@@ -535,8 +537,8 @@ describe("ShareDays changing a delivery day's plan", () => {
     await toNextWeek();
 
     await openRow(TUESDAY, WASHING);
-    // The delivery day stays locked; the day it moves to and the work days open.
-    for (const title of [MOVED_TO, WASHING, CLEANING, HARVESTING, PACKING]) {
+    // The delivery day stays locked; the work days open.
+    for (const title of [WASHING, CLEANING, HARVESTING, PACKING]) {
       expect(editor(title)).toBeInTheDocument();
     }
     expect(within(editingRow()).queryByRole("combobox", { name: DELIVERY })).not.toBeInTheDocument();
@@ -561,24 +563,23 @@ describe("ShareDays changing a delivery day's plan", () => {
     expect(body).not.toHaveProperty("year");
     expect(body).not.toHaveProperty("delivery_week");
     expect(highlightedIn(TUESDAY)).toEqual([WASHING]);
-    expect(planOf(FRIDAY).movedTo).toBe(shown(THURSDAY));
   });
 
-  it("moves a delivery day and sends the row's other days along, a missing one as null", async () => {
+  it("keeps a delivery's move and sends the row's other days along, a missing one as null", async () => {
     renderPage();
     await loaded();
     await toNextWeek();
 
-    await change(FRIDAY, MOVED_TO, WEDNESDAY);
+    await change(FRIDAY, PACKING, WEDNESDAY);
 
-    await waitFor(() => expect(planOf(FRIDAY).movedTo).toBe(shown(WEDNESDAY)));
+    await waitFor(() => expect(planOf(FRIDAY).packing).toBe(shown(WEDNESDAY)));
     const [body, params] = lastSave();
     expect(params).toEqual({ year: 2026, delivery_week: 42, day_number: FRIDAY });
     expect(dayFieldsOf(body)).toEqual({
-      changed_day_number: WEDNESDAY, harvesting_day: WEDNESDAY, packing_day: THURSDAY,
+      changed_day_number: THURSDAY, harvesting_day: WEDNESDAY, packing_day: WEDNESDAY,
       washing_day: WEDNESDAY, cleaning_day: null, get_current_stock_day: FRIDAY,
     });
-    expect(highlightedIn(FRIDAY)).toEqual([MOVED_TO, WASHING, HARVESTING, PACKING]);
+    expect(highlightedIn(FRIDAY)).toEqual([WASHING, HARVESTING, PACKING]);
     expect(planOf(TUESDAY)).toEqual(USUAL_TUESDAY);
   });
 
@@ -591,7 +592,7 @@ describe("ShareDays changing a delivery day's plan", () => {
     await change(FRIDAY, HARVESTING, THURSDAY);
 
     await waitFor(() => expect(planOf(FRIDAY).harvesting).toBe(shown(THURSDAY)));
-    expect(highlightedIn(FRIDAY)).toEqual([MOVED_TO, WASHING, PACKING]);
+    expect(highlightedIn(FRIDAY)).toEqual([WASHING, PACKING]);
     expect(listRequests()).toHaveLength(2);
   });
 
@@ -608,7 +609,7 @@ describe("ShareDays changing a delivery day's plan", () => {
 
     await waitFor(() => expect(planOf(FRIDAY).packing).toBe(shown(FRIDAY)));
     expect(deliveryDays()).toEqual([shown(TUESDAY), shown(FRIDAY)]);
-    expect(highlightedIn(FRIDAY)).toEqual([MOVED_TO, WASHING, HARVESTING]);
+    expect(highlightedIn(FRIDAY)).toEqual([WASHING, HARVESTING]);
     expect(planOf(TUESDAY)).toEqual(USUAL_TUESDAY);
   });
 
@@ -631,21 +632,6 @@ describe("ShareDays changing a delivery day's plan", () => {
     await waitFor(() => expect(api.saveDays).toHaveBeenCalledTimes(2));
     expect(lastSave()[1]).toEqual({ year: 2026, delivery_week: 43, day_number: TUESDAY });
     expect(lastSave()[0]).toMatchObject({ washing_day: MONDAY, packing_day: WEDNESDAY });
-  });
-
-  it("undoes a holiday move by clearing the day the delivery moved to", async () => {
-    renderPage();
-    await loaded();
-    await toNextWeek();
-
-    await pickOption(await openRow(FRIDAY, MOVED_TO), "");
-    await save();
-
-    await waitFor(() => expect(planOf(FRIDAY).movedTo).toBe("-"));
-    const [body, params] = lastSave();
-    expect(params).toEqual({ year: 2026, delivery_week: 42, day_number: FRIDAY });
-    expect(body.changed_day_number).toBeNull();
-    expect(highlightedIn(FRIDAY)).toEqual([WASHING, HARVESTING, PACKING]);
   });
 
   it("clears a work day with null, so it falls back to the usual one", async () => {
@@ -719,7 +705,7 @@ describe("ShareDays read-only plans", () => {
 
     expect(screen.getByText(PAST_WEEK)).toBeInTheDocument();
     expect(screen.queryByText(WEEK_BEGUN)).not.toBeInTheDocument();
-    expect(planOf(FRIDAY).movedTo).toBe(shown(SATURDAY));
+    expect(planOf(FRIDAY).packing).toBe(shown(FRIDAY));
     await expectReadOnly();
   });
 
@@ -732,7 +718,7 @@ describe("ShareDays read-only plans", () => {
       await toNextWeek();
 
       expect(screen.queryByText(PAST_WEEK)).not.toBeInTheDocument();
-      expect(planOf(FRIDAY).movedTo).toBe(shown(THURSDAY));
+      expect(planOf(FRIDAY).packing).toBe(shown(THURSDAY));
       await expectReadOnly();
     },
   );
