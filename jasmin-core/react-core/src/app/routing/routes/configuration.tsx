@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import { Navigate } from "react-router-dom";
 import {
   RequireCapability,
   RequireMembersAndSubscriptions,
@@ -58,14 +59,6 @@ const ConfigurationDeliveryExceptions = lazy(
   () =>
     import("@/features/configuration/pages/ConfigurationDeliveryExceptions"),
 );
-const ListCrates = lazy(
-  () => import("@features/commissioning/pages/ListCrates"),
-);
-const ListPlots = lazy(() => import("@features/commissioning/pages/ListPlots"));
-const ListStorages = lazy(
-  () => import("@features/commissioning/pages/ListStorages"),
-);
-
 export const configurationRoutes: AppRoute[] = [
   {
     path: "/configuration/general",
@@ -151,31 +144,19 @@ export const configurationRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  // The menu links these three for admins only, but the staff who keep them
-  // can still open them.
+  // The crates, storages and plots are commissioning's data lists; these
+  // addresses forward there so that bookmarks of them keep working.
   {
     path: "/configuration/crates",
-    element: (
-      <RequireRole flag="isStaff">
-        <ListCrates />
-      </RequireRole>
-    ),
+    element: <Navigate to="/commissioning/list-crates" replace />,
   },
   {
     path: "/configuration/storages",
-    element: (
-      <RequireRole flag="isStaff">
-        <ListStorages />
-      </RequireRole>
-    ),
+    element: <Navigate to="/commissioning/list-storages" replace />,
   },
   {
     path: "/configuration/plots",
-    element: (
-      <RequireRole flag="isStaff">
-        <ListPlots />
-      </RequireRole>
-    ),
+    element: <Navigate to="/commissioning/list-plots" replace />,
   },
   {
     path: "/configuration/subscriptions",

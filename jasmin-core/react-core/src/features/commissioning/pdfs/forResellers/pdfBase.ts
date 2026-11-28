@@ -2,6 +2,7 @@ import { StyleSheet } from "@react-pdf/renderer";
 import "../registerRoboto";
 import { DocumentTypeEnum } from "@shared/api/generated/models";
 import { formatNumber } from "@shared/utils/numberFormat";
+import { organicControlNumberOf } from "@shared/utils/organicControlNumber";
 import { decimalsForUnit } from "@shared/utils/amountFormat";
 import {
   itemLineNetto,
@@ -55,8 +56,10 @@ export interface TenantPDFSettings {
   /** EU 2018/848 Bio-Kontrollstellen-Nr. (e.g. "DE-ÖKO-XXX"). When
    * non-empty, ``ShareArticle.organic_status`` flows into the line
    * suffix ("*"/"**") and a footer disclosure references this number.
-   * Empty → the whole organic feature is suppressed on PDFs (matches
-   * the office-side gate via ``useOrganicGate``). */
+   * Empty → the whole organic feature is suppressed on PDFs. Set by
+   * ``buildTenantSettings`` through ``organicControlNumberOf``, the rule of
+   * the office-side ``useOrganicGate``: null while the farm's organic
+   * documentation is off. */
   organic_control_number?: string | null;
 }
 
@@ -437,8 +440,7 @@ export function buildTenantSettings(
     ) as number | null | undefined,
     number_locale:
       (getSetting("number_locale", "de-DE") as string) || "de-DE",
-    organic_control_number:
-      (tenant?.organic_control_number as string | null | undefined) ?? null,
+    organic_control_number: organicControlNumberOf(tenant, getSetting) || null,
   };
 }
 

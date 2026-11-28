@@ -230,6 +230,48 @@ describe("useShareArticleListColumns column set", () => {
     }
   });
 
+  const smallAndLargeColumns = [
+    "kg_per_piece_S",
+    "kg_per_piece_L",
+    "pieces_per_kg_S",
+    "pieces_per_kg_L",
+  ];
+
+  it("shows the weight and count per size, the small one starting each group, where the farm shows sizes", () => {
+    const columns = buildColumns();
+
+    for (const key of smallAndLargeColumns) {
+      expect(findColumn(columns, key).hidden, key).toBe(false);
+    }
+    expect(titleText(findColumn(columns, "kg_per_piece_M").title)).toBe(
+      "commissioning.kg_per_piece_M",
+    );
+    expect(titleText(findColumn(columns, "pieces_per_kg_M").title)).toBe(
+      "commissioning.pieces_per_kg_M",
+    );
+    expect(findColumn(columns, "kg_per_piece_S").className).toBe(
+      "column-group-start",
+    );
+    expect(findColumn(columns, "kg_per_piece_M").className).toBeUndefined();
+  });
+
+  it("keeps only the medium weight and count, named without the size, where the farm shows no sizes", () => {
+    const columns = buildColumns({ show_size_column: false });
+
+    for (const key of smallAndLargeColumns) {
+      expect(findColumn(columns, key).hidden, key).toBe(true);
+    }
+    for (const [key, title] of [
+      ["kg_per_piece_M", "commissioning.kg_per_piece"],
+      ["pieces_per_kg_M", "commissioning.pieces_per_kg"],
+    ]) {
+      const column = findColumn(columns, key);
+      expect(column.hidden, key).toBeFalsy();
+      expect(titleText(column.title)).toBe(title);
+      expect(column.className).toBe("column-group-start");
+    }
+  });
+
   it("requires only the name and the movement unit", () => {
     const required = buildColumns()
       .filter((column) => column.required)

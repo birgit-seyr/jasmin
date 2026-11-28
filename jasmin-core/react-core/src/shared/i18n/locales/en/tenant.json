@@ -13,6 +13,9 @@
     "city": "City",
     "country": "Country"
   },
+  "organic": {
+    "title": "Organic documentation"
+  },
   "organization": {
     "title": "Other",
     "organic_control_number": "Organic control number",

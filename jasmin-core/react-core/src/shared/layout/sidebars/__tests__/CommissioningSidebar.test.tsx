@@ -23,7 +23,12 @@ import { ROLES } from "@shared/auth/roles";
 import type { RoleFlags } from "@shared/auth/useRoles";
 import { NavigationProvider } from "@shared/contexts/NavigationContext";
 
+import CommissioningDataSidebar from "../CommissioningDataSidebar";
 import CommissioningSidebar from "../CommissioningSidebar";
+import {
+  COMMISSIONING_DATA_PATHS,
+  isCommissioningDataPath,
+} from "../commissioningDataPaths";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -151,6 +156,22 @@ function renderedLinks(): Map<string, string> {
 
 function linkedRoutes(): Set<string> {
   return new Set(renderedLinks().keys());
+}
+
+/** Every route the data section's own sidebar links, in sidebar order. */
+function dataSidebarRoutes(): string[] {
+  const { container } = render(
+    <MemoryRouter>
+      <NavigationProvider>
+        <CommissioningDataSidebar />
+      </NavigationProvider>
+    </MemoryRouter>,
+  );
+  const routes = Array.from(container.querySelectorAll("a[href]")).map(
+    (link) => link.getAttribute("href") ?? "",
+  );
+  container.remove();
+  return routes;
 }
 
 beforeEach(() => {
@@ -362,6 +383,50 @@ describe("CommissioningSidebar", () => {
     settings.packing_mode = "MIXED";
     physical.variations = [packedInBulk];
     expect(linkedRoutes().has(weightStatistics)).toBe(false);
+  });
+
+  it("keeps the data lists as a group where the configuration is a section", () => {
+    const routes = linkedRoutes();
+
+    for (const path of COMMISSIONING_DATA_PATHS) {
+      expect(routes.has(path), path).toBe(true);
+    }
+  });
+
+  it("leaves the data lists to a section of their own elsewhere", () => {
+    capabilities.configuration_section = false;
+    const routes = linkedRoutes();
+
+    for (const path of COMMISSIONING_DATA_PATHS) {
+      expect(routes.has(path), path).toBe(false);
+    }
+    expect(routes.has("/commissioning/forecast")).toBe(true);
+  });
+
+  it("gives the data section exactly the pages that select it", () => {
+    capabilities.configuration_section = false;
+    const routes = dataSidebarRoutes();
+
+    expect(new Set(routes)).toEqual(new Set(COMMISSIONING_DATA_PATHS));
+    for (const route of routes) {
+      expect(isCommissioningDataPath(route), route).toBe(true);
+    }
+  });
+
+  it("lists the crates, storages and plots among the data lists in either layout", () => {
+    const dataLists = [
+      "/commissioning/list-crates",
+      "/commissioning/list-storages",
+      "/commissioning/list-plots",
+    ];
+    const inCommissioning = linkedRoutes();
+    capabilities.configuration_section = false;
+    const inDataSection = new Set(dataSidebarRoutes());
+
+    for (const path of dataLists) {
+      expect(inCommissioning.has(path), path).toBe(true);
+      expect(inDataSection.has(path), path).toBe(true);
+    }
   });
 
   it("lists the commissioning lists before the packing lists", () => {

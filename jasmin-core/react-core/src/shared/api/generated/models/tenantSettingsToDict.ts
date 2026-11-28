@@ -128,6 +128,7 @@ export interface TenantSettingsToDict {
   has_markets?: boolean;
   sells_to_resellers?: boolean;
   has_purchases?: boolean;
+  uses_organic_documentation?: boolean;
   crates_should_be_on_documents?: boolean;
   /**
    * @minimum 0

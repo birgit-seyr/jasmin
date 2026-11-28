@@ -16,6 +16,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 const stable = vi.hoisted(() => ({
   // Mutated per test. ``undefined`` models the key being ABSENT from the
@@ -345,6 +346,68 @@ describe("ConfigurationApp sales channels", () => {
   });
 });
 
+describe("ConfigurationApp organic documentation", () => {
+  const ORGANIC = "settings.commissioning.uses_organic_documentation";
+
+  beforeEach(() => {
+    stable.weeklyUpload = undefined;
+    stable.save = null;
+    stable.capabilities = {};
+    stable.modulesInEffect = {};
+    delete stable.tenantRow.settings;
+    delete stable.tenantRow.current_settings;
+    vi.mocked(tenantsSettingsUpdateCurrentSettingsUpdate).mockClear();
+    vi.mocked(tenantsTenantsPartialUpdate).mockClear();
+  });
+
+  it("sits with the sales channels, on by default", () => {
+    render(<ConfigurationApp />);
+
+    const salesCard = screen
+      .getByText("settings.commissioning.sales.title")
+      .closest(".ant-card") as HTMLElement;
+    expect(
+      within(salesCard).getByRole("checkbox", { name: ORGANIC }),
+    ).toBeChecked();
+  });
+
+  it("shows a stored off as off", () => {
+    stable.tenantRow.current_settings = { uses_organic_documentation: false };
+    render(<ConfigurationApp />);
+
+    expect(moduleToggle(ORGANIC)).not.toBeChecked();
+  });
+
+  it("explains each sales switch in a line below it", () => {
+    render(<ConfigurationApp />);
+
+    for (const description of [
+      "settings.commissioning.sells_to_resellers_desc",
+      "settings.commissioning.has_markets_desc",
+      "settings.commissioning.has_purchases_desc",
+      "settings.commissioning.uses_organic_documentation_desc",
+    ]) {
+      expect(screen.getByText(description)).toBeInTheDocument();
+    }
+  });
+
+  it("shows the stored choice and saves a switched-off one with the versioned settings", async () => {
+    stable.tenantRow.current_settings = { uses_organic_documentation: true };
+    render(<ConfigurationApp />);
+
+    fireEvent.click(moduleToggle(ORGANIC));
+    await act(async () => {
+      await stable.save?.();
+    });
+
+    expect(tenantsSettingsUpdateCurrentSettingsUpdate).toHaveBeenCalledWith({
+      settings: { uses_organic_documentation: false },
+    });
+    const tenantBody = vi.mocked(tenantsTenantsPartialUpdate).mock.calls[0][1];
+    expect(tenantBody).not.toHaveProperty("uses_organic_documentation");
+  });
+});
+
 describe("ConfigurationApp modules fixed by the host", () => {
   beforeEach(() => {
     stable.weeklyUpload = true;
@@ -453,6 +516,82 @@ describe("ConfigurationApp HR-system card", () => {
     ]) {
       expect(body).not.toHaveProperty(field);
     }
+  });
+});
+
+// The serializer constrains the column to ``LanguageChoices`` (en/de), so an
+// option beyond those is one the office can pick and the save then rejects.
+describe("ConfigurationApp tenant language", () => {
+  const LANGUAGE = "tenant.organization.tenant_language";
+
+  /** The renderer puts the label and the Select in one wrapper div. The label
+   *  text sits in a <strong> inside AntD's <Text> span, so reach the wrapper by
+   *  the nearest enclosing div rather than a single parentElement hop. */
+  function languageSelect(): HTMLElement {
+    const label = screen.getByText(LANGUAGE);
+    return within(label.closest("div") as HTMLElement).getByRole("combobox");
+  }
+
+  /** The labels of the open dropdown's options, as the office reads them. */
+  async function openOptions(): Promise<HTMLElement[]> {
+    const dropdown = await screen.findByRole("listbox");
+    return Array.from(
+      (dropdown.closest(".ant-select-dropdown") ?? dropdown).querySelectorAll(
+        ".ant-select-item-option-content",
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    stable.weeklyUpload = undefined;
+    stable.save = null;
+    stable.capabilities = {};
+    stable.modulesInEffect = {};
+    delete stable.tenantRow.current_settings;
+    stable.tenantRow.tenant_language = "en";
+    vi.mocked(tenantsTenantsPartialUpdate).mockClear();
+  });
+
+  it("sits with the date format in the general settings, showing the stored language", () => {
+    render(<ConfigurationApp />);
+
+    const generalCard = screen
+      .getByText("settings.general.title")
+      .closest(".ant-card") as HTMLElement;
+    expect(within(generalCard).getByText(LANGUAGE)).toBeInTheDocument();
+    expect(
+      within(generalCard).getByText("settings.general.dateFormat"),
+    ).toBeInTheDocument();
+    expect(within(generalCard).getByText("English (EN)")).toBeInTheDocument();
+  });
+
+  it("offers only the languages the backend accepts", async () => {
+    const user = userEvent.setup();
+    render(<ConfigurationApp />);
+
+    // The options only exist in the DOM once the dropdown is open, so this
+    // click is what lets the assertion see an extra option at all.
+    await user.click(languageSelect());
+
+    const options = (await openOptions()).map((option) => option.textContent);
+    expect(options).toEqual(["Deutsch (DE)", "English (EN)"]);
+  });
+
+  it("saves a changed language on the tenant row", async () => {
+    const user = userEvent.setup();
+    render(<ConfigurationApp />);
+
+    await user.click(languageSelect());
+    const german = (await openOptions()).find(
+      (option) => option.textContent === "Deutsch (DE)",
+    );
+    await user.click(german as HTMLElement);
+    await act(async () => {
+      await stable.save?.();
+    });
+
+    const body = vi.mocked(tenantsTenantsPartialUpdate).mock.calls[0][1];
+    expect(body).toMatchObject({ tenant_language: "de" });
   });
 });
 

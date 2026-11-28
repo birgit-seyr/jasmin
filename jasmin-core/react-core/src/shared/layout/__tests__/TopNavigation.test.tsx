@@ -19,12 +19,16 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@shared/auth/roles";
 import type { RoleFlags } from "@shared/auth/useRoles";
-import { NavigationProvider } from "@shared/contexts/NavigationContext";
+import {
+  NavigationProvider,
+  useNavigation,
+} from "@shared/contexts/NavigationContext";
 
 import DoubleTopNavigation from "../TopNavigation";
 
@@ -47,11 +51,22 @@ const settings = vi.hoisted(() => ({
   weeklyUpload: undefined as boolean | undefined,
   showMembers: undefined as boolean | undefined,
   showAbos: undefined as boolean | undefined,
+  showConfiguration: undefined as boolean | undefined,
 }));
 
 // What the deployment offers; a name left out is offered, as with a payload
 // that carries no capabilities.
 const capabilities = vi.hoisted(() => ({}) as Record<string, boolean>);
+
+beforeEach(() => {
+  for (const name of Object.keys(capabilities)) delete capabilities[name];
+  window.history.replaceState(null, "", "/");
+});
+
+// The navigation context reads the capabilities through this module directly.
+vi.mock("@shared/hooks/configuration/useCapability", () => ({
+  useCapability: (name: string) => capabilities[name] ?? true,
+}));
 
 vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
@@ -63,6 +78,8 @@ vi.mock("@hooks/index", async () => {
         return settings.showMembers ?? defaultValue;
       if (key === "navigation.show_abos")
         return settings.showAbos ?? defaultValue;
+      if (key === "navigation.show_configuration")
+        return settings.showConfiguration ?? defaultValue;
       return defaultValue;
     },
   });
@@ -266,6 +283,228 @@ describe("TopNavigation section bar", () => {
       expect(screen.getByText(label)).toBeInTheDocument();
       expect(linkTo(route), `${route} must be linked`).not.toBeNull();
     }
+  });
+});
+
+const DATA_ROUTE = "/commissioning/list-harvest-share-articles";
+
+/** Where the app is, which section is active, and a way to follow a link
+ *  that isn't in the section bar. */
+function Probe() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <div data-testid="location">{useLocation().pathname}</div>
+      <div data-testid="section">{useNavigation().activeSection}</div>
+      <button type="button" onClick={() => navigate("/commissioning/forecast")}>
+        go to the forecast
+      </button>
+      <button type="button" onClick={() => navigate("/configuration/app")}>
+        go to the app settings
+      </button>
+      <button type="button" onClick={() => navigate("/commissioning/list-plots")}>
+        go to the plots
+      </button>
+    </>
+  );
+}
+
+/** The provider takes its first section from the browser's address, so the
+ *  window goes to the same path as the router. */
+function renderNavigationAt(path: string) {
+  window.history.replaceState(null, "", path);
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <NavigationProvider>
+        <DoubleTopNavigation />
+        <Probe />
+      </NavigationProvider>
+    </MemoryRouter>,
+  );
+}
+
+const sectionOf = (route: string) => linkTo(route)?.closest("li");
+/** The gear among the top bar's icon buttons. */
+const configurationIcon = () =>
+  screen.queryByRole("button", { name: "nav.configuration" });
+
+describe("TopNavigation configuration and data sections", () => {
+  beforeEach(() => {
+    settings.showConfiguration = undefined;
+    roleOverrides.value = {};
+  });
+
+  it("keeps the configuration a section where the deployment has it", () => {
+    renderNavigation();
+
+    expect(screen.getByText("nav.configuration")).toBeInTheDocument();
+    expect(configurationIcon()).toBeNull();
+    expect(linkTo(DATA_ROUTE), "the data stay in commissioning").toBeNull();
+  });
+
+  it("keeps the data lists in commissioning where the deployment has the section", () => {
+    renderNavigationAt("/commissioning/list-resellers");
+
+    expect(screen.getByTestId("section")).toHaveTextContent(/^commissioning$/);
+  });
+
+  it("turns the configuration into an icon and the data into a section elsewhere", () => {
+    capabilities.configuration_section = false;
+    renderNavigation();
+
+    expect(screen.queryByText("nav.configuration")).not.toBeInTheDocument();
+    expect(configurationIcon()).toHaveClass("ant-btn", "configuration-button");
+    expect(screen.getByText("commissioning.data")).toBeInTheDocument();
+    expect(linkTo(DATA_ROUTE)).not.toBeNull();
+  });
+
+  it("opens the configuration with its sidebar from the icon", async () => {
+    capabilities.configuration_section = false;
+    renderNavigationAt("/commissioning/dashboard");
+
+    await userEvent.click(configurationIcon() as HTMLElement);
+
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      "/configuration/dashboard",
+    );
+    expect(screen.getByTestId("section")).toHaveTextContent("configuration");
+  });
+
+  it("offers the icon to admins only, as the section was", () => {
+    capabilities.configuration_section = false;
+    roleOverrides.value = { admin: false, isAdmin: false };
+    renderNavigation();
+
+    expect(configurationIcon()).toBeNull();
+  });
+
+  it("leaves the icon out where the tenant's navigation hides the configuration", () => {
+    capabilities.configuration_section = false;
+    settings.showConfiguration = false;
+    renderNavigation();
+
+    expect(configurationIcon()).toBeNull();
+  });
+
+  it("selects the data section on a data list, though it lives under commissioning", () => {
+    capabilities.configuration_section = false;
+    renderNavigationAt("/commissioning/list-resellers");
+
+    expect(screen.getByTestId("section")).toHaveTextContent("commissioning-data");
+    expect(sectionOf(DATA_ROUTE)).toHaveClass("ant-menu-item-selected");
+    expect(sectionOf("/commissioning/dashboard")).not.toHaveClass(
+      "ant-menu-item-selected",
+    );
+  });
+
+  it("goes back to commissioning when a link leaves the data lists", async () => {
+    capabilities.configuration_section = false;
+    renderNavigationAt("/commissioning/list-resellers");
+
+    await userEvent.click(screen.getByRole("button", { name: "go to the forecast" }));
+
+    expect(screen.getByTestId("section")).toHaveTextContent(/^commissioning$/);
+    expect(sectionOf("/commissioning/dashboard")).toHaveClass(
+      "ant-menu-item-selected",
+    );
+  });
+
+  const cratesStoragesAndPlots = [
+    "/commissioning/list-crates",
+    "/commissioning/list-storages",
+    "/commissioning/list-plots",
+  ];
+
+  it("keeps the crates, storages and plots in commissioning where the deployment has the configuration section", () => {
+    for (const path of cratesStoragesAndPlots) {
+      const { unmount } = renderNavigationAt(path);
+      expect(screen.getByTestId("section"), path).toHaveTextContent(
+        /^commissioning$/,
+      );
+      unmount();
+    }
+  });
+
+  it("selects the data section on the crates, storages and plots elsewhere", () => {
+    capabilities.configuration_section = false;
+
+    for (const path of cratesStoragesAndPlots) {
+      const { unmount } = renderNavigationAt(path);
+      expect(screen.getByTestId("section"), path).toHaveTextContent(
+        "commissioning-data",
+      );
+      expect(sectionOf(DATA_ROUTE), path).toHaveClass("ant-menu-item-selected");
+      unmount();
+    }
+  });
+
+  it.each([
+    ["where the deployment has the configuration section", true, /^commissioning$/],
+    ["in the data section elsewhere", false, /^commissioning-data$/],
+  ])("lands an old configuration address of the plots %s", async (_, isSection, section) => {
+    capabilities.configuration_section = isSection;
+    renderNavigationAt("/configuration/plots");
+    expect(screen.getByTestId("section")).toHaveTextContent(/^configuration$/);
+
+    // The route forwards to the list's own address.
+    await userEvent.click(screen.getByRole("button", { name: "go to the plots" }));
+
+    expect(screen.getByTestId("section")).toHaveTextContent(section);
+  });
+
+  it("returns to commissioning when a link leaves the configuration for it, as the configuration has no tab", async () => {
+    capabilities.configuration_section = false;
+    renderNavigationAt("/configuration/app");
+    expect(screen.getByTestId("section")).toHaveTextContent(/^configuration$/);
+
+    await userEvent.click(screen.getByRole("button", { name: "go to the forecast" }));
+
+    expect(screen.getByTestId("section")).toHaveTextContent(/^commissioning$/);
+    expect(sectionOf("/commissioning/dashboard")).toHaveClass(
+      "ant-menu-item-selected",
+    );
+  });
+
+  it("returns to commissioning on such a link where the configuration is a section too", async () => {
+    renderNavigationAt("/configuration/app");
+
+    await userEvent.click(screen.getByRole("button", { name: "go to the forecast" }));
+
+    expect(screen.getByTestId("section")).toHaveTextContent(/^commissioning$/);
+  });
+
+  it.each([
+    ["where the configuration is a section", true],
+    ["where it is the gear icon", false],
+  ])("goes to the configuration when a link leaves commissioning for it, %s", async (_, isSection) => {
+    capabilities.configuration_section = isSection;
+    renderNavigationAt("/commissioning/dashboard");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "go to the app settings" }),
+    );
+
+    expect(screen.getByTestId("section")).toHaveTextContent(/^configuration$/);
+  });
+
+  it.each([
+    "/configuration/members",
+    "/configuration/email-templates/members",
+  ])("opens %s in the configuration on a reload, though its address names the members", (path) => {
+    renderNavigationAt(path);
+
+    expect(screen.getByTestId("section")).toHaveTextContent(/^configuration$/);
+  });
+
+  it("goes back to the configuration when a link leaves the data lists for it", async () => {
+    capabilities.configuration_section = false;
+    renderNavigationAt("/commissioning/list-plots");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "go to the app settings" }),
+    );
+
+    expect(screen.getByTestId("section")).toHaveTextContent(/^configuration$/);
   });
 });
 

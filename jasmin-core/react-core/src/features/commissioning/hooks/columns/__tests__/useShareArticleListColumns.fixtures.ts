@@ -53,6 +53,7 @@ export const baseArgs = {
   sells_to_resellers: true,
   has_markets: true,
   has_purchases: true,
+  show_size_column: true,
   number_packing_stations: 2,
   packingBulk: false,
   renderHarvestNumber: passThroughNumber,

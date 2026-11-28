@@ -109,6 +109,7 @@
    to. Doubled with .ant-btn so they outrank the text button's own colour. */
 .ant-btn.modal-toggle-button,
 .ant-btn.help-button,
+.ant-btn.configuration-button,
 .ant-btn.preference-button {
   color: var(--color-primary-hover);
 }

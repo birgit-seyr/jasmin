@@ -1,18 +1,36 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { makeUseTenantMock } from "@/test/tenantMock";
 import { useOrganicGate } from "../useOrganicGate";
 
 // useOrganicGate's only dependency is useTenant — mock it so the gate logic
-// (trim + non-empty) is tested in isolation, with no TenantContext/i18n load.
+// (the organic documentation switch, trim + non-empty) is tested in isolation,
+// with no TenantContext/i18n load.
 const mockUseTenant = vi.fn();
 vi.mock("../useTenant", () => ({
   useTenant: () => mockUseTenant(),
 }));
 
+/** A tenant with this control number and these settings; a setting left out
+ *  falls through to the caller's default. */
+function tenantWith(
+  organic_control_number: unknown,
+  settings: Record<string, unknown> = {},
+) {
+  return makeUseTenantMock({
+    tenant: { organic_control_number },
+    getSetting: (key: string, defaultValue?: unknown) =>
+      key in settings ? settings[key] : defaultValue,
+  });
+}
+
 describe("useOrganicGate", () => {
-  const gate = (organic_control_number: unknown) => {
-    mockUseTenant.mockReturnValue({ tenant: { organic_control_number } });
+  const gate = (
+    organic_control_number: unknown,
+    settings: Record<string, unknown> = {},
+  ) => {
+    mockUseTenant.mockReturnValue(tenantWith(organic_control_number, settings));
     return renderHook(() => useOrganicGate()).result.current;
   };
 
@@ -41,9 +59,23 @@ describe("useOrganicGate", () => {
   });
 
   it("is disabled when there is no tenant", () => {
-    mockUseTenant.mockReturnValue({ tenant: null });
+    mockUseTenant.mockReturnValue(
+      makeUseTenantMock({ tenant: null, getSetting: (_key, value) => value }),
+    );
     expect(
       renderHook(() => useOrganicGate()).result.current.enabled,
     ).toBe(false);
+  });
+
+  it("ignores a stored control number while the farm's organic documentation is off", () => {
+    const r = gate("DE-ÖKO-001", { uses_organic_documentation: false });
+    expect(r.enabled).toBe(false);
+    expect(r.controlNumber).toBe("");
+  });
+
+  it("counts the control number while the organic documentation is on", () => {
+    expect(
+      gate("DE-ÖKO-001", { uses_organic_documentation: true }).enabled,
+    ).toBe(true);
   });
 });

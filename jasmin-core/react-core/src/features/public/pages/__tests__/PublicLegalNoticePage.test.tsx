@@ -6,7 +6,12 @@ import userEvent from "@testing-library/user-event";
 // swapped per test by ``renderPage`` before the component reads it.
 const { navigateMock, tenantRow } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
-  tenantRow: { current: {} as Record<string, unknown> },
+  tenantRow: {
+    current: {} as Record<string, unknown>,
+    // The settings a signed-in payload carries; the anonymous one has none,
+    // and a key left out falls through to the caller's default.
+    settings: {} as Record<string, unknown>,
+  },
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -23,7 +28,12 @@ vi.mock("react-router-dom", async () => {
 vi.mock("@hooks/index", async () => {
   const { makeUseTenantMock } = await import("@/test/tenantMock");
   return {
-    useTenant: () => makeUseTenantMock({ tenant: tenantRow.current }),
+    useTenant: () =>
+      makeUseTenantMock({
+        tenant: tenantRow.current,
+        getSetting: (key: string, defaultValue?: unknown) =>
+          key in tenantRow.settings ? tenantRow.settings[key] : defaultValue,
+      }),
   };
 });
 
@@ -75,6 +85,7 @@ function renderPage(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   navigateMock.mockClear();
+  tenantRow.settings = {};
 });
 
 describe("PublicLegalNoticePage", () => {
@@ -206,6 +217,16 @@ describe("PublicLegalNoticePage", () => {
       expect(
         screen.queryByText("impressum.register_court_label"),
       ).toBeNull();
+    });
+  });
+
+  describe("organic control number", () => {
+    it("is left out of a signed-in visit while the farm's organic documentation is off", () => {
+      tenantRow.settings = { uses_organic_documentation: false };
+      renderPage({ organic_control_number: "DE-OEKO-001" });
+
+      expect(screen.queryByText("impressum.organic_control_title")).toBeNull();
+      expect(screen.queryByText("DE-OEKO-001")).toBeNull();
     });
   });
 

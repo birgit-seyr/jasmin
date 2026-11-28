@@ -126,9 +126,6 @@ const untouchedGroupEntries = [
   "configuration.commissioning",
   "configuration.share_type_variations",
   "configuration.delivery_days",
-  "commissioning.list_crates",
-  "commissioning.list_storages",
-  "commissioning.list_plots",
   "configuration.reseller_documents",
 ];
 
@@ -298,6 +295,31 @@ describe("ConfigurationSidebar email server", () => {
     renderSidebar();
 
     expect(emailLink()).not.toBeNull();
+  });
+});
+
+describe("ConfigurationSidebar crates, storages and plots", () => {
+  beforeEach(() => {
+    settings.weeklyUpload = false;
+    settings.sellsToResellers = undefined;
+    delete capabilities.configuration_section;
+  });
+
+  it.each([
+    ["where the configuration is a section", true],
+    ["where it isn't one", false],
+  ])("leaves them to commissioning's data lists %s", (_, isSection) => {
+    capabilities.configuration_section = isSection;
+    renderSidebar();
+
+    for (const label of [
+      "commissioning.list_crates",
+      "commissioning.list_storages",
+      "commissioning.list_plots",
+    ]) {
+      expect(screen.queryByText(label), label).not.toBeInTheDocument();
+    }
+    expect(screen.getByText("configuration.delivery_days")).toBeInTheDocument();
   });
 });
 

@@ -105,6 +105,7 @@ export default function ListShareArticles() {
   const has_markets = getSetting("has_markets", true) as boolean;
   const sells_to_resellers = getSetting("sells_to_resellers", true) as boolean;
   const has_purchases = getSetting("has_purchases", true) as boolean;
+  const show_size_column = getSetting("show_size_column", true) as boolean;
   const number_packing_stations = usePackingStationCount();
   const uploadAllowed =
     (getSetting("allow_upload_for_data_lists", false) as boolean) === true;
@@ -247,6 +248,7 @@ export default function ListShareArticles() {
     sells_to_resellers,
     has_markets,
     has_purchases,
+    show_size_column,
     number_packing_stations,
     packingBulk,
     renderHarvestNumber,

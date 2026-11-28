@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useRoles, type RoleFlags } from "@shared/auth";
 import { useNavigation } from "@shared/contexts/NavigationContext";
 import { useCapability, useIsMobile, useTenant } from "@hooks/index";
+import ConfigurationButton from "./ConfigurationButton";
 import HelpButton from "./HelpButton";
 import ModalToggle from "./ModalToggle";
 import SidebarToggle from "./SidebarToggle";
@@ -16,14 +17,30 @@ import AppsIcon from "@mui/icons-material/Apps";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import BubbleChartIcon from "@mui/icons-material/BubbleChart";
 import GrassIcon from "@mui/icons-material/Grass";
+import StorageIcon from "@mui/icons-material/Storage";
 
 const { Header } = Layout;
+
+/** Whether the viewer gets the configuration, as a section of the navigation
+ *  or as an icon of the top bar: admins, unless the tenant's navigation hides
+ *  it. */
+function useShowsConfiguration(): boolean {
+  const { isAdmin } = useRoles();
+  const { getSetting } = useTenant();
+  return isAdmin && Boolean(getSetting("navigation.show_configuration", true));
+}
 
 function PrimaryNavigation() {
   const { logoUrl, tenantName } = useTenant();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const offersSupportTickets = useCapability("support_tickets");
+  const offersConfigurationSection = useCapability("configuration_section");
+  const showsConfiguration = useShowsConfiguration();
+  // Where the configuration isn't a section of the navigation, it is an icon
+  // here.
+  const showsConfigurationIcon =
+    !offersConfigurationSection && showsConfiguration && !isMobile;
 
   return (
     <Header
@@ -66,6 +83,10 @@ function PrimaryNavigation() {
         {!isMobile && (
           <Divider type="vertical" className="top-navigation-divider" />
         )}
+        {showsConfigurationIcon && <ConfigurationButton />}
+        {showsConfigurationIcon && (
+          <Divider type="vertical" className="top-navigation-divider" />
+        )}
         {offersSupportTickets && <HelpButton />}
         {offersSupportTickets && !isMobile && (
           <Divider type="vertical" className="top-navigation-divider" />
@@ -81,6 +102,10 @@ function SecondaryNavigation() {
   const { t } = useTranslation();
   const { getSetting } = useTenant();
   const flags = useRoles();
+  // Where the configuration isn't a section (it is an icon of the top bar),
+  // commissioning's data lists take its place as one of their own.
+  const offersConfigurationSection = useCapability("configuration_section");
+  const showsConfiguration = useShowsConfiguration();
 
   // A tenant that imports its weekly share demand as aggregate rows keeps no
   // member or subscription records, so the members and abos sections have
@@ -102,7 +127,6 @@ function SecondaryNavigation() {
       economics: getSetting("navigation.show_economics", true),
       cultivation: getSetting("navigation.show_cultivation", true),
       exports: getSetting("navigation.show_exports", true),
-      configuration: getSetting("navigation.show_configuration", true),
     }),
     [getSetting, weeklyUpload],
   );
@@ -122,6 +146,17 @@ function SecondaryNavigation() {
           <Link to="/commissioning/dashboard">{t("nav.commissioning")}</Link>
         ),
         show: navigationSettings.commissioning,
+        requireRole: "isStaff",
+      },
+      {
+        key: NAVIGATION_SECTIONS.COMMISSIONING_DATA,
+        icon: <StorageIcon />,
+        label: (
+          <Link to="/commissioning/list-harvest-share-articles">
+            {t("commissioning.data")}
+          </Link>
+        ),
+        show: navigationSettings.commissioning && !offersConfigurationSection,
         requireRole: "isStaff",
       },
       {
@@ -177,7 +212,7 @@ function SecondaryNavigation() {
         label: (
           <Link to="/configuration/dashboard">{t("nav.configuration")}</Link>
         ),
-        show: navigationSettings.configuration,
+        show: showsConfiguration && offersConfigurationSection,
         requireRole: "isAdmin",
       },
     ];
@@ -185,7 +220,14 @@ function SecondaryNavigation() {
     return menuItemsConfig
       .filter((item) => item.show && flags[item.requireRole])
       .map(({ show: _show, requireRole: _requireRole, ...item }) => item);
-  }, [navigationSettings, t, flags, NAVIGATION_SECTIONS]);
+  }, [
+    navigationSettings,
+    t,
+    flags,
+    NAVIGATION_SECTIONS,
+    offersConfigurationSection,
+    showsConfiguration,
+  ]);
 
   return (
     <Header className="flex-between secondary-navigation">

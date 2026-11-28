@@ -34636,7 +34636,7 @@ components:
         organic_control_number:
           type: string
           nullable: true
-          maxLength: 100
+          readOnly: true
         uid:
           type: string
           nullable: true
@@ -34734,6 +34734,7 @@ components:
       - min_number_coop_shares
       - min_weeks_from_creation_to_start_delivery
       - name
+      - organic_control_number
       - requires_paper_signature_for_membership
       - season_start_week
       - subscriptions_end_after_one_year
@@ -37924,8 +37925,12 @@ components:
         share_types:
           type: boolean
           readOnly: true
+        configuration_section:
+          type: boolean
+          readOnly: true
       required:
       - about
+      - configuration_section
       - delivery_stations
       - gdpr
       - legal_notice
@@ -52640,6 +52645,8 @@ components:
           type: boolean
         has_purchases:
           type: boolean
+        uses_organic_documentation:
+          type: boolean
         crates_should_be_on_documents:
           type: boolean
         payment_terms_reseller_in_days:
@@ -52957,6 +52964,8 @@ components:
         sells_to_resellers:
           type: boolean
         has_purchases:
+          type: boolean
+        uses_organic_documentation:
           type: boolean
         crates_should_be_on_documents:
           type: boolean

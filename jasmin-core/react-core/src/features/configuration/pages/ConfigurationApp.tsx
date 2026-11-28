@@ -15,6 +15,7 @@ import {
 } from "@shared/api/generated/tenants/tenants";
 import { AutoSaveIndicator } from "@shared/ui";
 import { useAutoSave, useCapability, useTenant } from "@hooks/index";
+import { SUPPORTED_LANGUAGES } from "@shared/i18n/languages";
 import { notify } from "@shared/utils";
 import HrSystemSettingsCard from "@features/configuration/components/HrSystemSettingsCard";
 import {
@@ -27,6 +28,16 @@ import {
   TENANT_SETTINGS_OVERLAY_KEYS,
   tenantToUISettings,
 } from "./utils/tenantSettingsMapping";
+
+/**
+ * Options for the tenant language select. The code is appended to each
+ * language's own name because this is a long settings form, where a bare
+ * native language name is easy to skim past.
+ */
+const TENANT_LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES.map((language) => ({
+  value: language.code,
+  label: `${language.name} (${language.code.toUpperCase()})`,
+}));
 
 export default function ConfigurationApp() {
   const [tenantData, setTenantData] = useState<Record<string, unknown>>({});
@@ -108,8 +119,8 @@ export default function ConfigurationApp() {
           ],
         },
         // Which pages, settings and documents the farm needs follows from
-        // whom it sells to and whether it buys in, so this sits right under
-        // the modules.
+        // whom it sells to, whether it buys in and whether it documents its
+        // organic certification, so this sits right under the modules.
         {
           category: "sales",
           title: t("settings.commissioning.sales.title"),
@@ -117,18 +128,30 @@ export default function ConfigurationApp() {
             {
               key: "sells_to_resellers",
               label: t("settings.commissioning.sells_to_resellers"),
+              description: t("settings.commissioning.sells_to_resellers_desc"),
               type: "checkbox",
               defaultValue: true,
             },
             {
               key: "has_markets",
               label: t("settings.commissioning.has_markets"),
+              description: t("settings.commissioning.has_markets_desc"),
               type: "checkbox",
               defaultValue: false,
             },
             {
               key: "has_purchases",
               label: t("settings.commissioning.has_purchases"),
+              description: t("settings.commissioning.has_purchases_desc"),
+              type: "checkbox",
+              defaultValue: true,
+            },
+            {
+              key: "uses_organic_documentation",
+              label: t("settings.commissioning.uses_organic_documentation"),
+              description: t(
+                "settings.commissioning.uses_organic_documentation_desc",
+              ),
               type: "checkbox",
               defaultValue: true,
             },
@@ -155,6 +178,15 @@ export default function ConfigurationApp() {
           category: "general",
           title: t("settings.general.title"),
           settings: [
+            {
+              // Drives the backend's defaults too: the email templates and
+              // the consent documents' language.
+              key: "tenant_language",
+              label: t("tenant.organization.tenant_language"),
+              type: "select",
+              options: TENANT_LANGUAGE_OPTIONS,
+              defaultValue: "de",
+            },
             {
               key: "currency",
               label: t("settings.general.currency"),

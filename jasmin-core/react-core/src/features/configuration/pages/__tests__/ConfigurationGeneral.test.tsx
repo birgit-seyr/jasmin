@@ -1,14 +1,12 @@
-// Configuration > General: the tenant language select offers only the two
-// languages the backend accepts. The serializer constrains the column to
-// ``LanguageChoices`` (en/de), so an option beyond those is one the user can
-// pick and the save will then reject. The farm's address and VAT ID are
-// offered wherever something prints them: its reseller documents, its legal
-// notice or its data-protection pages.
+// Configuration > General: the farm's address and VAT ID are offered wherever
+// something prints them: its reseller documents, its legal notice or its
+// data-protection pages. The organic control number and logo share a card,
+// shown while the farm keeps its organic documentation. The tenant language is
+// set on the app settings, with the date and number formats.
 
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, render, screen, within } from "@testing-library/react";
 
 // Every mocked hook returns a STABLE reference. The page re-seeds its form
 // state from a ``useEffect`` keyed on the tenant object, so a fresh object
@@ -37,7 +35,18 @@ const stable = vi.hoisted(() => {
   const pictureUpload = { uploading: false, uploadPicture: () => {} };
   // What the deployment offers; a name left out is offered.
   const capabilities: Record<string, boolean> = {};
-  return { translation, settings, tenant, autoSave, pictureUpload, capabilities };
+  // The page's autosave callback, captured at render so a test can fire the
+  // save the office's next edit would fire and inspect what goes on the wire.
+  const saving = { save: null as null | (() => Promise<void>) };
+  return {
+    translation,
+    settings,
+    tenant,
+    autoSave,
+    pictureUpload,
+    capabilities,
+    saving,
+  };
 });
 
 vi.mock("react-i18next", () => ({
@@ -48,7 +57,10 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("@hooks/index", () => ({
   useTenant: () => stable.tenant,
-  useAutoSave: () => stable.autoSave,
+  useAutoSave: (options: { save: () => Promise<void> }) => {
+    stable.saving.save = options.save;
+    return stable.autoSave;
+  },
   useCapability: (name: string) => stable.capabilities[name] ?? true,
 }));
 
@@ -66,33 +78,64 @@ vi.mock("@shared/utils", () => ({
   notify: { success: vi.fn(), error: vi.fn() },
 }));
 
+import { tenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
 import ConfigurationGeneral from "../ConfigurationGeneral";
 
-/** The renderer puts the label and the Select in one wrapper div. The label
- *  text sits in a <strong> inside AntD's <Text> span, so reach the wrapper by
- *  the nearest enclosing div rather than a single parentElement hop. */
-function languageSelect(): HTMLElement {
-  const label = screen.getByText("tenant.organization.tenant_language");
-  return within(label.closest("div") as HTMLElement).getByRole("combobox");
-}
-
 describe("ConfigurationGeneral tenant language", () => {
-  it("offers only the languages the backend accepts", async () => {
-    const user = userEvent.setup();
+  it("leaves the language to the app settings", () => {
     render(<ConfigurationGeneral />);
 
-    // The options only exist in the DOM once the dropdown is open, so this
-    // click is what lets the assertion see an extra option at all.
-    await user.click(languageSelect());
+    expect(
+      screen.queryByText("tenant.organization.tenant_language"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("tenant.organization.fiscal_year_start_month"),
+    ).toBeInTheDocument();
+  });
 
-    const dropdown = await screen.findByRole("listbox");
-    const options = Array.from(
-      (dropdown.closest(".ant-select-dropdown") ?? dropdown).querySelectorAll(
-        ".ant-select-item-option-content",
-      ),
-    ).map((option) => option.textContent);
+  it("sends no language with its save, so a stale copy can't undo one changed on the app settings", async () => {
+    vi.mocked(tenantsTenantsPartialUpdate).mockClear();
+    render(<ConfigurationGeneral />);
 
-    expect(options).toEqual(["Deutsch (DE)", "English (EN)"]);
+    await act(async () => {
+      await stable.saving.save?.();
+    });
+
+    const body = vi.mocked(tenantsTenantsPartialUpdate).mock.calls[0][1];
+    expect(body).toMatchObject({ name: "Test Farm" });
+    expect(body).not.toHaveProperty("tenant_language");
+  });
+});
+
+describe("ConfigurationGeneral organic documentation", () => {
+  const ORGANIC = "tenant.organic.title";
+  const CONTROL_NUMBER = "tenant.organization.organic_control_number";
+  const ORGANIC_LOGO = "tenant.files.current_bio_logo";
+  const cardTitled = (title: string) =>
+    screen.getByText(title).closest(".ant-card") as HTMLElement;
+
+  beforeEach(() => {
+    for (const key of Object.keys(stable.settings)) delete stable.settings[key];
+  });
+
+  it("gathers the control number and the organic logo in one card by default", () => {
+    render(<ConfigurationGeneral />);
+
+    const card = cardTitled(ORGANIC);
+    expect(within(card).getByText(CONTROL_NUMBER)).toBeInTheDocument();
+    expect(within(card).getByText(ORGANIC_LOGO)).toBeInTheDocument();
+    expect(screen.getAllByText(CONTROL_NUMBER)).toHaveLength(1);
+    expect(screen.getAllByText(ORGANIC_LOGO)).toHaveLength(1);
+  });
+
+  it("leaves the card out where the farm keeps no organic documentation", () => {
+    stable.settings.uses_organic_documentation = false;
+    render(<ConfigurationGeneral />);
+
+    expect(screen.queryByText(ORGANIC)).not.toBeInTheDocument();
+    expect(screen.queryByText(CONTROL_NUMBER)).not.toBeInTheDocument();
+    expect(screen.queryByText(ORGANIC_LOGO)).not.toBeInTheDocument();
+    expect(screen.getByText("tenant.files.current_logo")).toBeInTheDocument();
   });
 });
 

@@ -1,6 +1,5 @@
 import { RequireCapability, RequireRole } from "@shared/auth";
 import { lazy } from "react";
-import { Navigate } from "react-router-dom";
 import type { AppRoute } from "../types";
 
 // Lazy load all commissioning components - only loaded when the specific route is accessed
@@ -52,6 +51,9 @@ const PlanningShareContentPage = lazy(
 );
 const Invoices = lazy(() => import("@features/commissioning/pages/Invoices"));
 
+const ListCrates = lazy(
+  () => import("@features/commissioning/pages/ListCrates"),
+);
 const ListDeliveryStations = lazy(
   () => import("@features/commissioning/pages/ListDeliveryStations"),
 );
@@ -82,11 +84,15 @@ const MarketPrices = lazy(
 const ListOfferGroups = lazy(
   () => import("@features/commissioning/pages/ListOfferGroups"),
 );
+const ListPlots = lazy(() => import("@features/commissioning/pages/ListPlots"));
 const ListResellers = lazy(
   () => import("@features/commissioning/pages/ListResellers"),
 );
 const ListSellers = lazy(
   () => import("@features/commissioning/pages/ListSellers"),
+);
+const ListStorages = lazy(
+  () => import("@features/commissioning/pages/ListStorages"),
 );
 const Offers = lazy(() => import("@features/commissioning/pages/Offers"));
 const PaymentsResellers = lazy(
@@ -192,15 +198,21 @@ export const commissioningRoutes: AppRoute[] = [
       </RequireRole>
     ),
   },
-  // The plots, stores and crates are configuration pages; these addresses
-  // forward there so that bookmarks of them keep working.
   {
     path: "/commissioning/list-plots",
-    element: <Navigate to="/configuration/plots" replace />,
+    element: (
+      <RequireRole flag="isStaff">
+        <ListPlots />
+      </RequireRole>
+    ),
   },
   {
     path: "/commissioning/list-storages",
-    element: <Navigate to="/configuration/storages" replace />,
+    element: (
+      <RequireRole flag="isStaff">
+        <ListStorages />
+      </RequireRole>
+    ),
   },
   {
     // One data-driven planning route per view. ``:slug`` selects the share
@@ -391,7 +403,11 @@ export const commissioningRoutes: AppRoute[] = [
   },
   {
     path: "/commissioning/list-crates",
-    element: <Navigate to="/configuration/crates" replace />,
+    element: (
+      <RequireRole flag="isStaff">
+        <ListCrates />
+      </RequireRole>
+    ),
   },
   {
     path: "/commissioning/list-delivery-stations",

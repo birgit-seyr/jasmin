@@ -9,6 +9,9 @@ import { useIsMobile } from "@hooks/index";
 const CommissioningSidebar = lazy(
   () => import("./sidebars/CommissioningSidebar"),
 );
+const CommissioningDataSidebar = lazy(
+  () => import("./sidebars/CommissioningDataSidebar"),
+);
 const CultivationSidebar = lazy(
   () => import("./sidebars/CultivationSidebar"),
 );
@@ -59,6 +62,7 @@ export default function DynamicSidebar() {
     [NAVIGATION_SECTIONS.MEMBERS]: MembersSidebar,
     [NAVIGATION_SECTIONS.ABOS]: AboSidebar,
     [NAVIGATION_SECTIONS.COMMISSIONING]: CommissioningSidebar,
+    [NAVIGATION_SECTIONS.COMMISSIONING_DATA]: CommissioningDataSidebar,
     [NAVIGATION_SECTIONS.STAFF]: StaffSidebar,
     [NAVIGATION_SECTIONS.WAREHOUSE]: WarehouseSidebar,
     [NAVIGATION_SECTIONS.ECONOMICS]: EconomicsSidebar,

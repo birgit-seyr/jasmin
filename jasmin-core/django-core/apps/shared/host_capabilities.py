@@ -97,6 +97,10 @@ def host_capabilities() -> dict[str, bool]:
       its product types and products into jasmin as share types and sizes,
       recognises a share type by its name, and ends every one it doesn't have,
       so one added or renamed in jasmin wouldn't last.
+    * ``configuration_section`` — the configuration as a section of the main
+      navigation, beside the modules. Inside Tapir only commissioning runs, so
+      the configuration is an icon beside the user menu instead, and
+      commissioning's data lists take its place as a section of their own.
     """
     standalone = jasmin_host() == STANDALONE
     return {
@@ -111,6 +115,7 @@ def host_capabilities() -> dict[str, bool]:
         "about": standalone,
         "module_choice": standalone,
         "share_types": standalone,
+        "configuration_section": standalone,
     }
 
 

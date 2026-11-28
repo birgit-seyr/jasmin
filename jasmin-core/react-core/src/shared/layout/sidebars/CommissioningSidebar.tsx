@@ -3,6 +3,7 @@ import { filterByRole, useRoles, type RoleGatedItem } from "@shared/auth";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import SidebarShell from "./SidebarShell";
+import { useCommissioningDataNavItems } from "./useCommissioningDataNavItems";
 import { useDeliveryStationNavItems } from "./useDeliveryStationNavItems";
 import { useMarketNavItems } from "./useMarketNavItems";
 import { usePackingListVisibility } from "./usePackingListVisibility";
@@ -42,10 +43,11 @@ export default function CommissioningSidebar({
     showBoxesPackingList,
     showWeightStatistics,
   } = usePackingListVisibility();
-  const { deliveryStationSection, deliveryStationListItems } =
-    useDeliveryStationNavItems();
+  const { deliveryStationSection } = useDeliveryStationNavItems();
   const marketSection = useMarketNavItems();
   const purchaseItems = usePurchaseNavItems();
+  const offersConfigurationSection = useCapability("configuration_section");
+  const dataItems = useCommissioningDataNavItems();
 
   const baseMenuItems = [
     {
@@ -371,78 +373,23 @@ export default function CommissioningSidebar({
       ],
     },
     ...deliveryStationSection,
-    {
-      key: "commissioning-data",
-
-      requireRole: "isStaff",
-      icon: <BubbleChartIcon />,
-      label: (
-        <div className="sidebar-section-header">{t("commissioning.data")}</div>
-      ),
-      children: [
-        {
-          key: "commissioning-list-harvest-shares-articles",
-
-          requireRole: "isStaff",
-          label: (
-            <Link to="/commissioning/list-harvest-share-articles">
-              {t("commissioning.list_harvest_shares_articles")}
-            </Link>
-          ),
-        },
-        {
-          key: "commissioning-default-share-articles-in-share",
-          requireRole: "isOffice",
-          label: (
-            <Link to="/commissioning/default-share-articles-in-share">
-              {t("commissioning.default_share_articles_in_share")}
-            </Link>
-          ),
-        },
-        // Extra articles are sold to resellers only.
-        ...(sells_to_resellers
-          ? [
-              {
-                key: "commissioning-list-extra-articles",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/list-extra-articles">
-                    {t("commissioning.list_extra_articles")}
-                  </Link>
-                ),
-              },
-            ]
-          : []),
-        ...deliveryStationListItems,
-
-        ...(sells_to_resellers
-          ? [
-              {
-                key: "commissioning-list-resellers",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/list-resellers">
-                    {t("commissioning.list_resellers")}
-                  </Link>
-                ),
-              },
-              {
-                key: "commissioning-list-offer-groups",
-
-                requireRole: "isOffice",
-                label: (
-                  <Link to="/commissioning/list-offer-groups">
-                    {t("commissioning.list_offer_groups")}
-                  </Link>
-                ),
-              },
-            ]
-          : []),
-        ...purchaseItems.dataItems,
-      ],
-    },
+    // Where the configuration isn't a section of the navigation, the data is
+    // one of its own instead (CommissioningDataSidebar).
+    ...(offersConfigurationSection
+      ? [
+          {
+            key: "commissioning-data",
+            requireRole: "isStaff",
+            icon: <BubbleChartIcon />,
+            label: (
+              <div className="sidebar-section-header">
+                {t("commissioning.data")}
+              </div>
+            ),
+            children: dataItems,
+          },
+        ]
+      : []),
   ];
 
   return (

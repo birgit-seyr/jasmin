@@ -115,6 +115,7 @@ class HostCapabilitiesSerializer(serializers.Serializer):
     about = serializers.BooleanField(read_only=True)
     module_choice = serializers.BooleanField(read_only=True)
     share_types = serializers.BooleanField(read_only=True)
+    configuration_section = serializers.BooleanField(read_only=True)
 
 
 class _HostCapabilitiesMixin:
@@ -771,6 +772,10 @@ class CurrentTenantSerializer(_HostCapabilitiesMixin, serializers.ModelSerialize
     # straight model-field passthrough).
     logo = serializers.SerializerMethodField()
     bio_logo = serializers.SerializerMethodField()
+    # The public Impressum names a control body only while the farm keeps its
+    # organic documentation (``uses_organic_documentation``); the office edits
+    # the stored number through the full ``TenantSerializer``.
+    organic_control_number = serializers.SerializerMethodField()
 
     # Deliberately a VERSION STAMP, not the file URL. The launcher icon is
     # served by its own unsigned route (``TenantAppIconView``) at a stable
@@ -902,6 +907,11 @@ class CurrentTenantSerializer(_HostCapabilitiesMixin, serializers.ModelSerialize
 
     def get_bio_logo(self, obj: Tenant) -> str | None:
         return self._file_url(obj.bio_logo)
+
+    def get_organic_control_number(self, obj: Tenant) -> str | None:
+        if not self._overlay(obj).get("uses_organic_documentation", True):
+            return None
+        return obj.organic_control_number
 
     def get_friendly_captcha_sitekey(self, obj: Tenant) -> str:
         from django.conf import settings

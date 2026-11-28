@@ -18,6 +18,7 @@
   "crates_in_orders": "For an order, the required crates are calculated automatically here, but can be adjusted manually.",
   "offer_creation_button": "Offers are created from the harvest forecast minus the demand already planned for shares. If offers already exist for this week (manually entered or copied from previous week), only additional suggestions will be created. For multiple offer groups, each group has the total amount as available quantity. Please adjust if necessary.",
   "modal_toggle": "Inline <-> Modal; not possible for all pages.",
+  "configuration_button": "Opens the configuration.",
   "sent_via_email": "Sent to the reseller",
   "grouping_mode_date": "Grouped by delivery note date",
   "delivery_station_day": "Here you can see the occupied / total capacity of the delivery station on this day. If 100% is already occupied here, no further shares can be booked with this delivery day, unless they have a different delivery station day.",

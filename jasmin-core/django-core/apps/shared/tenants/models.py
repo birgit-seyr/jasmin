@@ -580,6 +580,10 @@ class TenantSettings(JasminModel):
     has_markets = models.BooleanField(default=False)
     sells_to_resellers = models.BooleanField(default=True)
     has_purchases = models.BooleanField(default=True, db_default=True)
+    # Whether the farm documents its organic certification: its control number
+    # and organic logo, and with a control number the organic status of its
+    # articles, suppliers, documents and labels.
+    uses_organic_documentation = models.BooleanField(default=True, db_default=True)
     crates_should_be_on_documents = models.BooleanField(
         default=True
     )  # defines if crates are priced and put on deliverynote and invoices

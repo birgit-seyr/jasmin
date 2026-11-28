@@ -819,6 +819,25 @@ describe("ListShareArticles tenant settings", () => {
     expect(columnTitles()).toContain(HONEY_SHARE);
   });
 
+  it("keeps only the medium weight and count, named without the size, where the farm shows no sizes", async () => {
+    tenantState.settings = { show_size_column: false };
+    await renderLoaded();
+
+    const titles = columnTitles();
+    for (const sized of [
+      "commissioning.kg_per_piece_S",
+      "commissioning.kg_per_piece_M",
+      "commissioning.kg_per_piece_L",
+      "commissioning.pieces_per_kg_S",
+      "commissioning.pieces_per_kg_M",
+      "commissioning.pieces_per_kg_L",
+    ]) {
+      expect(titles, sized).not.toContain(sized);
+    }
+    expect(titles).toContain("commissioning.kg_per_piece");
+    expect(titles).toContain("commissioning.pieces_per_kg");
+  });
+
   it("offers a packing station for each one the farm runs", async () => {
     tenantState.settings = { number_packing_stations: 3 };
     const { user } = await renderLoaded();

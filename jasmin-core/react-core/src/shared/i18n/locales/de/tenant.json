@@ -13,6 +13,9 @@
     "city": "Stadt",
     "country": "Land"
   },
+  "organic": {
+    "title": "Bio-Dokumentation"
+  },
   "organization": {
     "title": "Sonstiges",
     "organic_control_number": "Bio-Kontrollnummer",

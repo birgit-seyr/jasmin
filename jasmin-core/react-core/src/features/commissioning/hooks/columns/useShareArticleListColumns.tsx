@@ -5,6 +5,7 @@
  * harvest/purchase number renderers; every column shape lives here.
  */
 
+import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,6 +28,45 @@ import {
 const isHarvestDisabled = (record: TableRecord) => record.is_purchased === true;
 const isPurchaseDisabled = (record: TableRecord) =>
   record.is_purchased === false;
+
+/**
+ * The weight per piece and the pieces per kg, each for the small, medium and
+ * large size. A farm that shows no sizes keeps only the medium ones, named
+ * without the size.
+ */
+function sizeColumns(
+  t: TFunction,
+  format: ReturnType<typeof useNumberFormat>["format"],
+  show_size_column: boolean,
+): EditableColumnConfig<TableRecord>[] {
+  const measures = [
+    { field: "kg_per_piece", inputType: "positive_decimal3", decimals: 3 },
+    { field: "pieces_per_kg", inputType: "positive_integer", decimals: 0 },
+  ] as const;
+  return measures.flatMap(({ field, inputType, decimals }) =>
+    (["S", "M", "L"] as const).map((size) => {
+      const isMedium = size === "M";
+      const named = show_size_column || !isMedium;
+      const startsGroup = size === "S" || !named;
+      return {
+        title: (
+          <span className="text-sm">
+            {t(named ? `commissioning.${field}_${size}` : `commissioning.${field}`)}
+          </span>
+        ),
+        dataIndex: `${field}_${size}`,
+        key: `${field}_${size}`,
+        inputType,
+        required: false,
+        align: "center",
+        width: "6em",
+        ...(startsGroup ? { className: "column-group-start" } : {}),
+        ...(isMedium ? {} : { hidden: !show_size_column }),
+        render: renderNumber(format, decimals),
+      } satisfies EditableColumnConfig<TableRecord>;
+    }),
+  );
+}
 
 interface ShareOptionLite {
   value: string;
@@ -51,6 +91,8 @@ interface UseShareArticleListColumnsArgs {
   has_markets: boolean;
   /** Without purchases, the purchased flag and the purchase PU columns go. */
   has_purchases: boolean;
+  /** Without sizes, only the medium weight and count stay, named without it. */
+  show_size_column: boolean;
   /** One station or none leaves the packing station column out. */
   number_packing_stations: number;
   packingBulk: boolean;
@@ -72,6 +114,7 @@ export function useShareArticleListColumns({
   sells_to_resellers,
   has_markets,
   has_purchases,
+  show_size_column,
   number_packing_stations,
   packingBulk,
   renderHarvestNumber,
@@ -196,92 +239,7 @@ export function useShareArticleListColumns({
           hidden: !has_markets,
           sortable: true,
         },
-        {
-          title: (
-            <span className="text-sm">{t("commissioning.kg_per_piece_S")}</span>
-          ),
-          dataIndex: "kg_per_piece_S",
-          key: "kg_per_piece_S",
-          inputType: "positive_decimal3",
-          required: false,
-          align: "center",
-          width: "6em",
-          className: "column-group-start",
-
-          render: renderNumber(format, 3),
-        },
-        {
-          title: (
-            <span className="text-sm">{t("commissioning.kg_per_piece_M")}</span>
-          ),
-          dataIndex: "kg_per_piece_M",
-          key: "kg_per_piece_M",
-          inputType: "positive_decimal3",
-          required: false,
-          align: "center",
-          width: "6em",
-
-          render: renderNumber(format, 3),
-        },
-        {
-          title: (
-            <span className="text-sm">{t("commissioning.kg_per_piece_L")}</span>
-          ),
-          dataIndex: "kg_per_piece_L",
-          key: "kg_per_piece_L",
-          inputType: "positive_decimal3",
-          required: false,
-          align: "center",
-          width: "6em",
-
-          render: renderNumber(format, 3),
-        },
-        {
-          title: (
-            <span className="text-sm">
-              {t("commissioning.pieces_per_kg_S")}
-            </span>
-          ),
-          dataIndex: "pieces_per_kg_S",
-          key: "pieces_per_kg_S",
-          inputType: "positive_integer",
-          required: false,
-          align: "center",
-          width: "6em",
-          className: "column-group-start",
-
-          render: renderNumber(format, 0),
-        },
-        {
-          title: (
-            <span className="text-sm">
-              {t("commissioning.pieces_per_kg_M")}
-            </span>
-          ),
-          dataIndex: "pieces_per_kg_M",
-          key: "pieces_per_kg_M",
-          inputType: "positive_integer",
-          required: false,
-          align: "center",
-          width: "6em",
-
-          render: renderNumber(format, 0),
-        },
-        {
-          title: (
-            <span className="text-sm">
-              {t("commissioning.pieces_per_kg_L")}
-            </span>
-          ),
-          dataIndex: "pieces_per_kg_L",
-          key: "pieces_per_kg_L",
-          inputType: "positive_integer",
-          required: false,
-          align: "center",
-          width: "6em",
-
-          render: renderNumber(format, 0),
-        },
+        ...sizeColumns(t, format, show_size_column),
         {
           title: (
             <div className="checkbox-column-title">
@@ -574,6 +532,7 @@ export function useShareArticleListColumns({
       renderPurchaseNumber,
       sells_to_resellers,
       has_purchases,
+      show_size_column,
       t,
       unitOptions,
       visibleShareOptions,

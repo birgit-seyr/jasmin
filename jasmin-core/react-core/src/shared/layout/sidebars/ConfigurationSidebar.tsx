@@ -216,36 +216,6 @@ export default function ConfigurationSidebar({
                 ),
               },
             ]),
-        {
-          key: "configuration-crates",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/crates">
-              {t("commissioning.list_crates")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-storages",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/storages">
-              {t("commissioning.list_storages")}
-            </Link>
-          ),
-        },
-        {
-          key: "configuration-plots",
-          requireRole: "isAdmin",
-          icon: <SettingOutlined />,
-          label: (
-            <Link to="/configuration/plots">
-              {t("commissioning.list_plots")}
-            </Link>
-          ),
-        },
 
         // Offers, delivery notes and invoices, and the emails they go out
         // with, are for resellers only.

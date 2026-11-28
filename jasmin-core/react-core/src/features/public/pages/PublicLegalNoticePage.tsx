@@ -4,6 +4,7 @@ import DOMPurify from "dompurify";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "@hooks/index";
+import { organicControlNumberOf } from "@shared/utils/organicControlNumber";
 import { safeExternalHref } from "@shared/utils/safeUrl";
 
 const { Title, Paragraph, Text } = Typography;
@@ -24,7 +25,7 @@ const { Title, Paragraph, Text } = Typography;
 export default function PublicLegalNoticePage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { tenant } = useTenant();
+  const { tenant, getSetting } = useTenant();
 
   const website = tenant?.website?.trim();
   const websiteHref = safeExternalHref(website);
@@ -39,7 +40,10 @@ export default function PublicLegalNoticePage() {
   const contentResponsible = tenant?.content_responsible?.trim();
   const auditingAssociation = tenant?.auditing_association?.trim();
   const professionalAssociation = tenant?.professional_association?.trim();
-  const organicControlNumber = tenant?.organic_control_number?.trim();
+  // A signed-in payload carries the settings; the anonymous one names no
+  // number while the farm's organic documentation is off.
+  const organicControlNumber =
+    organicControlNumberOf(tenant, getSetting) || undefined;
   const vatId = tenant?.uid?.trim();
   const legalForm = tenant?.legal_form?.trim();
   const extraHtml = tenant?.legal_notice_extra_html?.trim();

@@ -7,7 +7,6 @@ import { useAutoSave, useCapability, useTenant } from "@hooks/index";
 import type { Tenant } from "@shared/api/generated/models";
 import { tenantsTenantsPartialUpdate } from "@shared/api/generated/tenants/tenants";
 import type { Writable } from "@shared/api/typeHelpers";
-import { SUPPORTED_LANGUAGES } from "@shared/i18n/languages";
 import {
   AutoSaveIndicator,
   PictureUploadField,
@@ -42,16 +41,6 @@ type TenantFormState = Partial<Writable<Omit<Tenant, "logo" | "bio_logo">>> & {
   bio_logo?: File | string | null;
 };
 
-/**
- * Options for the tenant language select. The code is appended to each
- * language's own name because this is a long settings form, where a bare
- * native language name is easy to skim past.
- */
-const TENANT_LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES.map((language) => ({
-  value: language.code,
-  label: `${language.name} (${language.code.toUpperCase()})`,
-}));
-
 /** The twelve months, numbered from 1, as the fiscal year's start. */
 const monthOptions = (t: TFunction) => [
   { value: 1, label: t("settings.months.january") },
@@ -75,6 +64,22 @@ const addressFields = (t: TFunction): SettingsCategory["settings"] => [
   { key: "city", label: t("tenant.address.city"), type: "input", defaultValue: "" },
   { key: "country", label: t("tenant.address.country"), type: "input", defaultValue: "" },
 ];
+
+/** The farm's organic documentation; the page adds the organic logo's upload
+ *  to this card. */
+const organicCategory = (t: TFunction): SettingsCategory => ({
+  category: "organic",
+  title: t("tenant.organic.title"),
+  settings: [
+    {
+      key: "organic_control_number",
+      label: t("tenant.organization.organic_control_number"),
+      type: "input",
+      description: "tenant.organization.organic_control_number_desc",
+      defaultValue: "",
+    },
+  ],
+});
 
 function resolveMediaUrl(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -101,6 +106,9 @@ export default function ConfigurationGeneral() {
   const offersLegalNotice = useCapability("legal_notice");
   const offersGdpr = useCapability("gdpr");
   const namesTheFarm = sellsToResellers || offersLegalNotice || offersGdpr;
+  const usesOrganicDocumentation = Boolean(
+    getSetting("uses_organic_documentation", true),
+  );
 
   // Branding uploads (logo + organic logo) go through the shared multipart
   // picture-upload hook — a separate, immediate PATCH decoupled from the JSON
@@ -186,25 +194,6 @@ export default function ConfigurationGeneral() {
         title: t("tenant.organization.title"),
         settings: [
           {
-            key: "organic_control_number",
-            label: t("tenant.organization.organic_control_number"),
-            type: "input",
-            description: "tenant.organization.organic_control_number_desc",
-            defaultValue: "",
-          },
-          {
-            // ``tenant_language`` is a column on ``Tenant`` (not on the
-            // versioned ``TenantSettings``) so it saves through the
-            // same ``tenantsTenantsPartialUpdate`` call as the other
-            // org fields on this page. Drives backend defaults like
-            // email templates and consent-document locale resolution.
-            key: "tenant_language",
-            label: t("tenant.organization.tenant_language"),
-            type: "select",
-            options: TENANT_LANGUAGE_OPTIONS,
-            defaultValue: "de",
-          },
-          {
             key: "fiscal_year_start_month",
             label: t("tenant.organization.fiscal_year_start_month"),
             type: "select",
@@ -222,7 +211,7 @@ export default function ConfigurationGeneral() {
             : []),
         ],
       },
-
+      ...(usesOrganicDocumentation ? [organicCategory(t)] : []),
       {
         // Public legal-notice ("Impressum") identity block. These columns
         // live on ``Tenant`` and save through the same autosave PATCH; the
@@ -317,7 +306,7 @@ export default function ConfigurationGeneral() {
         ],
       },
     ],
-    [t, sellsToResellers, namesTheFarm],
+    [t, sellsToResellers, namesTheFarm, usesOrganicDocumentation],
   );
   // A host application publishes its own legal notice.
   const shownCategories = offersLegalNotice
@@ -347,10 +336,6 @@ export default function ConfigurationGeneral() {
       city: tenant.city || "",
       country: tenant.country || "",
       organic_control_number: tenant.organic_control_number || "",
-      // Omit rather than blank: the serializer has no ``default``, so an
-      // absent key leaves the stored language untouched on PATCH, and the
-      // published enum carries no blank member.
-      tenant_language: tenant.tenant_language ?? undefined,
       fiscal_year_start_month: tenant.fiscal_year_start_month || 1,
       iban: tenant.iban || "",
       sepa_creditor_id: tenant.sepa_creditor_id || "",
@@ -531,10 +516,26 @@ export default function ConfigurationGeneral() {
                     </div>
                   </Col>
                 ))}
+                {category.category === "organic" && (
+                  <Col xs={24} md={8}>
+                    <div className="settings-item">
+                      <Text strong>{t("tenant.files.current_bio_logo")}</Text>
+                      <div className="mt-8">
+                        <PictureUploadField
+                          pictureUrl={bioLogoPreviewUrl}
+                          uploading={bioLogoUploading}
+                          onUpload={uploadBioLogo}
+                          previewVariant="inline"
+                          showDelete={false}
+                        />
+                      </div>
+                    </div>
+                  </Col>
+                )}
               </Row>
             </Card>
 
-            {/* Branding: Logo + Bio Logo — placed below "Sonstiges". */}
+            {/* Branding: the logo and the app icon — placed below "Sonstiges". */}
             {category.category === "organization" && (
               <Card
                 title={t("tenant.files.title")}
@@ -550,20 +551,6 @@ export default function ConfigurationGeneral() {
                           pictureUrl={logoPreviewUrl}
                           uploading={logoUploading}
                           onUpload={uploadLogo}
-                          previewVariant="inline"
-                          showDelete={false}
-                        />
-                      </div>
-                    </div>
-                  </Col>
-                  <Col xs={24} md={8}>
-                    <div className="settings-item">
-                      <Text strong>{t("tenant.files.current_bio_logo")}</Text>
-                      <div className="mt-8">
-                        <PictureUploadField
-                          pictureUrl={bioLogoPreviewUrl}
-                          uploading={bioLogoUploading}
-                          onUpload={uploadBioLogo}
                           previewVariant="inline"
                           showDelete={false}
                         />

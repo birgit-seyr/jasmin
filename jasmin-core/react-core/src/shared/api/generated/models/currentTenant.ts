@@ -117,11 +117,8 @@ export interface CurrentTenant {
   privacy_policy_html?: string;
   /** @maxLength 100 */
   legal_form?: string;
-  /**
-   * @maxLength 100
-   * @nullable
-   */
-  organic_control_number?: string | null;
+  /** @nullable */
+  readonly organic_control_number: string | null;
   /**
    * @maxLength 20
    * @nullable

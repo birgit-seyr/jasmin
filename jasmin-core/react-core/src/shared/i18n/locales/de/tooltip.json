@@ -18,6 +18,7 @@
   "crates_in_orders": "Bei einer Bestellung werden die benötigten Kisten hier automatisch berechnet, können aber händisch angepasst werden.",
   "offer_creation_button": "Die Angebots-Erstellung erfolgt aus der Ernteprognose minus dem Bedarf, der für die Anteile schon verplant ist. Falls schon Angebote in dieser Woche vorliegen (die händisch eingetragen oder aus der Vorwoche kopiert wurden), werden nur zusätzliche Vorschläge dazu erstellt. Bei mehreren Angebots-Gruppen hat jede Gruppe die gesamte Menge als verfügbare Menge. Bitte gegebenfalls anpassen.",
   "modal_toggle": "Inline <-> Modal; nicht für alle Seiten möglich.",
+  "configuration_button": "Öffnet die Konfiguration.",
   "sent_via_email": "an WVK",
   "short_name_share_type": "Lesbare Kürzel wie z.B. Honig für Honiganteil, max. 6 Buchstaben.",
   "grouping_mode_date": "nach Lieferschein-Datum",

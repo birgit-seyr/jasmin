@@ -158,6 +158,7 @@ export const TENANT_SETTINGS_OVERLAY_KEYS: readonly string[] = [
   "sells_to_resellers",
   "has_markets",
   "has_purchases",
+  "uses_organic_documentation",
 ];
 
 /**

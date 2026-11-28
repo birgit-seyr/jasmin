@@ -1,5 +1,7 @@
 import type { TFunction } from "i18next";
 
+import { organicControlNumberOf } from "@shared/utils/organicControlNumber";
+
 import { useTenant } from "./useTenant";
 
 export type OrganicStatus = "organic" | "in_conversion" | "conventional";
@@ -13,6 +15,9 @@ export type OrganicStatus = "organic" | "in_conversion" | "conventional";
  * a non-empty ``Tenant.organic_control_number``. A tenant without
  * one is, by definition, not entitled to label anything as "organic"
  * or "in transition", so every UI surface hides the column/badge/dropdown.
+ * A farm that switches its organic documentation off
+ * (``uses_organic_documentation``) no longer sees its control number in the
+ * configuration, so a stored one stops counting too.
  *
  * Call this hook at the top of any component that renders an
  * organic-status surface; gate the render on ``enabled``.
@@ -21,10 +26,8 @@ export function useOrganicGate(): {
   enabled: boolean;
   controlNumber: string;
 } {
-  const { tenant } = useTenant();
-  const raw = (tenant as { organic_control_number?: string | null } | null)
-    ?.organic_control_number;
-  const controlNumber = (raw ?? "").trim();
+  const { tenant, getSetting } = useTenant();
+  const controlNumber = organicControlNumberOf(tenant, getSetting);
   return {
     enabled: controlNumber.length > 0,
     controlNumber,

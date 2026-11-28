@@ -21,4 +21,5 @@ export interface HostCapabilities {
   readonly about: boolean;
   readonly module_choice: boolean;
   readonly share_types: boolean;
+  readonly configuration_section: boolean;
 }
